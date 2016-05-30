@@ -1,5 +1,5 @@
 
-description := "Test kit for testing akka routes with real http calls"
+description := "AssertJ assertion classes for ts-reaktive and some other classes"
 
 // Do not append Scala versions to the generated artifacts
 crossPaths := false
@@ -12,3 +12,5 @@ EclipseKeys.projectFlavor := EclipseProjectFlavor.Java
 
 // Because of https://github.com/cuppa-framework/cuppa/pull/113
 parallelExecution in Test := false
+
+libraryDependencies += "org.assertj" % "assertj-core" % "3.2.0"
