@@ -7,8 +7,11 @@ with cassandra as backend, and exposing an event sourced stream using HTTP.
 In addition, it contains several extensions for [kamon](http://kamon.io) that provide insight to a running, clustered akka application.
 
 The repository consists of the following modules:
-  - [ts-reaktive-actor](ts-reaktive-actor) contains the base Java classes with which a reactive application can be built
+  - [ts-reaktive-actors](ts-reaktive-actors) contains the base Java classes with which a reactive application can be built
   - [ts-reaktive-testkit](ts-reaktive-testkit)  provides a test framework for testing akka routes with real HTTP
+  - [ts-reaktive-testkit-assertj](ts-reaktive-testkit-assertj)  provides [AssertJ](http://joel-costigliola.github.io/assertj/)-style 
+    assertions for Java 8 [CompletionStage](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletionStage.html) 
+    (with wait support) and Jackson's [JsonNode](https://fasterxml.github.io/jackson-databind/javadoc/2.2.0/com/fasterxml/jackson/databind/JsonNode.html).
   - [ts-reaktive-kamon-akka](ts-reaktive-kamon-akka)  provides dead letter monitoring for an actor system
   - [ts-reaktive-kamon-akka-http](ts-reaktive-kamon-akka-http) provides http server monitoring for akka streams http
   - [ts-reaktive-kamon-akka-cluster](ts-reaktive-kamon-akka-cluster) provides cluster membership monitoring for akka cluster
@@ -24,8 +27,9 @@ If you use SBT, you can use this library by adding the following:
     libraryDependencies ++= {
       val version = "0.0.1"
       Seq(
-        "com.tradeshift" % "ts-reaktive-actor" % version,
+        "com.tradeshift" % "ts-reaktive-actors" % version,
         "com.tradeshift" % "ts-reaktive-testkit" % version % "test",
+        "com.tradeshift" % "ts-reaktive-testkit-assertj" % version % "test",
         "com.tradeshift" %% "ts-reaktive-kamon-akka" % version,
         "com.tradeshift" %% "ts-reaktive-kamon-akka-http" % version,
         "com.tradeshift" %% "ts-reaktive-kamon-akka-cluster" % version,
@@ -36,7 +40,8 @@ If you use SBT, you can use this library by adding the following:
 How to use from Maven
 =====================
 
-If you use Maven, you can add the following to your `settings.xml` file or your `pom.xml`:
+If you use Maven, you can add the following to your `settings.xml` file or your `pom.xml`, and then add the individual dependencies
+shown above:
 
     <repositories>
       <repository>
