@@ -24,14 +24,14 @@ public class CompletableFutures {
     /**
      * Returns a future that completes when all the futures in the given collection have completed.
      */
-    public static <T> CompletableFuture<List<T>> sequence(Collection<CompletableFuture<? extends T>> futures) {
+    public static <T,U extends T> CompletableFuture<List<T>> sequence(Collection<CompletableFuture<U>> futures) {
         return sequence(futures.stream());
     }
     
     /**
      * Returns a future that completes when all the futures in the given stream have completed.
      */
-    public static <T> CompletableFuture<List<T>> sequence(Stream<CompletableFuture<? extends T>> futures) {
+    public static <T,U extends T> CompletableFuture<List<T>> sequence(Stream<CompletableFuture<U>> futures) {
         return CompletableFuture.supplyAsync(() -> futures.map(f -> f.join()).collect(Collectors.toList()));
     }
     
