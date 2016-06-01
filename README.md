@@ -12,10 +12,10 @@ The repository consists of the following modules:
   - [ts-reaktive-testkit-assertj](ts-reaktive-testkit-assertj)  provides [AssertJ](http://joel-costigliola.github.io/assertj/)-style 
     assertions for Java 8 [CompletionStage](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletionStage.html) 
     (with wait support) and Jackson's [JsonNode](https://fasterxml.github.io/jackson-databind/javadoc/2.2.0/com/fasterxml/jackson/databind/JsonNode.html).
-  - [ts-reaktive-kamon-akka](ts-reaktive-kamon-akka)  provides dead letter monitoring for an actor system
-  - [ts-reaktive-kamon-akka-http](ts-reaktive-kamon-akka-http) provides http server monitoring for akka streams http
-  - [ts-reaktive-kamon-akka-cluster](ts-reaktive-kamon-akka-cluster) provides cluster membership monitoring for akka cluster
-  - [ts-reaktive-kamon-log4j](ts-reaktive-kamon-log4j) provides log4j error and warning monitoring
+  - [ts-reaktive-kamon-akka](ts-reaktive-kamon-akka)  provides dead letter monitoring for an actor system. Just have it on your classpath to enable.
+  - [ts-reaktive-kamon-akka-http](ts-reaktive-kamon-akka-http) provides http server monitoring for akka streams http.  Just have it on your classpath to enable.
+  - [ts-reaktive-kamon-akka-cluster](ts-reaktive-kamon-akka-cluster) provides cluster membership monitoring for akka clustering. Just have it on your classpath to enable.
+  - [ts-reaktive-kamon-log4j](ts-reaktive-kamon-log4j) provides log4j error and warning monitoring. Just have it on your classpath to enable.
 
 How to use from SBT
 ===================
@@ -25,9 +25,10 @@ If you use SBT, you can use this library by adding the following:
     resolvers += Resolver.bintrayRepo("jypma", "maven")
     
     libraryDependencies ++= {
-      val version = "0.0.1"
+      val version = "0.0.4"
       Seq(
         "com.tradeshift" % "ts-reaktive-actors" % version,
+        "com.tradeshift" % "ts-reaktive-ssl" % version,
         "com.tradeshift" % "ts-reaktive-testkit" % version % "test",
         "com.tradeshift" % "ts-reaktive-testkit-assertj" % version % "test",
         "com.tradeshift" %% "ts-reaktive-kamon-akka" % version,

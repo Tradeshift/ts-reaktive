@@ -1,4 +1,4 @@
-package com.tradeshift.reaktive.kamon.akka.cluster
+package akka.kamon.cluster
 
 import kamon.metric.instrument.InstrumentFactory
 import kamon.metric.GenericEntityRecorder

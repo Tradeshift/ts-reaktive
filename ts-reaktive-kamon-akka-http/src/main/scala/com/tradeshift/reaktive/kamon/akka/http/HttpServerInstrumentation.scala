@@ -31,6 +31,7 @@ class HttpServerInstrumentation {
       val wrapped = RequestLogger.apply(flow.asInstanceOf[Flow[HttpRequest, HttpResponse, NotUsed]], name)
       val args: Array[Object] = jp.getArgs
       args(0) = wrapped
+      log.info("Logging http server {} metrics into Kamon.", name)
       jp.proceed(args)
     } catch {
       case x:Throwable =>

@@ -7,6 +7,7 @@
   </aspects>
 
   <weaver>
-    <include within="*"/>
+    <include within="com.tradeshift.reaktive.kamon.akka.http..*"/>
+    <include within="akka.http.scaladsl..*"/>
   </weaver>
 </aspectj>

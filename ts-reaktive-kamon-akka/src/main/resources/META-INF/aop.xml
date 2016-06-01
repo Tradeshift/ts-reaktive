@@ -1,0 +1,11 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+
+<aspectj>
+  <aspects>
+    <aspect name="akka.kamon.reaktive.AkkaSystemMonitoring"/>
+  </aspects>
+
+  <weaver>
+    <include within="akka..*"/>
+  </weaver>
+</aspectj>
