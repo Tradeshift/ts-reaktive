@@ -1,5 +1,5 @@
 
-description := "Reactive persistent actor base classes for Akka persistence"
+description := "Helper classes for SSL support, particularly in reading PEM-encoded keys and certificates"
 
 // Do not append Scala versions to the generated artifacts
 crossPaths := false
@@ -19,9 +19,7 @@ libraryDependencies ++= {
   val kamonVersion = "0.5.2"
 
   Seq(
-    "com.readytalk" % "metrics3-statsd" % "4.1.0", // to log cassandra (codahale / dropwizard) metrics into statsd
-    "com.fasterxml.jackson.core" % "jackson-databind" % "2.4.3",  
-    "com.google.protobuf" % "protobuf-java" % "2.6.1",
+    "org.bouncycastle" % "bcpkix-jdk15on" % "1.54", // for PEMReader, in order to read PEM encoded RSA keys
     "junit" % "junit" % "4.11" % "test",
     "org.assertj" % "assertj-core" % "3.2.0" % "test",
     "org.mockito" % "mockito-core" % "1.10.19" % "test",

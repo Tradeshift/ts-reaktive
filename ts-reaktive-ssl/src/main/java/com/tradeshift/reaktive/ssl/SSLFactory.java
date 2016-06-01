@@ -1,8 +1,7 @@
-package com.tradeshift.reaktive.akka.rest;
+package com.tradeshift.reaktive.ssl;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -27,11 +26,27 @@ import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
 /**
- * Factory methods to create HTTPS and JSE configuration objects
+ * Factory methods to create SSL and JSE configuration objects
  */
-public class HttpsContextFactory {
+public class SSLFactory {
     /**
-     * Creates an in-memory KeyStore by reading a certificate chain and private/public keypair from two base64-format PEM files.
+     * Reads a base64-format PEM key and returns a Java KeyPair for it.
+     * @param privateKey PEM-encoded private key
+     */
+    public static KeyPair readKeyPair(String privateKey) {
+        try (StringReader keyReader = new StringReader(privateKey);
+             PEMParser pemReader = new PEMParser(keyReader)) {
+            
+            JcaPEMKeyConverter converter = new JcaPEMKeyConverter();
+            return converter.getKeyPair((PEMKeyPair) pemReader.readObject());
+        } catch (IOException x) {
+            // Shouldn't occur, since we're only reading from strings
+            throw new RuntimeException(x);            
+        }
+    }
+    
+    /**
+     * Creates an in-memory KeyStore by reading a certificate chain and private/public keypair from two base64-format PEM strings.
      * 
      * @param password Password to encrypt the keystore with
      * @param privatekey PEM-encoded private key
@@ -39,11 +54,9 @@ public class HttpsContextFactory {
      */
     public static KeyStore createKeystore(char[] password, String privatekey, String certificateChain) throws KeyStoreException, CertificateException, NoSuchAlgorithmException {
         KeyStore ks = KeyStore.getInstance("JKS");
+        KeyPair keyPair = readKeyPair(privatekey);
 
-        try ( StringReader keyReader = new StringReader(privatekey);
-              InputStream caStream = new ByteArrayInputStream(certificateChain.getBytes());
-              PEMParser pemReader = new PEMParser(keyReader);
-            ) {
+        try (InputStream caStream = new ByteArrayInputStream(certificateChain.getBytes())) {
             
             // Initialize empty keystore
             ks.load(null, password);
@@ -59,9 +72,6 @@ public class HttpsContextFactory {
                 
             }
 
-            // store the private key
-            JcaPEMKeyConverter converter = new JcaPEMKeyConverter();
-            KeyPair keyPair = converter.getKeyPair((PEMKeyPair) pemReader.readObject());
             ks.setKeyEntry("key", keyPair.getPrivate(), password, chain);
         } catch (IOException e) {
             // Shouldn't occur, since we're only reading from strings
@@ -76,7 +86,7 @@ public class HttpsContextFactory {
      * @param ks A keystore with a private key and certificate chain.
      * @param password the password for the keystore.
      */
-    public static SSLContext createSSLContext(KeyStore ks, char[] password) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, CertificateException, FileNotFoundException, UnrecoverableKeyException {
+    public static SSLContext createSSLContext(KeyStore ks, char[] password) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException, CertificateException, UnrecoverableKeyException {
         final SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
         KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
         kmf.init(ks, password);

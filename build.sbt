@@ -47,6 +47,8 @@ lazy val `ts-reaktive-testkit-assertj` = project.settings(commonSettings: _*)
 
 lazy val `ts-reaktive-actors` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-testkit` % "test")
 
+lazy val `ts-reaktive-ssl` = project.settings(commonSettings: _*)
+
 lazy val `ts-reaktive-kamon-log4j` = project.settings(commonSettings: _*)
 
 lazy val `ts-reaktive-kamon-akka` = project.settings(commonSettings: _*)
@@ -57,6 +59,7 @@ lazy val `ts-reaktive-kamon-akka-cluster` = project.settings(commonSettings: _*)
 
 lazy val root = (project in file(".")).settings(publish := { }, publishLocal := { }).aggregate(
   `ts-reaktive-actors`,
+  `ts-reaktive-ssl`,
   `ts-reaktive-testkit`,
   `ts-reaktive-testkit-assertj`,
   `ts-reaktive-kamon-log4j`,
