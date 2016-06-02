@@ -1,4 +1,4 @@
-package com.tradeshift.reaktive.kamon.akka
+package akka.kamon.reaktive
 
 import kamon.metric.instrument.InstrumentFactory
 import kamon.metric.GenericEntityRecorder

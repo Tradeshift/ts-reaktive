@@ -3,7 +3,7 @@ scalaVersion := "2.11.8"
 lazy val commonSettings = Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  version := "0.0.3",
+  version := "0.0.4",
   scalaVersion := "2.11.8",
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
@@ -35,7 +35,8 @@ lazy val commonSettings = Seq(
       "io.kamon" %% "kamon-datadog" % kamonVersion,
       "io.kamon" %% "kamon-log-reporter" % kamonVersion,
       "io.kamon" %% "kamon-system-metrics" % kamonVersion,
-      "org.aspectj" % "aspectjweaver" % "1.8.5",
+      "org.aspectj" % "aspectjweaver" % "1.8.8",
+      "io.kamon" %% "kamon-autoweave" % kamonVersion,
       "org.slf4j" % "slf4j-log4j12" % "1.7.12"
     )
   }  
