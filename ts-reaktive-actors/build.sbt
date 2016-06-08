@@ -20,7 +20,7 @@ libraryDependencies ++= {
 
   Seq(
     "com.readytalk" % "metrics3-statsd" % "4.1.0", // to log cassandra (codahale / dropwizard) metrics into statsd
-    "com.fasterxml.jackson.core" % "jackson-databind" % "2.4.3",  
+    "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.4",  
     "com.google.protobuf" % "protobuf-java" % "2.6.1",
     "junit" % "junit" % "4.11" % "test",
     "org.assertj" % "assertj-core" % "3.2.0" % "test",
