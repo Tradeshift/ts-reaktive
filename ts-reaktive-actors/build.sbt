@@ -15,9 +15,6 @@ parallelExecution in Test := false
 
 // library dependencies. (organization name) % (project name) % (version) % (scope)
 libraryDependencies ++= {
-  val akkaVersion = "2.4.6"
-  val kamonVersion = "0.6.1"
-
   Seq(
     "com.readytalk" % "metrics3-statsd" % "4.1.0", // to log cassandra (codahale / dropwizard) metrics into statsd
     "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.4",  

@@ -1,5 +1,6 @@
 scalaVersion := "2.11.8"
 
+
 lazy val commonSettings = Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
@@ -11,6 +12,9 @@ lazy val commonSettings = Seq(
   javacOptions in doc ++= Seq("-Xdoclint:none"),
   EclipseKeys.executionEnvironment := Some(EclipseExecutionEnvironment.JavaSE18),
   EclipseKeys.withSource := true,
+  resolvers ++= Seq(
+    Resolver.bintrayRepo("readytalk", "maven"),
+    Resolver.jcenterRepo),
   libraryDependencies ++= {
     val akkaVersion = "2.4.6"
     val kamonVersion = "0.6.1"
@@ -48,6 +52,8 @@ lazy val `ts-reaktive-testkit-assertj` = project.settings(commonSettings: _*)
 
 lazy val `ts-reaktive-actors` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-testkit` % "test")
 
+lazy val `ts-reaktive-akka` = project.settings(commonSettings: _*)
+
 lazy val `ts-reaktive-ssl` = project.settings(commonSettings: _*)
 
 lazy val `ts-reaktive-kamon-log4j` = project.settings(commonSettings: _*)
@@ -59,6 +65,7 @@ lazy val `ts-reaktive-kamon-akka-http` = project.settings(commonSettings: _*)
 lazy val `ts-reaktive-kamon-akka-cluster` = project.settings(commonSettings: _*)
 
 lazy val root = (project in file(".")).settings(publish := { }, publishLocal := { }).aggregate(
+  `ts-reaktive-akka`,
   `ts-reaktive-actors`,
   `ts-reaktive-ssl`,
   `ts-reaktive-testkit`,
