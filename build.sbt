@@ -4,7 +4,7 @@ scalaVersion := "2.11.8"
 lazy val commonSettings = Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  version := "0.0.6-SNAPSHOT",
+  version := "0.0.7",
   scalaVersion := "2.11.8",
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
@@ -16,7 +16,7 @@ lazy val commonSettings = Seq(
     Resolver.bintrayRepo("readytalk", "maven"),
     Resolver.jcenterRepo),
   libraryDependencies ++= {
-    val akkaVersion = "2.4.6"
+    val akkaVersion = "2.4.7"
     val kamonVersion = "0.6.1"
 
     Seq(
@@ -32,7 +32,7 @@ lazy val commonSettings = Seq(
       "com.typesafe.akka" %% "akka-http-core" % akkaVersion,
       "com.typesafe.akka" %% "akka-http-jackson-experimental" % akkaVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion % "test",
-      "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.14",
+      "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.16",
       "com.readytalk" % "metrics3-statsd" % "4.1.0", // to log cassandra (codahale / dropwizard) metrics into statsd
       "io.kamon" %% "kamon-core" % kamonVersion,
       "io.kamon" %% "kamon-akka" % kamonVersion,
