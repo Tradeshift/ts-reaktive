@@ -1,5 +1,5 @@
 
-description := "Reactive persistent actor base classes for Akka persistence"
+description := "Various utility classes that build on top of cassandra and akka-persistence-cassandra"
 
 // Do not append Scala versions to the generated artifacts
 crossPaths := false
@@ -16,6 +16,8 @@ parallelExecution in Test := false
 // library dependencies. (organization name) % (project name) % (version) % (scope)
 libraryDependencies ++= {
   Seq(
+    "com.google.guava" % "guava" % "18.0",  
+    "com.readytalk" % "metrics3-statsd" % "4.1.0", // to log cassandra (codahale / dropwizard) metrics into statsd
     "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.4",  
     "com.google.protobuf" % "protobuf-java" % "2.6.1",
     "junit" % "junit" % "4.11" % "test",
