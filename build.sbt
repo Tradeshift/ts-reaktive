@@ -4,7 +4,7 @@ scalaVersion := "2.11.8"
 lazy val commonSettings = Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  version := "0.0.5",
+  version := "0.0.6-SNAPSHOT",
   scalaVersion := "2.11.8",
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
@@ -20,6 +20,7 @@ lazy val commonSettings = Seq(
     val kamonVersion = "0.6.1"
 
     Seq(
+      "com.google.guava" % "guava" % "18.0",
       "io.javaslang" % "javaslang" % "2.0.1",
       "com.typesafe" % "config" % "1.3.0",
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
@@ -50,9 +51,11 @@ lazy val `ts-reaktive-testkit` = project.settings(commonSettings: _*)
 
 lazy val `ts-reaktive-testkit-assertj` = project.settings(commonSettings: _*)
 
-lazy val `ts-reaktive-actors` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-testkit` % "test")
-
 lazy val `ts-reaktive-akka` = project.settings(commonSettings: _*)
+
+lazy val `ts-reaktive-cassandra` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-akka`, `ts-reaktive-testkit-assertj` % "test")
+
+lazy val `ts-reaktive-actors` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-testkit` % "test")
 
 lazy val `ts-reaktive-ssl` = project.settings(commonSettings: _*)
 
@@ -67,6 +70,7 @@ lazy val `ts-reaktive-kamon-akka-cluster` = project.settings(commonSettings: _*)
 lazy val root = (project in file(".")).settings(publish := { }, publishLocal := { }).aggregate(
   `ts-reaktive-akka`,
   `ts-reaktive-actors`,
+  `ts-reaktive-cassandra`,
   `ts-reaktive-ssl`,
   `ts-reaktive-testkit`,
   `ts-reaktive-testkit-assertj`,
