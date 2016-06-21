@@ -30,3 +30,14 @@ libraryDependencies ++= {
     "com.github.tomakehurst" % "wiremock" % "1.58" % "test"
   )
 }
+
+
+dependencyOverrides += "com.google.protobuf" % "protobuf-java" % "2.6.1"
+
+import sbtprotobuf.{ProtobufPlugin=>PB}
+
+// Protobuf initialization
+Seq(PB.protobufSettings: _*)
+
+// include *.proto files in packaged jar
+unmanagedResourceDirectories in Compile <+= (sourceDirectory in PB.protobufConfig)

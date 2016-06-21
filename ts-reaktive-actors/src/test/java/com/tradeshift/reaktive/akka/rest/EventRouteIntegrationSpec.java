@@ -21,7 +21,7 @@ import com.tradeshift.reaktive.testkit.HttpIntegrationSpec;
 public class EventRouteIntegrationSpec extends HttpIntegrationSpec {
     static class TestEventRoute extends EventRoute {
         public TestEventRoute(EventsByTagQuery journal) {
-            super(materializer, journal, "testEvent");
+            super(system, materializer, journal, "testEvent");
         }
 
         @Override

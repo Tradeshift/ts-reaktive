@@ -1,0 +1,10 @@
+package com.tradeshift.reaktive.protobuf;
+
+import "Types.proto";
+
+message EventEnvelope {
+    optional string persistenceId = 1;      
+    optional uint64 sequenceNr = 2;
+    optional uint64 offset = 3;
+    optional bytes event = 4;
+}
