@@ -1,0 +1,9 @@
+package com.tradeshift.reaktive.protobuf;
+
+/**
+ * A 128-bit id, transferred as two 64-bit longs
+ */
+message UUID {
+    required fixed64 least_significant_bits = 1;
+    required fixed64 most_significant_bits = 2;
+}
