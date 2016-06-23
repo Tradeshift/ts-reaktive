@@ -28,7 +28,7 @@ public class EventRouteIntegrationSpec extends HttpIntegrationSpec {
     private EventRoute testEventRoute(EventsByTagQuery journal) {
         EventEnvelopeSerializer serializer = mock(EventEnvelopeSerializer.class);
         when(serializer.toProtobuf(any())).thenReturn(Query.EventEnvelope.newBuilder().build());
-        return new EventRoute(materializer, journal, "testEvent", serializer);
+        return new EventRoute(materializer, journal, serializer, "testEvent");
     }
     
 {

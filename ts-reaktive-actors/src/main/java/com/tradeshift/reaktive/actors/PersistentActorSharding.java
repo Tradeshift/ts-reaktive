@@ -18,17 +18,27 @@ import akka.persistence.AbstractPersistentActor;
  * - Respond to a specific base class of commands
  * - Send the commands unchanged from the SharedRegion router onto the persistent actors themselves
  */
-public class PersistentActorSharding<A extends AbstractPersistentActor, C> {
-    private final Class<A> actorType;
+public class PersistentActorSharding<C> {
+    private final Props props;
     private final String entityIdPrefix;
     private final Function<C, UUID> entityIdPostfix;
     
-    public static <A extends AbstractPersistentActor, C> PersistentActorSharding<A,C> of(Class<A> actorType, String entityIdPrefix, Function<C, UUID> entityIdPostfix) {
-        return new PersistentActorSharding<>(actorType, entityIdPrefix, entityIdPostfix);
+    /**
+     * Creates a PersistentActorSharding for an actor that has a no-args constructor
+     */
+    public static <A extends AbstractPersistentActor, C> PersistentActorSharding<C> of(Class<A> actorType, String entityIdPrefix, Function<C, UUID> entityIdPostfix) {
+        return new PersistentActorSharding<>(Props.create(actorType), entityIdPrefix, entityIdPostfix);
     }
     
-    protected PersistentActorSharding(Class<A> actorType, String entityIdPrefix, Function<C, UUID> entityIdPostfix) {
-        this.actorType = actorType;
+    /**
+     * Creates a PersistentActorSharding for an actor that is created according to [props]. The actor must be a subclass of {@link AbstractPersistentActor}.
+     */
+    public static <C> PersistentActorSharding<C> of(Props props, String entityIdPrefix, Function<C, UUID> entityIdPostfix) {
+        return new PersistentActorSharding<>(props, entityIdPrefix, entityIdPostfix);
+    }
+    
+    protected PersistentActorSharding(Props props, String entityIdPrefix, Function<C, UUID> entityIdPostfix) {
+        this.props = props;
         this.entityIdPrefix = entityIdPrefix;
         this.entityIdPostfix = entityIdPostfix;
     }
@@ -61,7 +71,7 @@ public class PersistentActorSharding<A extends AbstractPersistentActor, C> {
     public ActorRef shardRegion(ActorSystem system) {
         return ClusterSharding.get(system).start(
             entityIdPrefix, 
-            Props.create(actorType), 
+            props, 
             ClusterShardingSettings.create(system), 
             messageExtractor);
     }
