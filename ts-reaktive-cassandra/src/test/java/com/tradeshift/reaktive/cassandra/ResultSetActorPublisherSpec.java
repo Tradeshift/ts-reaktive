@@ -2,6 +2,7 @@ package com.tradeshift.reaktive.cassandra;
 
 import static com.tradeshift.reaktive.assertj.CompletionStageAssertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.forgerock.cuppa.Cuppa.after;
 import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
 import static org.forgerock.cuppa.Cuppa.when;
@@ -90,5 +91,9 @@ public class ResultSetActorPublisherSpec {
                 assertThat(failure.cause()).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("is not a column");
             });            
         });
+        
+        after(() -> {
+            CassandraLauncher.stop();
+        });        
     });
 }}

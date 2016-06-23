@@ -32,3 +32,5 @@ libraryDependencies ++= {
     "com.github.tomakehurst" % "wiremock" % "1.58" % "test"
   )
 }
+
+fork in Test := true
