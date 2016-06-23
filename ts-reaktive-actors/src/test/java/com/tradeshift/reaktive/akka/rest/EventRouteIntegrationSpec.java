@@ -1,39 +1,40 @@
 package com.tradeshift.reaktive.akka.rest;
 
-import org.forgerock.cuppa.junit.CuppaRunner;
-import static org.forgerock.cuppa.Cuppa.describe;
-import static org.forgerock.cuppa.Cuppa.when;
-import static org.forgerock.cuppa.Cuppa.it;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.forgerock.cuppa.Cuppa.describe;
+import static org.forgerock.cuppa.Cuppa.it;
+import static org.forgerock.cuppa.Cuppa.when;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import org.forgerock.cuppa.junit.CuppaRunner;
 import org.junit.runner.RunWith;
+
+import com.tradeshift.reaktive.protobuf.EventEnvelopeSerializer;
+import com.tradeshift.reaktive.protobuf.Query;
+import com.tradeshift.reaktive.testkit.HttpIntegrationSpec;
 
 import akka.http.javadsl.model.StatusCodes;
 import akka.persistence.query.EventEnvelope;
 import akka.persistence.query.javadsl.EventsByTagQuery;
 import akka.stream.StreamTcpException;
 import akka.stream.javadsl.Source;
-import akka.util.ByteString;
-
-import com.tradeshift.reaktive.testkit.HttpIntegrationSpec;
 
 @RunWith(CuppaRunner.class)
 public class EventRouteIntegrationSpec extends HttpIntegrationSpec {
-    static class TestEventRoute extends EventRoute {
-        public TestEventRoute(EventsByTagQuery journal) {
-            super(system, materializer, journal, "testEvent");
-        }
-
-        @Override
-        protected ByteString serialize(EventEnvelope envelope) {
-            return ByteString.fromString(envelope.event().toString());
-        }
+    
+    private EventRoute testEventRoute(EventsByTagQuery journal) {
+        EventEnvelopeSerializer serializer = mock(EventEnvelopeSerializer.class);
+        when(serializer.toProtobuf(any())).thenReturn(Query.EventEnvelope.newBuilder().build());
+        return new EventRoute(materializer, journal, "testEvent", serializer);
     }
     
 {
     describe("GET /events", () -> {
         when("the underlying source encounters an error before the first element", () -> {
-            TestEventRoute eventRoute = new TestEventRoute((tag, idx) -> 
+            EventRoute eventRoute = testEventRoute((tag, idx) -> 
                 Source.failed(new RuntimeException("simulated failure on first element"))
             );
             
@@ -45,7 +46,7 @@ public class EventRouteIntegrationSpec extends HttpIntegrationSpec {
         });
         
         when("the underlying source completes with error after events have been sent out", () -> {
-            TestEventRoute eventRoute = new TestEventRoute((tag, idx) -> {
+            EventRoute eventRoute = testEventRoute((tag, idx) -> {
                 return Source.single(
                     EventEnvelope.apply(0, "doc_bc779420-beac-4636-b747-ea0a587d4f8b", 1, "hello")
                 ).concat(

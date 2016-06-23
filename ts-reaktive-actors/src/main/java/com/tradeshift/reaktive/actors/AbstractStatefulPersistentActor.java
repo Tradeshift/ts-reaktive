@@ -1,14 +1,13 @@
-package com.tradeshift.reaktive.akka.persistence;
+package com.tradeshift.reaktive.actors;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import akka.actor.ReceiveTimeout;
 import akka.cluster.sharding.ShardRegion;
+import akka.event.Logging;
+import akka.event.LoggingAdapter;
 import akka.japi.pf.ReceiveBuilder;
 import akka.persistence.AbstractPersistentActor;
 import akka.persistence.SnapshotOffer;
@@ -20,25 +19,32 @@ import scala.runtime.BoxedUnit;
  * Base class for persistent actor that manages some state, receives commands of a defined type, and emits events of a defined type.
  * The actor automatically passivates itself after a configured timeout.
  *
+ * Implementations must define a public, no-arguments constructor that passes in the runtime Class types of C and E.
+ *  
  * @param <C> Type of commands that this actor expects to receive. 
  * @param <E> Type of events that this actor emits. 
  * @param <S> Immutable type that contains all the state the actor maintains. 
  */
 public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractState<E,S>> extends AbstractPersistentActor {
-    private static final Logger log = LoggerFactory.getLogger(AbstractStatefulPersistentActor.class);
+    protected final LoggingAdapter log = Logging.getLogger(getContext().system(), this);
     
     private S state = initialState();
-    private final Class<E> eventType;
-    private final Class<C> commandType;
+    
+    protected final Class<E> eventType;
+    protected final Class<C> commandType;
     
     public AbstractStatefulPersistentActor(Class<C> commandType, Class<E> eventType) {
         this.commandType = commandType;
         this.eventType = eventType;
-        getContext().setReceiveTimeout(Duration.fromNanos(context().system().settings().config().getDuration("documentcore.passivate-timeout").toNanos()));
+        getContext().setReceiveTimeout(Duration.fromNanos(getPassivateTimeout().toNanos()));
+    }
+
+    protected java.time.Duration getPassivateTimeout() {
+        return context().system().settings().config().getDuration("ts-reaktive.actors.passivate-timeout");
     }
 
     @Override
-    public final PartialFunction<Object, BoxedUnit> receiveCommand() {
+    public PartialFunction<Object, BoxedUnit> receiveCommand() {
         return ReceiveBuilder
             .match(commandType, this::handleCommand)
             .matchEquals(ReceiveTimeout.getInstance(), msg -> context().parent().tell(new ShardRegion.Passivate("stop"), self()))
@@ -47,22 +53,22 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     }
 
     @Override
-    public final PartialFunction<Object, BoxedUnit> receiveRecover() {
+    public PartialFunction<Object, BoxedUnit> receiveRecover() {
         return ReceiveBuilder
-            .match(eventType, evt -> { state = state.apply(evt); })
+            .match(eventType, evt -> { haveApplied(evt); })
             .match(SnapshotOffer.class, snapshot -> {
-            // Snapshots will be handled here once we need them.
+                // Snapshots support is not implemented yet.
             })
             .build();
     }
     
     @Override
-    public final String persistenceId() {
+    public String persistenceId() {
         return self().path().name();
     }
     
     /** Returns the current state of the actor (before having handled any incoming command) */
-    protected final S getState() {
+    protected S getState() {
         return state;
     }
 
@@ -98,12 +104,21 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
             } else {
                 AtomicInteger need = new AtomicInteger(events.size());
                 persistAll(events, evt -> {
-                    state = state.apply(evt);
+                    haveApplied(evt);
                     if (need.decrementAndGet() == 0) {
                         sender().tell(handler.getReply(events, lastSequenceNr()), self());                        
                     }
                 });                    
             }
         }
+    }
+
+    /**
+     * Updates the actor's internal state to match [evt] having been applied.
+     * 
+     * You should generally not have to call this method yourself, unless you're extending the framework.
+     */
+    protected void haveApplied(E evt) {
+        state = state.apply(evt);
     }
 }
