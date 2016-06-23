@@ -1,4 +1,4 @@
-package com.tradeshift.reaktive.akka.persistence;
+package com.tradeshift.reaktive.actors;
 
 /**
  * Base class for immutable classes that hold the state for an AbstractStatefulPersistentActor 

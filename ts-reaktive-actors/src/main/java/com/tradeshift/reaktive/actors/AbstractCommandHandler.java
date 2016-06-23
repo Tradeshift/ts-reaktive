@@ -1,4 +1,4 @@
-package com.tradeshift.reaktive.akka.persistence;
+package com.tradeshift.reaktive.actors;
 
 import java.util.List;
 import java.util.Optional;

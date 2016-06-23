@@ -1,7 +1,8 @@
 scalaVersion := "2.11.8"
 
+import sbtprotobuf.{ProtobufPlugin=>PB}
 
-lazy val commonSettings = Seq(
+lazy val commonSettings = PB.protobufSettings ++ Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
   version := "0.0.7",
@@ -15,6 +16,8 @@ lazy val commonSettings = Seq(
   resolvers ++= Seq(
     Resolver.bintrayRepo("readytalk", "maven"),
     Resolver.jcenterRepo),
+  dependencyOverrides += "com.google.protobuf" % "protobuf-java" % "2.6.1",
+  unmanagedResourceDirectories in Compile <+= (sourceDirectory in PB.protobufConfig),
   libraryDependencies ++= {
     val akkaVersion = "2.4.7"
     val kamonVersion = "0.6.1"

@@ -1,4 +1,4 @@
-package com.tradeshift.reaktive.akka.persistence;
+package com.tradeshift.reaktive.actors;
 
 import java.util.UUID;
 import java.util.function.Function;
@@ -27,21 +27,20 @@ public class PersistentActorSharding<A extends AbstractPersistentActor, C> {
         return new PersistentActorSharding<>(actorType, entityIdPrefix, entityIdPostfix);
     }
     
-    private PersistentActorSharding(Class<A> actorType, String entityIdPrefix, Function<C, UUID> entityIdPostfix) {
+    protected PersistentActorSharding(Class<A> actorType, String entityIdPrefix, Function<C, UUID> entityIdPostfix) {
         this.actorType = actorType;
         this.entityIdPrefix = entityIdPrefix;
         this.entityIdPostfix = entityIdPostfix;
     }
 
-    @SuppressWarnings("unchecked")
     private final MessageExtractor messageExtractor = new MessageExtractor() {
         private final int numberOfShards = 256;
         
         @Override
         public String entityId(Object command) {
-            return entityIdPrefix + "_" + entityIdPostfix.apply((C) command);
+            return getEntityId(command);
         }
-        
+
         @Override
         public String shardId(Object command) {
             return String.valueOf(entityId(command).hashCode() % numberOfShards);
@@ -75,5 +74,10 @@ public class PersistentActorSharding<A extends AbstractPersistentActor, C> {
     public UUID getUUIDFromPersistenceId(String persistenceId) {
         return UUID.fromString(persistenceId.substring(entityIdPrefix.length() + 1));
     };
+    
+    @SuppressWarnings("unchecked")
+    protected String getEntityId(Object command) {
+        return entityIdPrefix + "_" + entityIdPostfix.apply((C) command);
+    }
     
 }
