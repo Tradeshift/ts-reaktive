@@ -1,5 +1,6 @@
 package com.tradeshift.reaktive;
 
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -12,7 +13,29 @@ import javaslang.control.Option;
  * A regular expression with compile-time known capture groups 
  */
 public abstract class Regex<T> {
+    /**
+     * A Regex that matches a UUID
+     */
+    public static final Regex<UUID> aUUID = Regex
+        .compile1("([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})", Pattern.CASE_INSENSITIVE)
+        .map(UUID::fromString);
+    
     private final Pattern regex;
+    
+    @Override
+    public int hashCode() {
+        return regex.hashCode();
+    }
+    
+    @Override
+    public boolean equals(Object obj) {
+        return (obj instanceof Regex) && Regex.class.cast(obj).regex.equals(regex);
+    }
+    
+    @Override
+    public String toString() {
+        return regex.toString();
+    }
     
     /**
      * Returns a Regex for a regular expression with 1 capture group.
@@ -88,6 +111,11 @@ public abstract class Regex<T> {
             protected U extract(Matcher m) {
                 return null;
             }
+            
+            @Override
+            public String toString() {
+                return parent.toString();
+            }
         };
     }
     
@@ -105,6 +133,11 @@ public abstract class Regex<T> {
             @Override
             protected U extract(Matcher m) {
                 return null;
+            }
+            
+            @Override
+            public String toString() {
+                return parent.toString();
             }
         };
     }

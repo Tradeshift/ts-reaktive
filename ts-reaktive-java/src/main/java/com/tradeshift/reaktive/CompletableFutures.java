@@ -6,8 +6,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.google.common.util.concurrent.ListenableFuture;
-
 /**
  * Various functions relating to CompletableFuture
  */
@@ -33,20 +31,5 @@ public class CompletableFutures {
      */
     public static <T,U extends T> CompletableFuture<List<T>> sequence(Stream<CompletableFuture<U>> futures) {
         return CompletableFuture.supplyAsync(() -> futures.map(f -> f.join()).collect(Collectors.toList()));
-    }
-    
-    /**
-     * Turns a google ListenableFuture into a Java 7 CompletableFuture
-     */
-    public static <T> CompletableFuture<T> toJava(ListenableFuture<T> l) {
-        CompletableFuture<T> f = new CompletableFuture<>();
-        l.addListener(() -> {
-            try {
-                f.complete(l.get());
-            } catch (Throwable x) {
-                f.completeExceptionally(x);
-            }
-        }, Runnable::run);
-        return f;
     }
 }

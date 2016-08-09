@@ -1,23 +1,20 @@
 package com.tradeshift.reaktive.akka.rest;
 
-import static com.tradeshift.reaktive.Lambdas.unchecked;
-
-import java.io.IOException;
-
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import akka.http.javadsl.marshallers.jackson.Jackson;
 import akka.http.javadsl.model.HttpEntity;
-import akka.http.javadsl.model.MediaTypes;
 import akka.http.javadsl.model.RequestEntity;
 import akka.http.javadsl.server.Marshaller;
 import akka.http.javadsl.server.Unmarshaller;
 
 /**
- * Various marshallers that help marshalling to/from JSON using Jackson
+ * Various marshallers that help marshalling to/from JSON using Jackson. It configures
+ * the default object mapper with more lenient settings than the default mapper akka's 
+ * Jackson support uses.
  */
 public class JacksonMarshallers {
     private static final ObjectMapper mapper = new ObjectMapper();
@@ -33,17 +30,12 @@ public class JacksonMarshallers {
     }
     
     public static <T> Marshaller<T, RequestEntity> toJSON() {
-        return Marshaller.wrapEntity(unchecked(mapper::writeValueAsString), Marshaller.stringToEntity(), MediaTypes.APPLICATION_JSON);
+        return Jackson.marshaller(mapper);
     }
     
-    public static final Unmarshaller<HttpEntity,JsonNode> asJsonNode =
-        Unmarshaller.forMediaType(MediaTypes.APPLICATION_JSON, Unmarshaller.entityToString())
-                    .thenApply(s -> {
-                        try {
-                            return mapper.readTree(s);
-                        } catch (JsonParseException x) {
-                            throw new IllegalArgumentException(x);
-                        } catch (IOException x) {
-                            throw new IllegalStateException(x);
-                        }
-                    });}
+    public static final Unmarshaller<HttpEntity,JsonNode> asJsonNode = as(JsonNode.class);
+    
+    public static final <T> Unmarshaller<HttpEntity,T> as(Class<T> type) { 
+        return Jackson.unmarshaller(mapper, type);
+    }
+}
