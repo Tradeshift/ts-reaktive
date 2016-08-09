@@ -12,12 +12,12 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Row;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.tradeshift.reaktive.akka.AbstractActorPublisherWithStash;
 
 import akka.actor.ActorRef;
 import akka.actor.Cancellable;
 import akka.actor.Props;
 import akka.japi.pf.ReceiveBuilder;
+import akka.stream.actor.AbstractActorPublisherWithStash;
 import akka.stream.actor.ActorPublisherMessage;
 import akka.stream.javadsl.Source;
 import scala.PartialFunction;
