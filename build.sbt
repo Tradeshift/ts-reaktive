@@ -2,10 +2,10 @@ scalaVersion := "2.11.8"
 
 import sbtprotobuf.{ProtobufPlugin=>PB}
 
-lazy val commonSettings = PB.protobufSettings ++ Seq(
+lazy val projectSettings = PB.protobufSettings ++ Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  version := "0.0.7",
+  version := "0.0.8-SNAPSHOT",
   scalaVersion := "2.11.8",
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
@@ -18,13 +18,20 @@ lazy val commonSettings = PB.protobufSettings ++ Seq(
     Resolver.jcenterRepo),
   dependencyOverrides += "com.google.protobuf" % "protobuf-java" % "2.6.1",
   unmanagedResourceDirectories in Compile <+= (sourceDirectory in PB.protobufConfig),
+  libraryDependencies ++= Seq(
+    "io.javaslang" % "javaslang" % "2.0.1",
+    "org.slf4j" % "slf4j-api" % "1.7.12",
+    "org.slf4j" % "slf4j-log4j12" % "1.7.12" % "test"
+  )
+)
+
+lazy val commonSettings = projectSettings ++ Seq(
   libraryDependencies ++= {
     val akkaVersion = "2.4.7"
     val kamonVersion = "0.6.1"
 
     Seq(
       "com.google.guava" % "guava" % "18.0",
-      "io.javaslang" % "javaslang" % "2.0.1",
       "com.typesafe" % "config" % "1.3.0",
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
@@ -50,15 +57,19 @@ lazy val commonSettings = PB.protobufSettings ++ Seq(
   }  
 )
 
+lazy val `ts-reaktive-java` = project.settings(projectSettings: _*)
+
 lazy val `ts-reaktive-testkit` = project.settings(commonSettings: _*)
 
 lazy val `ts-reaktive-testkit-assertj` = project.settings(commonSettings: _*)
 
 lazy val `ts-reaktive-akka` = project.settings(commonSettings: _*)
 
+lazy val `ts-reaktive-marshal` = project.settings(projectSettings: _*).dependsOn(`ts-reaktive-java`)
+
 lazy val `ts-reaktive-cassandra` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-akka`, `ts-reaktive-testkit-assertj` % "test")
 
-lazy val `ts-reaktive-actors` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-testkit` % "test")
+lazy val `ts-reaktive-actors` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-java`, `ts-reaktive-testkit` % "test")
 
 lazy val `ts-reaktive-ssl` = project.settings(commonSettings: _*)
 
@@ -75,6 +86,7 @@ lazy val root = (project in file(".")).settings(publish := { }, publishLocal := 
   `ts-reaktive-actors`,
   `ts-reaktive-cassandra`,
   `ts-reaktive-ssl`,
+  `ts-reaktive-marshal`,
   `ts-reaktive-testkit`,
   `ts-reaktive-testkit-assertj`,
   `ts-reaktive-kamon-log4j`,

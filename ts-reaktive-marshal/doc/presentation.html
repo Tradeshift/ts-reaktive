@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      .small { font-size: 75%; }
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+# Functional Java marshalling without magic 
+
+---
+
+# Who likes
+
+1. Debugging reflection-based code
+--
+
+2. Debugging annotation-based code
+--
+
+3. Debugging aspect-based code
+--
+
+
+- Yet, every time we want to read or write XML, we dive head-first into it.
+---
+
+# I need to do XML, I know this!
+
+```
+package com.service.data;
+
+class Person {
+    private final String firstName, lastName;
+    private final List<String> address;
+    
+    public Person (String firstName, String lastName, Iterable<String> address) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.address = Collections.unmodifiableList(new ArrayList(address)); 
+    }
+    
+    public String getFirstName() { return firstName; }
+    
+    public String getLastName() { return lastName; }
+    
+    public List<String> getAddress() { return address; }
+}
+``` 
+
+---
+
+# I need to do XML, I know this!
+
+```
+@XmlRootElement(namespace = API, name = "Person")
+class Person {
+    private final String firstName, lastName;
+    private final List<String> address;
+    
+    public Person (String firstName, String lastName, Iterable<String> address) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.address = Collections.unmodifiableList(new ArrayList(address)); 
+    }
+    
+    @XmlAttribute("firstName")
+    public String getFirstName() { return firstName; }
+    
+    @XmlAttribute("lastName")
+    public String getLastName() { return lastName; }
+    
+    @XmlElement(namespace = Constants.API, "address")
+    public List<String> getAddress() { return address; }
+}
+``` 
+
+---
+
+# I need to do XML, I know this!
+
+- A short while later...
+
+```
+@XmlRootElement(namespace = API, name = "Person")
+*@XmlAccessorType(XmlAccessType.NONE)
+class Person {
+    private final String firstName, lastName;
+    private final List<String> address;
+    
+    public Person (String firstName, String lastName, Iterable<String> address) { 
+      /* ... */ 
+    }
+    
+    /* ... */
+    
+    @XmlElement(namespace = API, "address")
+    public List<String> getAddress() { 
+*       return Collections.unmodifiableList(address); 
+    }
+    
+*   public String getName() { return getFirstName() + " " + getLastName(); }
+}
+``` 
+
+---
+
+# I need to do XML, I know this!
+
+- A little later yet...
+```
+class Person {
+    /* ... */
+    
+    private final LocalDate birthday;
+    
+    @XmlAttribute("birthday")
+    public LocalDate getBirthday() { return birthday; }
+}
+``` 
+
+- Oh I'd actually like 
+```xml
+<birthday>
+      <year>1981</year><month>11</month><day>1</date>
+</birthday>
+```
+
+- Anyone?
+
+--
+.small[
+- Declare `@XmlJavaTypeAdapter` on every usage
+- Create `XmlAdapter<LocalDate,Object>` and have it cast to DOM `Element`
+]
+---
+
+# I need to do XML, I know this!
+
+- Even later...
+```
+@XmlRootElement(namespace = API, name="RichPerson")
+class RichPerson {
+    //lots of extra fields added here, 
+    //slightly incompatible with Person 
+    
+    public Person toPerson() { return new Person( /* ... */ ); }
+}
+```
+
+- I'd like to accept either a Person or a RichPerson for my API
+
+- Anyone? 
+---
+
+# Problems with data binding through annotations
+
+- Polluting service data classes with REST API logic
+- Must change the data classes (or write clumsy XML or binding code)
+- Data classes can only be annotated once
+- Hard or impossible to use any collections besides `java.util.ArrayList`
+- Must always deal with both read and write concerns
+- Same concerns exist, to differing extents, in Jackson and its annotations
+- Some inherent limitations
+
+  - Lots of duplication: namespace declarations, collection handling, XmlAccessorType, ...
+  - Code structure must follow XML or JSON object structure
+
+---
+
+# Data binding through code
+
+- What if I could just say "_Put the first name into firstName, the last into lastName, and the address into some tags_"
+
+```
+import static com.tradeshift.reaktive.xml.XMLProtocol.*;
+
+XMLWriteProtocol<Person> proto = 
+  tag(qname(API, "person"),
+    Person::getFirstName, attribute(qname("firstName")),
+    Person::getLastName, attribute(qname("lastName")),
+    Person::getAddress, iterable(
+      tag(qname(API, "address"), 
+        body
+      )
+    )
+  );
+```
+
+- which can then be used e.g. with STaX:
+
+    `String xml = stax.writeAsString(person, proto.writer());`
+
+---
+
+# Read and write protocol
+
+- Just add another lambda to allow reading as well
+
+```
+XMLProtocol<Person> proto = 
+  tag(qname(API, "person"),
+    attribute(qname("firstName")),
+    attribute(qname("lastName")),
+*   arrayList(
+      tag(qname(API, "address"), 
+        body
+      )
+    ),
+*   (f, l, a) -> new Person(f, l, a),
+    Person::getFirstName,
+    Person::getLastName,
+    Person::getAddress
+  );
+```
+
+---
+# Our birthday example
+
+```
+XMLProtocol<LocalDate> date(QName tagName) {
+  return tag(tagName,
+    tag(qname("year"), body.as(INTEGER)),
+    tag(qname("month"), body.as(INTEGER)),
+    tag(qname("day"), body.as(INTEGER)),
+    LocalDate::of,
+    LocalDate::getYear,
+    LocalDate::getMonthValue,
+    LocalDate::getDayOfMonth
+  );
+}
+XMLProtocol<Person> proto = 
+  tag(qname(API, "person"),
+    attribute(qname("firstName")),
+    attribute(qname("lastName")),
+    arrayList(
+      tag(qname(API, "address"), 
+        body
+      )
+    ),
+*   date(qname("birthday")),
+    Person::new, /* ... */
+  );
+```
+
+---
+# Wilder things are possible
+
+- Extract and write _any_ tag and have it represented as a string
+    
+```
+XMLProtocol<QName> p = XMLProtocol.anyTag
+```
+    
+- Extract and write any tag in the default namespace and its body into a `Tuple2` ([javaslang.io](http://www.javaslang.io))
+
+```
+XMLProtocol<Tuple2<String,String>> p = XMLProtocol.anyTag.asLocalName()
+```
+
+- Represent the `<props><key1>value1</key1><key2>more</key2></props>` pattern as a normal `Map`
+
+```
+XMLProtocol<Map<String, String>> proto = tag(qname("props"),
+  hashMap(
+    anyTagWithBody.asLocalName()
+  ));
+```
+
+- `Map<String,String>` of _all nested tag names and their 'value' attribute_
+- `Map<String,String>` of _all of this tag's attributes_ 
+---
+
+# Protocol alternatives
+
+- Say we have a breaking change and want to introduce a "version 2" person
+
+```xml
+  <person rich='true'> <!-- ...data... --> </person>
+```
+
+- We can tie multiple type-compatible protocols together using `alternatively`
+
+```
+XMLProtocol<Person> protoV2 = tag(qname("person"), /* ... */)
+                             .having(attribute(qname("rich")), "true");
+                             
+XMLProtocol<Person> protoV1 = tag(qname("person"), /* ... */);
+
+XMLProtocol<Person> proto = alternatively(protoV2, protoV1);
+```
+
+- When reading, any protocol is allowed to match (first successful one wins)
+- When writing, first alternative is always used
+
+---
+
+# Final thoughts
+
+- A complete analogous DSL exists for JSON (re-using Jackson's lowest-level parser underneath)
+
+- This is a "push" model parser
+    - Data is pushed to the parser as it comes in
+    - Compatible with non-blocking parsers like Aalto XML, and reactive frameworks like Akka
+    
+```
+void handle(Person p) { /* ... */ }
+
+XMLReadProtocol<Void> streamedProto = 
+    tag(qname("root"),
+        foreach(personProto, this::handle)
+    );     
+```
+
+    </textarea>
+    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>
+    <script>
+      var slideshow = remark.create({
+          highlightLanguage: "java",
+          highlightLines: true
+      });
+    </script>
+  </body>
+</html>
