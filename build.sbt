@@ -22,7 +22,10 @@ lazy val projectSettings = PB.protobufSettings ++ Seq(
     "io.javaslang" % "javaslang" % "2.0.1",
     "org.slf4j" % "slf4j-api" % "1.7.12",
     "org.slf4j" % "slf4j-log4j12" % "1.7.12" % "test"
-  )
+  ),
+  PB.runProtoc in PB.protobufConfig := { args =>
+    com.github.os72.protocjar.Protoc.runProtoc("-v261" +: args.toArray)
+  }
 )
 
 lazy val commonSettings = projectSettings ++ Seq(
