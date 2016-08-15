@@ -1,7 +1,8 @@
 package com.tradeshift.reaktive.actors;
 
-import java.util.List;
 import java.util.Optional;
+
+import javaslang.collection.Seq;
 
 /** Base class for handlers that handle specific commands */
 public abstract class AbstractCommandHandler<C,E,S extends AbstractState<E,?>> {
@@ -23,14 +24,14 @@ public abstract class AbstractCommandHandler<C,E,S extends AbstractState<E,?>> {
     /**
      * Returns the events to be emitted as a result of applying the command
      */
-    public abstract List<E> getEventsToEmit();
+    public abstract Seq<E> getEventsToEmit();
     
     /**
      * Returns the reply to send back to sender() on successfully having applied the events returned from events()
      * @param emittedEvents The list of events that was returned from getEventsToEmit() earlier. 
      * @param lastSequenceNr The current last sequence number emitted on any event
      */
-    public abstract Object getReply(List<E> emittedEvents, long lastSequenceNr);
+    public abstract Object getReply(Seq<E> emittedEvents, long lastSequenceNr);
 
     /**
      * Returns the reply to send back to sender() on determining that the command has already been applied and was idempotent.

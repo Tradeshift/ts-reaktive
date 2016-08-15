@@ -1,5 +1,6 @@
+import sbtprotobuf.{ProtobufPlugin=>PB}
 
-description := "Helper classes for SSL support, particularly in reading PEM-encoded keys and certificates"
+description := "Multi-datacenter synchronization for persistent actors"
 
 // Do not append Scala versions to the generated artifacts
 crossPaths := false
@@ -13,15 +14,19 @@ EclipseKeys.projectFlavor := EclipseProjectFlavor.Java
 // Because of https://github.com/cuppa-framework/cuppa/pull/113
 parallelExecution in Test := false
 
+PB.includePaths in PB.protobufConfig += file("ts-reaktive-actors/src/main/protobuf")
+
 // library dependencies. (organization name) % (project name) % (version) % (scope)
 libraryDependencies ++= {
   Seq(
-    "org.bouncycastle" % "bcpkix-jdk15on" % "1.54", // for PEMReader, in order to read PEM encoded RSA keys
+    "com.readytalk" % "metrics3-statsd" % "4.1.0", // to log cassandra (codahale / dropwizard) metrics into statsd
+    "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.4",  
+    "com.google.protobuf" % "protobuf-java" % "2.6.1",
     "junit" % "junit" % "4.11" % "test",
     "org.assertj" % "assertj-core" % "3.2.0" % "test",
     "org.mockito" % "mockito-core" % "1.10.19" % "test",
     "info.solidsoft.mockito" % "mockito-java8" % "0.3.0" % "test",
-    "com.github.dnvriend" %% "akka-persistence-inmemory" % "1.2.0" % "test",
+    "com.github.dnvriend" %% "akka-persistence-inmemory" % "1.3.0" % "test",
     "com.novocode" % "junit-interface" % "0.11" % "test",
     "org.forgerock.cuppa" % "cuppa" % "1.1.0" % "test",
     "org.forgerock.cuppa" % "cuppa-junit" % "1.1.0" % "test",
@@ -29,3 +34,5 @@ libraryDependencies ++= {
     "com.github.tomakehurst" % "wiremock" % "1.58" % "test"
   )
 }
+
+fork in Test := true

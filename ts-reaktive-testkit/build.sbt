@@ -1,5 +1,5 @@
 
-description := "Test kit for testing akka routes with real http calls"
+description := "Various base classes for akka-based unit tests"
 
 // Do not append Scala versions to the generated artifacts
 crossPaths := false
@@ -19,6 +19,7 @@ libraryDependencies ++= {
     "org.assertj" % "assertj-core" % "3.2.0" % "test",
     "com.novocode" % "junit-interface" % "0.11" % "test",
     "org.forgerock.cuppa" % "cuppa" % "1.1.0" % "test",
-    "org.forgerock.cuppa" % "cuppa-junit" % "1.1.0" % "test"
+    "org.forgerock.cuppa" % "cuppa-junit" % "1.1.0" % "test",
+    "com.github.dnvriend" %% "akka-persistence-inmemory" % "1.3.5"
   )
 }

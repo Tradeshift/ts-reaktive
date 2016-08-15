@@ -1,5 +1,8 @@
 package com.tradeshift.reaktive.protobuf;
 
+/**
+ * This envelope is wrapped around all events that are queried through com.tradeshift.reaktive.akka.rest.EventRoute
+ */
 message EventEnvelope {
     optional string persistenceId = 1;      
     optional uint64 sequenceNr = 2;
