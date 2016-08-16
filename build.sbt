@@ -41,6 +41,7 @@ lazy val commonSettings = projectSettings ++ Seq(
       "com.typesafe.akka" %% "akka-http-experimental" % akkaVersion,
       "com.typesafe.akka" %% "akka-http-core" % akkaVersion,
       "com.typesafe.akka" %% "akka-http-jackson-experimental" % akkaVersion,
+      "com.typesafe.akka" %% "akka-persistence-query-experimental" % akkaVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion % "test",
       "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.17",
       "com.readytalk" % "metrics3-statsd" % "4.1.0", // to log cassandra (codahale / dropwizard) metrics into statsd
@@ -71,6 +72,8 @@ lazy val `ts-reaktive-cassandra` = project.settings(commonSettings: _*).dependsO
 
 lazy val `ts-reaktive-actors` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-java`, `ts-reaktive-testkit` % "test")
 
+lazy val `ts-reaktive-replication` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-actors`, `ts-reaktive-cassandra`, `ts-reaktive-testkit` % "test")
+
 lazy val `ts-reaktive-ssl` = project.settings(commonSettings: _*)
 
 lazy val `ts-reaktive-kamon-log4j` = project.settings(commonSettings: _*)
@@ -85,6 +88,7 @@ lazy val root = (project in file(".")).settings(publish := { }, publishLocal := 
   `ts-reaktive-akka`,
   `ts-reaktive-actors`,
   `ts-reaktive-cassandra`,
+  `ts-reaktive-replication`,
   `ts-reaktive-ssl`,
   `ts-reaktive-marshal`,
   `ts-reaktive-testkit`,

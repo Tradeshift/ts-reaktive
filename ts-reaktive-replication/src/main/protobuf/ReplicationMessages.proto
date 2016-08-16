@@ -1,0 +1,8 @@
+package com.tradeshift.reaktive.protobuf;
+
+/**
+ * Indicates that a received EventEnvelope has been successfully applied into the receiving data center.
+ */
+message EventsPersisted {
+    optional uint64 offset = 1;     /// The offset of the latest successfully persisted event 
+};

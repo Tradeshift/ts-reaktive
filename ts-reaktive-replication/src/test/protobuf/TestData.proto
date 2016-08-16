@@ -1,0 +1,23 @@
+package com.tradeshift.reaktive.replication;
+
+import "Types.proto";
+
+message TestEvent {
+    required string msg = 1; 
+}
+
+message TestCommand {
+    required com.tradeshift.reaktive.protobuf.UUID aggregateId = 1;
+
+    message Read {
+    }
+    
+    message Write {
+        required string msg = 1;
+    }
+    
+    oneof body {
+        Write write = 2;
+        Read read = 3;
+    }
+}

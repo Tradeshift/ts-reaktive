@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<log4j:configuration>
+  <appender name="CONSOLE" class="org.apache.log4j.ConsoleAppender">
+    <param name="Target" value="System.out" />
+    <param name="Threshold" value="DEBUG" />
+    <layout class="org.apache.log4j.EnhancedPatternLayout">
+      <param name="ConversionPattern" value="%d{ABSOLUTE} %-5p [%c{1.}] %X{akkaSource} - %m%n" />
+    </layout>
+  </appender>
+  
+  <logger name="org.apache.cassandra"><level value="WARN" /></logger>
+  <logger name="com.datastax.driver"><level value="WARN" /></logger>
+  <logger name="io.netty"><level value="WARN" /></logger>
+  <logger name="Sigar"><level value="WARN"/></logger>
+  <logger name="org.apache.http"><level value="WARN"/></logger>
+  <logger name="org.mortbay"><level value="WARN"/></logger>
+  <logger name="akka"><level value="DEBUG"/></logger>
+  <logger name="akka.io"><level value="INFO"/></logger>
+  <logger name="akka.cluster.sharding"><level value="WARN"/></logger>
+  <logger name="akka.persistence.cassandra.query.EventsByTagPublisher"><level value="INFO"/></logger>
+  <logger name="com.tradeshift.reaktive.cassandra.ResultSetActorPublisher"><level value="INFO"/></logger>
+  <logger name="com.tradeshift.reaktive.replication.TestActor"><level value="ERROR"/></logger>
+  <logger name="com.tradeshift.reaktive.replication.DataCenterForwarder"><level value="ERROR"/></logger>
+  
+  <!-- These are to get rid of the "Column family ID mismatch" errors during test startup -->
+  <logger name="org.apache.cassandra.service.CassandraDaemon"><level value="FATAL"/></logger>
+  <logger name="org.apache.cassandra.transport.Message"><level value="FATAL"/></logger>
+  <logger name="org.apache.cassandra.transport.Message"><level value="FATAL"/></logger>
+  <logger name="org.apache.cassandra.transport.messages.ErrorMessage"><level value="FATAL"/></logger>
+  
+  <root>
+    <priority value="DEBUG" />
+    <appender-ref ref="CONSOLE" />
+  </root>
+</log4j:configuration>
