@@ -86,6 +86,7 @@ lazy val `ts-reaktive-kamon-akka-cluster` = project.settings(commonSettings: _*)
 
 lazy val root = (project in file(".")).settings(publish := { }, publishLocal := { }).aggregate(
   `ts-reaktive-akka`,
+  `ts-reaktive-java`,
   `ts-reaktive-actors`,
   `ts-reaktive-cassandra`,
   `ts-reaktive-replication`,
