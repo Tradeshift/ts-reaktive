@@ -1,6 +1,11 @@
 package com.tradeshift.reaktive.xml;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringReader;
 import java.util.Iterator;
@@ -62,48 +67,67 @@ public class Stax {
         }
     }
     
-    public <T> Stream<T> parse(String s, Reader<T> reader) {
-        reader.reset();
-        
+    public <T> Stream<T> parse(File f, Reader<T> reader) {
         try {
-            XMLEventReader in = inFactory.createXMLEventReader(new StringReader(s));
-            Iterator<T> iterator = new Iterator<T>() {
-                private Option<T> next = parse();
-
-                private Option<T> parse() {
-                    try {
-                        while (in.peek() != null) {
-                            Try<T> read = reader.apply(in.nextEvent());
-                            if (read.isSuccess()) {
-                                return read.toOption();
-                            } else if (read.isFailure() && !XMLReadProtocol.isNone(read)) {
-                                throw (RuntimeException) read.failed().get();
-                            }
-                        }
-                        return Option.none();
-                    } catch (XMLStreamException e) {
-                        throw new IllegalArgumentException(e);
-                    }
-                }
-                
-                @Override
-                public boolean hasNext() {
-                    return next.isDefined();
-                }
-
-                @Override
-                public T next() {
-                    T elmt = next.get();
-                    next = parse();
-                    return elmt;
-                }
-            };
-            
-            return StreamSupport.stream(
-                Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED),
-                false);
+            return parse(inFactory.createXMLEventReader(new BufferedInputStream(new FileInputStream(f))), reader);
+        } catch (XMLStreamException | FileNotFoundException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+    
+    public <T> Stream<T> parse(InputStream in, Reader<T> reader) {
+        try {
+            return parse(inFactory.createXMLEventReader(in), reader);
         } catch (XMLStreamException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+    
+    public <T> Stream<T> parse(String s, Reader<T> reader) {
+        try {
+            return parse(inFactory.createXMLEventReader(new StringReader(s)), reader);
+        } catch (XMLStreamException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+    
+    private <T> Stream<T> parse(XMLEventReader in, Reader<T> reader) {
+        reader.reset();
+        
+        Iterator<T> iterator = new Iterator<T>() {
+            private Option<T> next = parse();
+
+            private Option<T> parse() {
+                try {
+                    while (in.peek() != null) {
+                        Try<T> read = reader.apply(in.nextEvent());
+                        if (read.isSuccess()) {
+                            return read.toOption();
+                        } else if (read.isFailure() && !XMLReadProtocol.isNone(read)) {
+                            throw (RuntimeException) read.failed().get();
+                        }
+                    }
+                    return Option.none();
+                } catch (XMLStreamException e) {
+                    throw new IllegalArgumentException(e);
+                }
+            }
+            
+            @Override
+            public boolean hasNext() {
+                return next.isDefined();
+            }
+
+            @Override
+            public T next() {
+                T elmt = next.get();
+                next = parse();
+                return elmt;
+            }
+        };
+        
+        return StreamSupport.stream(
+            Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED),
+            false);
     }
 }
