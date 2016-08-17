@@ -1,4 +1,6 @@
-package com.tradeshift.reaktive.protobuf;
+package Types;
+
+option java_package = "com.tradeshift.reaktive.protobuf";
 
 /**
  * A 128-bit id, transferred as two 64-bit longs
