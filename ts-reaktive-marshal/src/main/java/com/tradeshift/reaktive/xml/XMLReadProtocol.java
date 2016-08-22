@@ -99,4 +99,17 @@ public abstract class XMLReadProtocol<T> {
             return current;
         }
     }
+    
+    /**
+     * Maps the protocol into a different type, invoking [onRead] after reading.
+     */
+    public <U> XMLReadProtocol<U> map(Function1<T,U> onRead) {
+        XMLReadProtocol<T> parent = this;
+        return new XMLReadProtocol<U>() {
+            @Override
+            public Reader<U> reader() {
+                return parent.reader().map(onRead);
+            }
+        };
+    };
 }

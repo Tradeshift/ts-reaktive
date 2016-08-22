@@ -36,4 +36,22 @@ public interface XMLWriteProtocol<T> {
             return (Writer<U>) w;
         }
     }
+    
+    /**
+     * Maps the protocol into a different type, invoking [beforeWrite] before writing.
+     */
+    public default <U> XMLWriteProtocol<U> compose(Function1<U,T> beforeWrite) {
+        XMLWriteProtocol<T> parent = this;
+        return new XMLWriteProtocol<U>() {
+            @Override
+            public Writer<U> writer() {
+                return parent.writer().compose(beforeWrite);
+            }
+            
+            @Override
+            public boolean isAttributeProtocol() {
+                return parent.isAttributeProtocol();
+            }
+        };
+    };    
 }

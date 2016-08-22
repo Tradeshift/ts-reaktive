@@ -441,7 +441,9 @@ public abstract class XMLProtocol<T> extends XMLReadProtocol<T> implements XMLWr
         return AlternativesProtocol.readWrite(Vector.of(first, second).appendAll(Arrays.asList(others)));
     }
 
-    
+    /**
+     * Maps the protocol into a different type, invoking [onRead] after reading and [beforeWrite] before writing.
+     */
     public <U> XMLProtocol<U> map(Function1<T,U> onRead, Function1<U,T> beforeWrite) {
         XMLProtocol<T> parent = this;
         return new XMLProtocol<U>() {
