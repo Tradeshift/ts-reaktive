@@ -24,7 +24,15 @@ public abstract class JSONProtocol<T> extends JSONReadProtocol<T> implements JSO
     public static final JSONProtocol<Integer> integerValue = ValueProtocol.INTEGER;
     
     public static <E> JSONProtocol<E> array(JSONProtocol<E> inner) {
-        return new ArrayProtocol<E>(inner);
+        return ArrayProtocol.readWrite(inner);
+    }
+    
+    public static <E> JSONReadProtocol<E> array(JSONReadProtocol<E> inner) {
+        return ArrayProtocol.read(inner);
+    }
+    
+    public static <E> JSONWriteProtocol<E> array(JSONWriteProtocol<E> inner) {
+        return ArrayProtocol.write(inner);
     }
     
     public static <T> JSONProtocol<T> field(String name, JSONProtocol<T> inner) {
