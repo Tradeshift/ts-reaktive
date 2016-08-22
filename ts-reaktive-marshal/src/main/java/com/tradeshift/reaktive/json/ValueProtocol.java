@@ -33,6 +33,11 @@ public class ValueProtocol<T> extends JSONProtocol<T> {
         evt -> Try.of(() -> new BigInteger(evt.getValueAsString())), 
         d -> new JSONEvent.NumericValue(String.valueOf(d)));
     
+    /** A Java boolean represented a JSON boolean (on reading, a JSON string of "true" or "false" is also allowed) */ 
+    public static final JSONProtocol<Boolean> BOOLEAN = of("(boolean)", 
+        v -> Try.of(() -> v.getValueAsString().equals("true")), 
+        b -> b ? JSONEvent.TRUE : JSONEvent.FALSE);
+    
     private final Function1<Value, Try<T>> tryRead;
     private final Function1<T,Value> write;
     private final String description;
