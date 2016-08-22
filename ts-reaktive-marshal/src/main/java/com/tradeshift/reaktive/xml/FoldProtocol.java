@@ -8,6 +8,7 @@ import javaslang.control.Try;
  * Folds over a repeated nested protocol, merging the results into a single element. Only for read protocols.
  */
 public class FoldProtocol {
+    // FIXME put a proper foldLeft signature here, after changing Reader.reset() from void to Try<T>, and removing XMLReadProtocol.combine().
     public static <T,U> XMLReadProtocol<U> read(XMLReadProtocol<T> parent, Function1<T,U> map, U initial, Function2<U,U,U> combine) {
         return new XMLReadProtocol<U>() {
 

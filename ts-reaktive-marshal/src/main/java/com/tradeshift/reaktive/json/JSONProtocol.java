@@ -3,6 +3,8 @@ package com.tradeshift.reaktive.json;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import com.tradeshift.reaktive.marshal.StringMarshallable;
 
@@ -230,6 +232,20 @@ public abstract class JSONProtocol<T> extends JSONReadProtocol<T> implements JSO
     }
     
     // --------------------------------------------------------------------
+    
+    /**
+     * Folds over a repeated nested protocol, merging the results into a single element.
+     */
+    public static <T,U> JSONReadProtocol<U> foldLeft(JSONReadProtocol<T> inner, Supplier<U> initial, Function2<U,T,U> combine) {
+        return FoldProtocol.read(inner, initial, combine);
+    }
+    
+    /**
+     * Invokes the given function for every item the inner protocol emits, while emitting a single null as outer value.
+     */
+    public static <T> JSONReadProtocol<Void> foreach(JSONReadProtocol<T> inner, Consumer<T> consumer) {
+        return FoldProtocol.read(inner, () -> null, (v1,v2) -> { consumer.accept(v2); return null; });
+    }
     
     /**
      * Maps the protocol into a different type, invoking [onRead] after reading and [beforeWrite] before writing.
