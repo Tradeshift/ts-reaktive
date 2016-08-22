@@ -4,13 +4,16 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.stream.Stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.tradeshift.reaktive.json.JSONEvent.Value;
 
 import javaslang.Function1;
 import javaslang.control.Try;
 
 public class ValueProtocol<T> extends JSONProtocol<T> {
-    // Only numeric types are defined here, since they have to marshal to numbers in JSON. 
+    // Only numeric and boolean types are defined here, since they have to marshal to numbers and booleans in JSON. 
     // For everything that marshals to strings, re-use StringMarshallable.* using JSONProtocol.as(XXX, ...)
     
     /** A Java integer represented as a JSON number (on reading, JSON string is also allowed) */
@@ -38,6 +41,8 @@ public class ValueProtocol<T> extends JSONProtocol<T> {
         v -> Try.of(() -> v.getValueAsString().equals("true")), 
         b -> b ? JSONEvent.TRUE : JSONEvent.FALSE);
     
+    private static final Logger log = LoggerFactory.getLogger(ValueProtocol.class);
+    
     private final Function1<Value, Try<T>> tryRead;
     private final Function1<T,Value> write;
     private final String description;
@@ -52,32 +57,6 @@ public class ValueProtocol<T> extends JSONProtocol<T> {
         this.write = write;
     }
 
-    private final Reader<T> reader = new Reader<T>() {
-        private int level = 0;
-        
-        @Override
-        public Try<T> reset() {
-            level = 0;
-            return none();
-        }
-
-        @Override
-        public Try<T> apply(JSONEvent evt) {
-            if (evt == JSONEvent.START_OBJECT || evt == JSONEvent.START_ARRAY) {
-                level++;
-            } else if (evt == JSONEvent.END_OBJECT || evt == JSONEvent.END_ARRAY) {
-                level--;
-            }
-            
-            if (level == 0 && evt instanceof JSONEvent.Value) {
-                return tryRead.apply(JSONEvent.Value.class.cast(evt));
-            } else {
-                return none();
-            }
-        }
-
-    };
-
     private final Writer<T> writer = new Writer<T>() {
         @Override
         public Stream<JSONEvent> apply(T value) {
@@ -87,7 +66,33 @@ public class ValueProtocol<T> extends JSONProtocol<T> {
 
     @Override
     public Reader<T> reader() {
-        return reader;
+        return new Reader<T>() {
+            private int level = 0;
+            
+            @Override
+            public Try<T> reset() {
+                level = 0;
+                return none();
+            }
+
+            @Override
+            public Try<T> apply(JSONEvent evt) {
+                if (evt == JSONEvent.START_OBJECT || evt == JSONEvent.START_ARRAY) {
+                    level++;
+                } else if (evt == JSONEvent.END_OBJECT || evt == JSONEvent.END_ARRAY) {
+                    level--;
+                }
+                
+                if (level == 0 && evt instanceof JSONEvent.Value) {
+                    Try<T> result = tryRead.apply(JSONEvent.Value.class.cast(evt));
+                    log.info("Read {}", result);
+                    return result;
+                } else {
+                    return none();
+                }
+            }
+
+        };
     }
 
     @Override
