@@ -18,6 +18,9 @@ lazy val projectSettings = PB.protobufSettings ++ Seq(
     Resolver.jcenterRepo),
   dependencyOverrides += "com.google.protobuf" % "protobuf-java" % "2.6.1",
   unmanagedResourceDirectories in Compile <+= (sourceDirectory in PB.protobufConfig),
+  PB.runProtoc in PB.protobufConfig := { args =>
+    com.github.os72.protocjar.Protoc.runProtoc("-v261" +: args.toArray)
+  },
   libraryDependencies ++= Seq(
     "io.javaslang" % "javaslang" % "2.0.1",
     "org.slf4j" % "slf4j-api" % "1.7.12",
