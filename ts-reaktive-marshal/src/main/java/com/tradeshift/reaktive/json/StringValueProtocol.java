@@ -26,6 +26,11 @@ public class StringValueProtocol extends ValueProtocol<String> {
             public Reader<T> reader() {
                 return parent.reader().flatMap(s -> regex.match(s).toTry());
             }
+            
+            @Override
+            public String toString() {
+                return "~\"" + regex.toString() + "\"";
+            }
         };
     }
 
@@ -47,6 +52,10 @@ public class StringValueProtocol extends ValueProtocol<String> {
                 return parent.writer().compose(onWrite);
             }
             
+            @Override
+            public String toString() {
+                return "~\"" + regex.toString() + "\"";
+            }
         };
     }
 }

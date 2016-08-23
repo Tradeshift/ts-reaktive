@@ -68,24 +68,21 @@ public abstract class JSONReadProtocol<T> {
         return none();
     }
     
-    /*
-    protected Try<T> combine(Try<T> previous, Try<T> current) {
-        // Default strategy for combining:
-        //   - If either one is NONE, return the other.
-        //   - If either one is a failure, return that (failures aren't ignored)
-        //   - Otherwise, return the newest value
-        
-        if (isNone(previous) && current.isSuccess()) {
-            return current;
-        } else if (previous.isSuccess() && isNone(current)) {
-            return previous;
-        } else if (current.isFailure()) {
-            return current;
-        } else if (previous.isFailure()) {
-            return previous;
-        } else {
-            return current;
-        }
-    }
-    */
+    /**
+     * Maps the protocol into a different type, invoking [onRead] after reading.
+     */
+    public <U> JSONReadProtocol<U> map(Function1<T,U> onRead) {
+        JSONReadProtocol<T> parent = this;
+        return new JSONReadProtocol<U>() {
+            @Override
+            public Reader<U> reader() {
+                return parent.reader().map(onRead);
+            }
+
+            @Override
+            protected Try<U> empty() {
+                return parent.empty().map(onRead);
+            }
+        };
+    };
 }

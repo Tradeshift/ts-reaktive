@@ -5,7 +5,7 @@ import sbtprotobuf.{ProtobufPlugin=>PB}
 lazy val projectSettings = PB.protobufSettings ++ Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  version := "0.0.8",
+  version := "0.0.9",
   scalaVersion := "2.11.8",
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
@@ -86,6 +86,7 @@ lazy val `ts-reaktive-kamon-akka-cluster` = project.settings(commonSettings: _*)
 
 lazy val root = (project in file(".")).settings(publish := { }, publishLocal := { }).aggregate(
   `ts-reaktive-akka`,
+  `ts-reaktive-java`,
   `ts-reaktive-actors`,
   `ts-reaktive-cassandra`,
   `ts-reaktive-replication`,

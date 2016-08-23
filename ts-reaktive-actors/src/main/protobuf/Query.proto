@@ -1,4 +1,6 @@
-package com.tradeshift.reaktive.protobuf;
+package Query;
+
+option java_package = "com.tradeshift.reaktive.protobuf";
 
 /**
  * This envelope is wrapped around all events that are queried through com.tradeshift.reaktive.akka.rest.EventRoute

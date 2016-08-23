@@ -8,6 +8,7 @@ import static com.tradeshift.reaktive.json.JSONProtocol.alternatively;
 import static com.tradeshift.reaktive.json.JSONProtocol.anyField;
 import static com.tradeshift.reaktive.json.JSONProtocol.array;
 import static com.tradeshift.reaktive.json.JSONProtocol.field;
+import static com.tradeshift.reaktive.json.JSONProtocol.foldLeft;
 import static com.tradeshift.reaktive.json.JSONProtocol.hashMap;
 import static com.tradeshift.reaktive.json.JSONProtocol.integerValue;
 import static com.tradeshift.reaktive.json.JSONProtocol.longValue;
@@ -196,12 +197,11 @@ public class JSONProtocolSpec {{
         });
     });
     
-    describe("a JSONProtocol for an array root", () -> {
-        JSONProtocol<DTO2> proto = array(
+    describe("a JSONProtocol for reading an array root", () -> {
+        JSONReadProtocol<DTO2> proto = array(
             object(
                 option(field("i", integerValue)),
-                i -> new DTO2(Option.none(), i),
-                t -> t.getI()
+                i -> new DTO2(Option.none(), i)
                 )
             );
         
@@ -361,5 +361,28 @@ public class JSONProtocolSpec {{
                 .isEqualTo("{\"foo\":[3,4],\"hello\":[1,2]}");
         });
         
+    });
+    
+    describe("a JSONProtocol folding all array elements into a single value", () -> {
+        JSONReadProtocol<Integer> proto = array(
+            foldLeft(
+            integerValue,
+            () -> 0,
+            (i1, i2) -> i1 + i2
+        ));
+        
+        it("should invoke the fold function on all elements", () -> {
+            assertThat(jackson.parse("[1,2,3]", proto.reader()).findFirst()).contains(6);
+        });
+        
+        it("should yield initial on an empty array", () -> {
+            assertThat(jackson.parse("[]", proto.reader()).findFirst()).contains(0);
+        });
+        
+        it("should fail early if an item doesn't fit", () -> {
+            assertThatThrownBy(() -> 
+                jackson.parse("[1,false,3]", proto.reader()).findFirst()
+            ).hasMessageContaining("false");
+        });
     });
 }}

@@ -33,4 +33,23 @@ public interface JSONWriteProtocol<T> {
     public default boolean isEmpty(T value) {
         return false;
     }
+    
+    /**
+     * Maps the protocol into a different type, invoking [beforeWrite] before writing.
+     */
+    public default <U> JSONWriteProtocol<U> compose(Function1<U,T> beforeWrite) {
+        JSONWriteProtocol<T> parent = this;
+        return new JSONWriteProtocol<U>() {
+            @Override
+            public Writer<U> writer() {
+                return parent.writer().compose(beforeWrite);
+            }
+            
+            @Override
+            public boolean isEmpty(U value) {
+                return parent.isEmpty(beforeWrite.apply(value));
+            }
+        };
+    };
+    
 }
