@@ -1,5 +1,7 @@
 package com.tradeshift.reaktive.json;
 
+import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.stream.Stream;
@@ -8,13 +10,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.tradeshift.reaktive.json.JSONEvent.Value;
+import com.tradeshift.reaktive.marshal.Protocol;
+import com.tradeshift.reaktive.marshal.Reader;
+import com.tradeshift.reaktive.marshal.Writer;
 
 import javaslang.Function1;
 import javaslang.control.Try;
 
-public class ValueProtocol<T> extends JSONProtocol<T> {
+public class ValueProtocol<T> implements Protocol<JSONEvent, T> {
     // Only numeric and boolean types are defined here, since they have to marshal to numbers and booleans in JSON. 
-    // For everything that marshals to strings, re-use StringMarshallable.* using JSONProtocol.as(XXX, ...)
+    // For everything that marshals to strings, use stringValue.as(...)
     
     /** A Java integer represented as a JSON number (on reading, JSON string is also allowed) */
     public static final ValueProtocol<Integer> INTEGER = of("(signed 32-bit integer)",
@@ -37,9 +42,14 @@ public class ValueProtocol<T> extends JSONProtocol<T> {
         d -> new JSONEvent.NumericValue(String.valueOf(d)));
     
     /** A Java boolean represented a JSON boolean (on reading, a JSON string of "true" or "false" is also allowed) */ 
-    public static final JSONProtocol<Boolean> BOOLEAN = of("(boolean)", 
+    public static final ValueProtocol<Boolean> BOOLEAN = of("(boolean)", 
         v -> Try.of(() -> v.getValueAsString().equals("true")), 
         b -> b ? JSONEvent.TRUE : JSONEvent.FALSE);
+    
+    /** A Java String. Internal implementation, @see {@link StringValueProtocol} */
+    static final ValueProtocol<String> STRING = of("(string)",
+        evt -> Try.success(evt.getValueAsString()), 
+        s -> new JSONEvent.StringValue(s));
     
     private static final Logger log = LoggerFactory.getLogger(ValueProtocol.class);
     
@@ -57,7 +67,7 @@ public class ValueProtocol<T> extends JSONProtocol<T> {
         this.write = write;
     }
 
-    private final Writer<T> writer = new Writer<T>() {
+    private final Writer<JSONEvent, T> writer = new Writer<JSONEvent, T>() {
         @Override
         public Stream<JSONEvent> apply(T value) {
             return Stream.of(write.apply(value));
@@ -65,8 +75,8 @@ public class ValueProtocol<T> extends JSONProtocol<T> {
     };
 
     @Override
-    public Reader<T> reader() {
-        return new Reader<T>() {
+    public Reader<JSONEvent, T> reader() {
+        return new Reader<JSONEvent, T>() {
             private int level = 0;
             
             @Override
@@ -94,9 +104,14 @@ public class ValueProtocol<T> extends JSONProtocol<T> {
 
         };
     }
+    
+    @Override
+    public Class<? extends JSONEvent> getEventType() {
+        return JSONEvent.class;
+    }
 
     @Override
-    public Writer<T> writer() {
+    public Writer<JSONEvent, T> writer() {
         return writer;
     }
 

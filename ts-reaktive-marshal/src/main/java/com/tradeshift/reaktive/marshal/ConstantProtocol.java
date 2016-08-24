@@ -1,4 +1,4 @@
-package com.tradeshift.reaktive.json;
+package com.tradeshift.reaktive.marshal;
 
 import javaslang.control.Try;
 
@@ -12,24 +12,24 @@ public class ConstantProtocol {
      */
     public static class Present { private Present() {} }
     public static final Present PRESENT = new Present();
-
-    public static <T> JSONReadProtocol<Present> read(JSONReadProtocol<T> inner, T value) {
-        return new JSONReadProtocol<Present>() {
+    
+    public static <E,T> ReadProtocol<E,Present> read(ReadProtocol<E,T> inner, T value) {
+        return new ReadProtocol<E,Present>() {
             @Override
-            public Reader<Present> reader() {
-                Reader<T> innerReader = inner.reader();
+            public Reader<E,Present> reader() {
+                final Reader<E,T> innerReader = inner.reader();
                 
-                return new Reader<Present>() {
+                return new Reader<E,Present>() {
                     @Override
                     public Try<Present> reset() {
                         return emit(innerReader.reset());
                     }
-                    
+
                     @Override
-                    public Try<Present> apply(JSONEvent evt) {
+                    public Try<Present> apply(E evt) {
                         return emit(innerReader.apply(evt));
                     }
-
+                    
                     private Try<Present> emit(Try<T> t) {
                         return t.filter(value::equals).map(v -> PRESENT);
                     }
@@ -42,14 +42,17 @@ public class ConstantProtocol {
             }
         };
     }
-    
-    public static <T> JSONWriteProtocol<Present> write(JSONWriteProtocol<T> inner, T value) {
-        return new JSONWriteProtocol<Present>() {
-            private final Writer<Present> writer = p -> inner.writer().apply(value);
+
+    public static <E,T> WriteProtocol<E,Present> write(WriteProtocol<E,T> inner, T value) {
+        return new WriteProtocol<E,Present>() {
+            @Override
+            public Writer<E,Present> writer() {
+                return v -> inner.writer().apply(value);
+            }
 
             @Override
-            public Writer<Present> writer() {
-                return writer;
+            public Class<? extends E> getEventType() {
+                return inner.getEventType();
             }
             
             @Override
@@ -58,25 +61,8 @@ public class ConstantProtocol {
             }
         };
     }
-    
-    public static <T> JSONProtocol<Present> readWrite(JSONProtocol<T> inner, T value) {
-        JSONReadProtocol<Present> read = read(inner, value);
-        JSONWriteProtocol<Present> write = write(inner, value);
-        return new JSONProtocol<Present>() {
-            @Override
-            public Writer<Present> writer() {
-                return write.writer();
-            }
 
-            @Override
-            public Reader<Present> reader() {
-                return read.reader();
-            }
-            
-            @Override
-            public String toString() {
-                return inner.toString() + " with value " + value;
-            }
-        };
+    public static <E,T> Protocol<E,Present> readWrite(Protocol<E,T> inner, T value) {
+        return Protocol.of(read(inner, value), write(inner, value));
     }
 }

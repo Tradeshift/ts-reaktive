@@ -1,11 +1,18 @@
 package com.tradeshift.reaktive.xml;
 
+
+import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
+
 import java.util.stream.Stream;
 
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventFactory;
 import javax.xml.stream.events.Attribute;
 import javax.xml.stream.events.XMLEvent;
+
+import com.tradeshift.reaktive.marshal.Protocol;
+import com.tradeshift.reaktive.marshal.Reader;
+import com.tradeshift.reaktive.marshal.Writer;
 
 import javaslang.Tuple;
 import javaslang.Tuple2;
@@ -14,30 +21,31 @@ import javaslang.control.Try;
 /**
  * Handles reading and writing a single attribute of a tag, matching any name 
  */
-public class AnyAttributeProtocol extends XMLProtocol<Tuple2<QName,String>> {
+public class AnyAttributeProtocol implements Protocol<XMLEvent,Tuple2<QName,String>> {
     public static final AnyAttributeProtocol INSTANCE = new AnyAttributeProtocol();
     
     private static final XMLEventFactory factory = XMLEventFactory.newFactory();
     
-    private final Writer<Tuple2<QName,String>> writer;
+    private final Writer<XMLEvent,Tuple2<QName,String>> writer;
 
     private AnyAttributeProtocol() {
         this.writer = t -> Stream.of(factory.createAttribute(t._1(), t._2()));
     }
     
     @Override
-    public boolean isAttributeProtocol() {
-        return true;
+    public Class<? extends XMLEvent> getEventType() {
+        return Attribute.class;
     }
-
+    
     @Override
-    public Reader<Tuple2<QName,String>> reader() {
-        return new Reader<Tuple2<QName,String>>() {
+    public Reader<XMLEvent,Tuple2<QName,String>> reader() {
+        return new Reader<XMLEvent,Tuple2<QName,String>>() {
             private int level = 0;
 
             @Override
-            public void reset() {
+            public Try<Tuple2<QName,String>> reset() {
                 level = 0;
+                return none();
             }
 
             @Override
@@ -59,7 +67,7 @@ public class AnyAttributeProtocol extends XMLProtocol<Tuple2<QName,String>> {
     }
     
     @Override
-    public Writer<Tuple2<QName,String>> writer() {
+    public Writer<XMLEvent,Tuple2<QName,String>> writer() {
         return writer;
     }
 }

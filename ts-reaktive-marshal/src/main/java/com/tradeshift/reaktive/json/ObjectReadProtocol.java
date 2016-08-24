@@ -1,5 +1,8 @@
 package com.tradeshift.reaktive.json;
 
+import static com.tradeshift.reaktive.marshal.ReadProtocol.isNone;
+import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -8,6 +11,9 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.tradeshift.reaktive.marshal.ConstantProtocol;
+import com.tradeshift.reaktive.marshal.ReadProtocol;
+import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.ValidationException;
 
 import javaslang.collection.Seq;
@@ -18,24 +24,24 @@ import javaslang.control.Try;
  * Generic class to combine several nested FieldProtocols into reading/writing a Java object instance.  
  */
 @SuppressWarnings("unchecked")
-public class ObjectReadProtocol<T> extends JSONReadProtocol<T> {
+public class ObjectReadProtocol<T> implements ReadProtocol<JSONEvent, T> {
     private static final Logger log = LoggerFactory.getLogger(ObjectReadProtocol.class);
     
-    private final Seq<JSONReadProtocol<?>> protocols;
+    private final Seq<ReadProtocol<JSONEvent, ?>> protocols;
     private final Function<List<?>, T> produce;
-    private final Seq<JSONReadProtocol<ConstantProtocol.Present>> conditions;
+    private final Seq<ReadProtocol<JSONEvent, ConstantProtocol.Present>> conditions;
 
     public ObjectReadProtocol(
-        List<JSONReadProtocol<?>> protocols,
+        List<ReadProtocol<JSONEvent, ?>> protocols,
         Function<List<?>, T> produce
     ) {
         this(Vector.ofAll(protocols), produce, Vector.empty());
     }
     
     ObjectReadProtocol(
-        Seq<JSONReadProtocol<?>> protocols,
+        Seq<ReadProtocol<JSONEvent, ?>> protocols,
         Function<List<?>, T> produce,
-        Seq<JSONReadProtocol<ConstantProtocol.Present>> conditions
+        Seq<ReadProtocol<JSONEvent, ConstantProtocol.Present>> conditions
     ) {
         this.protocols = protocols;
         this.produce = produce;
@@ -43,10 +49,10 @@ public class ObjectReadProtocol<T> extends JSONReadProtocol<T> {
     }
 
     @Override
-    public Reader<T> reader() {
-        return new Reader<T>() {
-            private final Seq<JSONReadProtocol<Object>> all = protocols.appendAll(conditions).map(p -> (JSONReadProtocol<Object>)p);
-            private final List<Reader<Object>> readers = all.map(p -> p.reader()).toJavaList();
+    public Reader<JSONEvent, T> reader() {
+        return new Reader<JSONEvent, T>() {
+            private final Seq<ReadProtocol<JSONEvent, Object>> all = protocols.appendAll(conditions).map(p -> (ReadProtocol<JSONEvent, Object>)p);
+            private final List<Reader<JSONEvent, Object>> readers = all.map(p -> p.reader()).toJavaList();
             private Try<Object>[] values = (Try<Object>[]) new Try<?>[readers.size()];
             private int nestedObjects = 0;
             private boolean matched = false;
@@ -92,14 +98,15 @@ public class ObjectReadProtocol<T> extends JSONReadProtocol<T> {
                     
                     for (int i = 0; i < readers.size(); i++) {
                         Try<Object> r = readers.get(i).reset();
-                        if (!isNone(r)) {
+                        
+                        if (!isNone(r) && values[i].eq(protocols.get(i).empty())) {
                             values[i] = r;                            
                         }
                     }
                     
                     Object[] args = new Object[protocols.size()];
                     for (int i = 0; i < args.length; i++) {
-                        JSONReadProtocol<Object> p = (JSONReadProtocol<Object>) protocols.get(i);
+                        ReadProtocol<JSONEvent, Object> p = (ReadProtocol<JSONEvent, Object>) protocols.get(i);
                         Try<Object> t = values[i];
                         log.debug("{} said {}", p, t);
                         t.failed().forEach(failure::set);
@@ -115,9 +122,9 @@ public class ObjectReadProtocol<T> extends JSONReadProtocol<T> {
                     if (matched) {
                         for (int i = 0; i < readers.size(); i++) {
                             int idx = i;
-                            Reader<Object> r = readers.get(i);
+                            Reader<JSONEvent, Object> r = readers.get(i);
                             Try<Object> t = r.apply(evt);
-                            if (t != JSONReadProtocol.NONE) {
+                            if (t != ReadProtocol.NONE) {
                                 values[idx] = t;
                                 log.debug("   -> {}", values[idx]);
                             }
@@ -144,7 +151,7 @@ public class ObjectReadProtocol<T> extends JSONReadProtocol<T> {
     /**
      * Returns a new protocol that, in addition, also requires the given nested protocol to be present with the given constant value
      */
-    public <U> ObjectReadProtocol<T> having(JSONReadProtocol<U> nestedProtocol, U value) {
+    public <U> ObjectReadProtocol<T> having(ReadProtocol<JSONEvent, U> nestedProtocol, U value) {
         return new ObjectReadProtocol<T>(protocols, produce, conditions.append(ConstantProtocol.read(nestedProtocol, value)));
     }
     

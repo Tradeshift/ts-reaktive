@@ -1,23 +1,31 @@
 package com.tradeshift.reaktive.json;
 
+import static com.tradeshift.reaktive.marshal.ReadProtocol.isNone;
+import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
+
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.tradeshift.reaktive.marshal.ReadProtocol;
+import com.tradeshift.reaktive.marshal.Reader;
+import com.tradeshift.reaktive.marshal.WriteProtocol;
+import com.tradeshift.reaktive.marshal.Writer;
 
 import javaslang.control.Try;
 
 public class ArrayProtocol<E> {
     private static final Logger log = LoggerFactory.getLogger(ArrayProtocol.class);
     
-    public static <E> JSONReadProtocol<E> read(JSONReadProtocol<E> innerProtocol) {
-        return new JSONReadProtocol<E>() {
-            private final JSONReadProtocol<E> owner = this;
+    public static <E> ReadProtocol<JSONEvent, E> read(ReadProtocol<JSONEvent, E> innerProtocol) {
+        return new ReadProtocol<JSONEvent, E>() {
+            private final ReadProtocol<JSONEvent, E> owner = this;
             
             @Override
-            public com.tradeshift.reaktive.json.JSONReadProtocol.Reader<E> reader() {
-                return new Reader<E>() {
-                    private final Reader<E> inner = innerProtocol.reader();
+            public Reader<JSONEvent, E> reader() {
+                return new Reader<JSONEvent, E>() {
+                    private final Reader<JSONEvent, E> inner = innerProtocol.reader();
                     private int nestedObjects = 0;
                     private boolean matched = false;
                     private boolean wasEmpty = true;
@@ -72,7 +80,7 @@ public class ArrayProtocol<E> {
             }
             
             @Override
-            protected Try<E> empty() {
+            public Try<E> empty() {
                 return innerProtocol.empty();
             }
             
@@ -83,10 +91,10 @@ public class ArrayProtocol<E> {
         };
     }
 
-    public static <E> JSONWriteProtocol<E> write(JSONWriteProtocol<E> innerProtocol) {
-        return new JSONWriteProtocol<E>() {
-            private final Writer<E> writer = e -> {
-                Writer<E> inner = innerProtocol.writer();
+    public static <E> WriteProtocol<JSONEvent, E> write(WriteProtocol<JSONEvent, E> innerProtocol) {
+        return new WriteProtocol<JSONEvent, E>() {
+            private final Writer<JSONEvent, E> writer = e -> {
+                Writer<JSONEvent, E> inner = innerProtocol.writer();
                 return
                     Stream.concat(
                         Stream.concat(
@@ -99,44 +107,13 @@ public class ArrayProtocol<E> {
             };
             
             @Override
-            public JSONWriteProtocol.Writer<E> writer() {
+            public Class<? extends JSONEvent> getEventType() {
+                return JSONEvent.class;
+            }
+            
+            @Override
+            public Writer<JSONEvent, E> writer() {
                 return writer;
-            }
-            
-            @Override
-            public boolean isEmpty(E value) {
-                return innerProtocol.isEmpty(value);
-            }
-            
-            @Override
-            public String toString() {
-                return "[ " + innerProtocol + "]";
-            }            
-        };
-    }
-    
-    public static <E> JSONProtocol<E> readWrite(JSONProtocol<E> innerProtocol) {
-        JSONReadProtocol<E> read = read(innerProtocol);
-        JSONWriteProtocol<E> write = write(innerProtocol);
-        return new JSONProtocol<E>() {
-            @Override
-            public Writer<E> writer() {
-                return write.writer();
-            }
-
-            @Override
-            public Reader<E> reader() {
-                return read.reader();
-            }
-            
-            @Override
-            public boolean isEmpty(E value) {
-                return write.isEmpty(value);
-            }
-            
-            @Override
-            protected Try<E> empty() {
-                return read.empty();
             }
             
             @Override

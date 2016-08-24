@@ -3,18 +3,22 @@ package com.tradeshift.reaktive.json;
 import java.util.List;
 import java.util.function.Function;
 
+import com.tradeshift.reaktive.marshal.Protocol;
+import com.tradeshift.reaktive.marshal.Reader;
+import com.tradeshift.reaktive.marshal.Writer;
+
 import javaslang.Function1;
 import javaslang.collection.Vector;
 
 /**
  * Generic class to combine several nested FieldProtocols into reading/writing a Java object instance.  
  */
-public class ObjectProtocol<T> extends JSONProtocol<T> {
+public class ObjectProtocol<T> implements Protocol<JSONEvent, T> {
     private final ObjectReadProtocol<T> read;
     private final ObjectWriteProtocol<T> write;
 
     public ObjectProtocol(
-        List<JSONProtocol<?>> protocols,
+        List<Protocol<JSONEvent, ?>> protocols,
         Function<List<?>, T> produce,
         List<Function1<T, ?>> getters
     ) {
@@ -28,20 +32,30 @@ public class ObjectProtocol<T> extends JSONProtocol<T> {
     }
 
     @Override
-    public Reader<T> reader() {
+    public Reader<JSONEvent, T> reader() {
         return read.reader();
     }
 
     @Override
-    public Writer<T> writer() {
+    public Writer<JSONEvent, T> writer() {
         return write.writer();
+    }
+    
+    @Override
+    public String toString() {
+        return read.toString();
+    }
+    
+    @Override
+    public Class<? extends JSONEvent> getEventType() {
+        return write.getEventType();
     }
     
     /**
      * Returns a new protocol that, in addition, also requires the given nested protocol to be present with the given constant value,
      * writing out the value when serializing as well.
      */
-    public <U> ObjectProtocol<T> having(JSONProtocol<U> nestedProtocol, U value) {
+    public <U> ObjectProtocol<T> having(Protocol<JSONEvent, U> nestedProtocol, U value) {
         return new ObjectProtocol<T>(read.having(nestedProtocol, value), write.having(nestedProtocol, value));
     }
     

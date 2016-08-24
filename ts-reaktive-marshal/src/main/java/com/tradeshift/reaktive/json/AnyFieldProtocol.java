@@ -1,9 +1,16 @@
 package com.tradeshift.reaktive.json;
 
+import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
+
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.tradeshift.reaktive.marshal.ReadProtocol;
+import com.tradeshift.reaktive.marshal.Reader;
+import com.tradeshift.reaktive.marshal.WriteProtocol;
+import com.tradeshift.reaktive.marshal.Writer;
 
 import javaslang.Tuple;
 import javaslang.Tuple2;
@@ -11,18 +18,19 @@ import javaslang.control.Option;
 import javaslang.control.Try;
 
 /**
- * Protocol for reading and writing a single JSON field and its value (through an inner protocol), matching all fields
+ * Protocol for reading and writing individual JSON fields and their value (through an inner protocol), mapping each field's name
+ * as a String, and delegating to an inner protocol for the value.
  */
 public class AnyFieldProtocol {
     private static final Logger log = LoggerFactory.getLogger(AnyFieldProtocol.class);
     
-    public static <T> JSONReadProtocol<Tuple2<String,T>> read(JSONReadProtocol<T> innerProtocol) {
+    public static <T> ReadProtocol<JSONEvent,Tuple2<String,T>> read(ReadProtocol<JSONEvent,T> innerProtocol) {
         
-        return new JSONReadProtocol<Tuple2<String,T>>() {
+        return new ReadProtocol<JSONEvent,Tuple2<String,T>>() {
             @Override
-            public Reader<Tuple2<String, T>> reader() {
-                return new Reader<Tuple2<String,T>>() {
-                    private final Reader<T> inner = innerProtocol.reader();
+            public Reader<JSONEvent, Tuple2<String, T>> reader() {
+                return new Reader<JSONEvent, Tuple2<String,T>>() {
+                    private final Reader<JSONEvent, T> inner = innerProtocol.reader();
                     private boolean matched;
                     private int nestedObjects = 0;
                     private Option<String> lastField = Option.none();
@@ -80,45 +88,25 @@ public class AnyFieldProtocol {
         };
     }
     
-    public static <T> JSONWriteProtocol<Tuple2<String,T>> write(JSONWriteProtocol<T> innerProtocol) {
-        return new JSONWriteProtocol<Tuple2<String,T>>() {
-            final Writer<Tuple2<String,T>> writer = value -> {
-                if (!innerProtocol.isEmpty(value._2)) {
-                    return Stream.concat(Stream.of(new JSONEvent.FieldName(value._1)), innerProtocol.writer().apply(value._2));
-                } else {
-                    return Stream.empty();
-                }
+    public static <T> WriteProtocol<JSONEvent, Tuple2<String,T>> write(WriteProtocol<JSONEvent, T> innerProtocol) {
+        return new WriteProtocol<JSONEvent, Tuple2<String,T>>() {
+            final Writer<JSONEvent, Tuple2<String,T>> writer = value -> {
+                return FieldProtocol.concatIfSecondNotEmpty(Stream.of(new JSONEvent.FieldName(value._1)), innerProtocol.writer().apply(value._2));
             };
             
             @Override
-            public Writer<Tuple2<String,T>> writer() {
+            public Class<? extends JSONEvent> getEventType() {
+                return JSONEvent.class;
+            }
+            
+            @Override
+            public Writer<JSONEvent, Tuple2<String,T>> writer() {
                 return writer;
             }
             
             @Override
             public String toString() {
                 return "(any): " + innerProtocol;
-            }
-        };
-    }
-    
-    public static <T> JSONProtocol<Tuple2<String,T>> readWrite(JSONProtocol<T> inner) {
-        JSONReadProtocol<Tuple2<String,T>> read = read(inner);
-        JSONWriteProtocol<Tuple2<String,T>> write = write(inner);
-        return new JSONProtocol<Tuple2<String,T>>() {
-            @Override
-            public Writer<Tuple2<String,T>> writer() {
-                return write.writer();
-            }
-
-            @Override
-            public Reader<Tuple2<String,T>> reader() {
-                return read.reader();
-            }
-            
-            @Override
-            public String toString() {
-                return "(any): " + inner;
             }
         };
     }
