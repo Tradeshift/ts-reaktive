@@ -6,14 +6,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import akka.http.javadsl.marshallers.jackson.Jackson;
+import akka.http.javadsl.marshalling.Marshaller;
 import akka.http.javadsl.model.HttpEntity;
 import akka.http.javadsl.model.RequestEntity;
-import akka.http.javadsl.server.Marshaller;
-import akka.http.javadsl.server.Unmarshaller;
+import akka.http.javadsl.unmarshalling.Unmarshaller;
 
 /**
  * Various marshallers that help marshalling to/from JSON using Jackson. It configures
- * the default object mapper with more lenient settings than the default mapper akka's 
+ * the default object mapper with more lenient settings than the default mapper akka's
  * Jackson support uses.
  */
 public class JacksonMarshallers {
@@ -35,7 +35,7 @@ public class JacksonMarshallers {
     
     public static final Unmarshaller<HttpEntity,JsonNode> asJsonNode = as(JsonNode.class);
     
-    public static final <T> Unmarshaller<HttpEntity,T> as(Class<T> type) { 
+    public static final <T> Unmarshaller<HttpEntity,T> as(Class<T> type) {
         return Jackson.unmarshaller(mapper, type);
     }
 }

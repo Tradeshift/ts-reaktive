@@ -30,7 +30,7 @@ lazy val projectSettings = PB.protobufSettings ++ Seq(
 
 lazy val commonSettings = projectSettings ++ Seq(
   libraryDependencies ++= {
-    val akkaVersion = "2.4.8"
+    val akkaVersion = "2.4.9"
     val kamonVersion = "0.6.2"
 
     Seq(
