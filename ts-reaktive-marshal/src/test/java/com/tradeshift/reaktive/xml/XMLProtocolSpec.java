@@ -1,16 +1,21 @@
 package com.tradeshift.reaktive.xml;
 
 
+import static com.tradeshift.reaktive.marshal.Protocol.alternatively;
+import static com.tradeshift.reaktive.marshal.Protocol.arrayList;
+import static com.tradeshift.reaktive.marshal.Protocol.forEach;
+import static com.tradeshift.reaktive.marshal.Protocol.hashMap;
+import static com.tradeshift.reaktive.marshal.Protocol.option;
+import static com.tradeshift.reaktive.marshal.Protocol.vector;
 import static com.tradeshift.reaktive.marshal.StringMarshallable.INTEGER;
 import static com.tradeshift.reaktive.marshal.StringMarshallable.LONG;
+import static com.tradeshift.reaktive.xml.XMLProtocol.anyAttribute;
+import static com.tradeshift.reaktive.xml.XMLProtocol.anyTagWithAttribute;
+import static com.tradeshift.reaktive.xml.XMLProtocol.anyTagWithBody;
 import static com.tradeshift.reaktive.xml.XMLProtocol.attribute;
-import static com.tradeshift.reaktive.xml.XMLProtocol.*;
-import static com.tradeshift.reaktive.xml.XMLProtocol.foreach;
-import static com.tradeshift.reaktive.xml.XMLProtocol.hashMap;
-import static com.tradeshift.reaktive.xml.XMLProtocol.option;
+import static com.tradeshift.reaktive.xml.XMLProtocol.body;
 import static com.tradeshift.reaktive.xml.XMLProtocol.qname;
 import static com.tradeshift.reaktive.xml.XMLProtocol.tag;
-import static com.tradeshift.reaktive.xml.XMLProtocol.vector;
 import static javaslang.control.Option.none;
 import static javaslang.control.Option.some;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,8 +26,12 @@ import static org.forgerock.cuppa.Cuppa.it;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.xml.stream.events.XMLEvent;
+
 import org.forgerock.cuppa.junit.CuppaRunner;
 import org.junit.runner.RunWith;
+
+import com.tradeshift.reaktive.marshal.Protocol;
 
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
@@ -33,7 +42,7 @@ import javaslang.control.Option;
 public class XMLProtocolSpec {{
     final Stax stax = new Stax();
     
-    final XMLProtocol<DTO1> dto1proto = 
+    final Protocol<XMLEvent,DTO1> dto1proto = 
         tag(qname("dto"),
             tag(qname("l"),
                 body.as(LONG)
@@ -88,7 +97,7 @@ public class XMLProtocolSpec {{
         });
         
         it("should be convertable to and from a new data type using map", () -> {
-            XMLProtocol<String> mapped = dto1proto.map(dto -> dto.getS().head(), s -> new DTO1(123, none(), Vector.of(s)));
+            Protocol<XMLEvent,String> mapped = dto1proto.map(dto -> dto.getS().head(), s -> new DTO1(123, none(), Vector.of(s)));
             assertThat(
                 stax.writeAsString("hello", mapped.writer())
             ).isEqualTo("<dto><l>123</l><s>hello</s></dto>");
@@ -101,9 +110,9 @@ public class XMLProtocolSpec {{
     describe("An XMLProtocol that relies on side-effects to allow streamed parsing", () -> {
         List<DTO1> received = new ArrayList<>();
         
-        XMLReadProtocol<Void> streamedProto = 
+        TagReadProtocol<Void> streamedProto = 
             tag(qname("root"),
-                foreach(dto1proto, received::add)
+                forEach(dto1proto, received::add)
             );
         
         it("should invoke the side effect for each parsed element", () -> {
@@ -194,21 +203,21 @@ public class XMLProtocolSpec {{
             dto -> dto.getL()
         ); 
         
-        XMLProtocol<DTO1> proto = alternatively(
+        Protocol<XMLEvent,DTO1> proto = alternatively(
             protoV1.having(attribute("version"), "1"),
             protoV2.having(attribute("version"), "2")
         );
 
-        it("should unmarshal nothing if the condition is absent", () -> {
-            assertThat(
+        it("should fail if the condition is absent", () -> {
+            assertThatThrownBy(() ->
                 stax.parse("<dto><l>42</l></dto>", proto.reader()).findFirst()
-            ).isEmpty();                                    
+            ).hasMessageContaining("must have @version");
         });
         
-        it("should unmarshal nothing if the condition is wrong", () -> {
-            assertThat(
+        it("should fail if the condition is wrong", () -> {
+            assertThatThrownBy(() ->
                 stax.parse("<dto version='3'><l>42</l></dto>", proto.reader()).findFirst()
-            ).isEmpty();                        
+            ).hasMessageContaining("must have @version");
         });
         
         it("should unmarshal a first alternative correctly", () -> {
@@ -247,7 +256,7 @@ public class XMLProtocolSpec {{
             dto -> dto.getL()
         ); 
         
-        XMLProtocol<DTO1> proto = alternatively(
+        Protocol<XMLEvent,DTO1> proto = alternatively(
             protoV2.having(
                 attribute("version"), "2"
             ),
@@ -268,7 +277,7 @@ public class XMLProtocolSpec {{
     });
     
     describe("An XMLProtocol that deals with plain java ArrayList", () -> {
-        XMLProtocol<List<String>> proto = tag(qname("list"),
+        Protocol<XMLEvent,List<String>> proto = tag(qname("list"),
             arrayList(
                 tag(qname("item"), body)
             )

@@ -1,5 +1,8 @@
 package com.tradeshift.reaktive.xml;
 
+import static com.tradeshift.reaktive.marshal.ReadProtocol.isNone;
+import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
+
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -13,19 +16,24 @@ import javax.xml.stream.events.XMLEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.tradeshift.reaktive.marshal.ConstantProtocol;
+import com.tradeshift.reaktive.marshal.ReadProtocol;
+import com.tradeshift.reaktive.marshal.Reader;
+import com.tradeshift.reaktive.marshal.ValidationException;
+
 import javaslang.collection.Seq;
 import javaslang.collection.Vector;
 import javaslang.control.Option;
 import javaslang.control.Try;
 
 @SuppressWarnings({"unchecked","rawtypes"})
-public class TagReadProtocol<T> extends XMLReadProtocol<T> {
+public class TagReadProtocol<T> implements ReadProtocol<XMLEvent,T> {
     private static final Logger log = LoggerFactory.getLogger(TagReadProtocol.class);
     
     private final Option<QName> name;
-    private final Vector<? extends XMLReadProtocol<?>> protocols;
+    private final Vector<? extends ReadProtocol<XMLEvent,?>> protocols;
     private final Function<List<?>, T> produce;
-    private final Seq<XMLReadProtocol<ConstantProtocol.Present>> conditions;
+    private final Seq<ReadProtocol<XMLEvent,ConstantProtocol.Present>> conditions;
 
     /**
      * Creates a new TagReadProtocol
@@ -33,14 +41,14 @@ public class TagReadProtocol<T> extends XMLReadProtocol<T> {
      * @param protocols Attributes and child tags to read
      * @param produce Function that must accept a list of (attributes.size + tags.size) objects and turn that into T
      */
-    public TagReadProtocol(Option<QName> name, Vector<? extends XMLReadProtocol<?>> protocols, Function<List<?>, T> produce, Seq<XMLReadProtocol<ConstantProtocol.Present>> conditions) {
+    public TagReadProtocol(Option<QName> name, Vector<? extends ReadProtocol<XMLEvent,?>> protocols, Function<List<?>, T> produce, Seq<ReadProtocol<XMLEvent,ConstantProtocol.Present>> conditions) {
         this.name = name;
         this.protocols = protocols;
         this.produce = produce;
         this.conditions = conditions;
     }
     
-    public TagReadProtocol(Option<QName> name, Vector<? extends XMLReadProtocol<?>> protocols, Function<List<?>, T> produce) {
+    public TagReadProtocol(Option<QName> name, Vector<? extends ReadProtocol<XMLEvent,?>> protocols, Function<List<?>, T> produce) {
         this(name, protocols, produce, Vector.empty());
     }
     
@@ -56,26 +64,38 @@ public class TagReadProtocol<T> extends XMLReadProtocol<T> {
         return msg.toString();
     }
     
-    public <U> TagReadProtocol<T> having(XMLReadProtocol<U> nestedProtocol, U value) {
+    /**
+     * Returns a new protocol that, in addition, also requires the given nested protocol to be present with the given constant value
+     */
+    public <U> TagReadProtocol<T> having(ReadProtocol<XMLEvent,U> nestedProtocol, U value) {
         return new TagReadProtocol<T>(name, protocols, produce, conditions.append(ConstantProtocol.read(nestedProtocol, value)));
     }
     
     @Override
-    public Reader<T> reader() {
-        return new Reader<T>() {
-            private final Seq<XMLReadProtocol<Object>> all = protocols.map(p -> (XMLReadProtocol<Object>)p).appendAll(conditions.map(p -> XMLReadProtocol.narrow(p))); 
-            private final List<Reader<Object>> readers = all.map(p -> p.reader()).toJavaList();
+    public Reader<XMLEvent,T> reader() {
+        return new Reader<XMLEvent,T>() {
+            private final Seq<ReadProtocol<XMLEvent,Object>> all = protocols.map(p -> (ReadProtocol<XMLEvent,Object>)p).appendAll(conditions.map(p -> ReadProtocol.widen(p))); 
+            private final List<Reader<XMLEvent,Object>> readers = all.map(p -> p.reader()).toJavaList();
             private final Try<Object>[] values = new Try[readers.size()];
             
             private int level = 0;
             private boolean match = false;
             
+            {
+                reset();
+            }
+            
             @Override
-            public void reset() {
+            public Try<T> reset() {
                 level = 0;
                 match = false;
                 readers.forEach(r -> r.reset());
-                Arrays.fill(values, null);
+                Arrays.fill(values, none());
+                for (int i = 0; i < protocols.size(); i++) {
+                    values[i] = (Try<Object>) protocols.get(i).empty();
+                    log.debug("{} init to {}", protocols.get(i), values[i]);
+                }
+                return none();
             }
             
             @Override
@@ -107,9 +127,26 @@ public class TagReadProtocol<T> extends XMLReadProtocol<T> {
                     if (name.isEmpty()) {
                         args[0] = evt.asEndElement().getName();
                     }
+                    
+                    for (int i = protocols.size(); i < values.length; i++) {
+                        if (isNone(values[i])) {
+                            failure.set(new ValidationException("must have " + conditions.get(i - protocols.size())));
+                        }
+                    }
+                    
                     for (int i = 0; i < all.size(); i++) {
-                        XMLReadProtocol<Object> p = all.get(i);
-                        Try<Object> t = (values[i] != null) ? values[i] : p.empty();
+                        Try<Object> r = readers.get(i).reset();
+                        log.debug("{} reset: {}", all.get(i), r);
+                        if (!isNone(r) && values[i].eq(all.get(i).empty())) {
+                            values[i] = r;                            
+                        }
+                    }
+                    for (int i = 0; i < all.size(); i++) {
+                        log.debug("wrapup: {} -> {}", all.get(i), values[i]);
+                    }
+                    
+                    for (int i = 0; i < protocols.size(); i++) {
+                        Try<Object> t = values[i];
                         t.failed().forEach(failure::set);
                         args[name.isEmpty() ? i+1 : i] = t.getOrElse((Object)null);
                     }
@@ -134,15 +171,13 @@ public class TagReadProtocol<T> extends XMLReadProtocol<T> {
 
             private void forward(XMLEvent evt) {
                 for (int i = 0; i < readers.size(); i++) {
-                    int idx = i;
-                    Reader<Object> r = readers.get(i);
-                    log.debug("Sending {} at {} to {}", evt, evt.getLocation().getLineNumber(), r);
+                    Reader<XMLEvent,Object> r = readers.get(i);
+                    log.debug("Sending {} at {} to {}", evt, evt.getLocation().getLineNumber(), all.get(i));
                     Try<Object> result = r.apply(evt);
-                    result.forEach(value -> { log.debug("   said {}", value); });
-                    if (!isNone(result)) {
-                        XMLReadProtocol<Object> p = all.get(i);
-                        Try<Object> current = (values[idx] != null) ? values[idx] : p.empty();
-                        values[idx] = p.combine(current,  result);
+                    log.debug("{} apply: {}", all.get(i), result);
+                    if (result != ReadProtocol.NONE) {
+                        values[i] = result;
+                        log.debug("   -> {}", values[i]);
                     }
                 }
             }

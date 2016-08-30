@@ -20,12 +20,14 @@ import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.events.XMLEvent;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.tradeshift.reaktive.xml.XMLReadProtocol.Reader;
-import com.tradeshift.reaktive.xml.XMLWriteProtocol.Writer;
+import com.tradeshift.reaktive.marshal.ReadProtocol;
+import com.tradeshift.reaktive.marshal.Reader;
+import com.tradeshift.reaktive.marshal.Writer;
 
 import javaslang.control.Option;
 import javaslang.control.Try;
@@ -45,13 +47,13 @@ public class Stax {
     private static final XMLInputFactory inFactory = XMLInputFactory.newFactory();
     private static final XMLOutputFactory outFactory = XMLOutputFactory.newFactory();
 
-    public <T> String writeAsString(T obj, Writer<T> writer) {
+    public <T> String writeAsString(T obj, Writer<XMLEvent,T> writer) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         write(obj, writer, out);
         return new String(out.toByteArray());
     }
     
-    public <T> void write(T obj, Writer<T> writer, OutputStream out) {
+    public <T> void write(T obj, Writer<XMLEvent,T> writer, OutputStream out) {
         try {
             XMLEventWriter xmlW = outFactory.createXMLEventWriter(out);
             writer.apply(obj).forEach(evt -> {
@@ -67,7 +69,7 @@ public class Stax {
         }
     }
     
-    public <T> Stream<T> parse(File f, Reader<T> reader) {
+    public <T> Stream<T> parse(File f, Reader<XMLEvent,T> reader) {
         try {
             return parse(inFactory.createXMLEventReader(new BufferedInputStream(new FileInputStream(f))), reader);
         } catch (XMLStreamException | FileNotFoundException e) {
@@ -75,7 +77,7 @@ public class Stax {
         }
     }
     
-    public <T> Stream<T> parse(InputStream in, Reader<T> reader) {
+    public <T> Stream<T> parse(InputStream in, Reader<XMLEvent,T> reader) {
         try {
             return parse(inFactory.createXMLEventReader(in), reader);
         } catch (XMLStreamException e) {
@@ -83,7 +85,7 @@ public class Stax {
         }
     }
     
-    public <T> Stream<T> parse(String s, Reader<T> reader) {
+    public <T> Stream<T> parse(String s, Reader<XMLEvent,T> reader) {
         try {
             return parse(inFactory.createXMLEventReader(new StringReader(s)), reader);
         } catch (XMLStreamException e) {
@@ -91,7 +93,7 @@ public class Stax {
         }
     }
     
-    private <T> Stream<T> parse(XMLEventReader in, Reader<T> reader) {
+    private <T> Stream<T> parse(XMLEventReader in, Reader<XMLEvent,T> reader) {
         reader.reset();
         
         Iterator<T> iterator = new Iterator<T>() {
@@ -103,7 +105,7 @@ public class Stax {
                         Try<T> read = reader.apply(in.nextEvent());
                         if (read.isSuccess()) {
                             return read.toOption();
-                        } else if (read.isFailure() && !XMLReadProtocol.isNone(read)) {
+                        } else if (read.isFailure() && !ReadProtocol.isNone(read)) {
                             throw (RuntimeException) read.failed().get();
                         }
                     }

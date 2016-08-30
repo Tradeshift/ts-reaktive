@@ -27,6 +27,11 @@ public abstract class StringMarshallable<T> {
         public String write(String value) {
             return value;
         }
+        
+        @Override
+        public String toString() {
+            return "string";
+        }
     };
 
     /** Java Long converter. For JSON, please prefer to use {@link JSONProtocol.longValue} since it maps to JSON number instead of string. */
@@ -40,6 +45,11 @@ public abstract class StringMarshallable<T> {
         public String write(Long value) {
             return String.valueOf(value);
         }
+        
+        @Override
+        public String toString() {
+            return "long";
+        }        
     };
     
     /** Java Integer converter. For JSON, please prefer to use {@link JSONProtocol.integerValue} since it maps to JSON number instead of string. */
@@ -53,6 +63,11 @@ public abstract class StringMarshallable<T> {
         public String write(Integer value) {
             return String.valueOf(value);
         }
+        
+        @Override
+        public String toString() {
+            return "integer";
+        }        
     };
     
     /** Java BigDecimal converter. For JSON, please prefer to use {@link JSONProtocol.longValue} since it maps to JSON number instead of string. */
@@ -66,6 +81,11 @@ public abstract class StringMarshallable<T> {
         public String write(BigDecimal value) {
             return value.toString();
         }
+        
+        @Override
+        public String toString() {
+            return "big decimal";
+        }        
     };
     
     /** Java BigInteger converter. For JSON, please prefer to use {@link JSONProtocol.longValue} since it maps to JSON number instead of string. */
@@ -79,6 +99,11 @@ public abstract class StringMarshallable<T> {
         public String write(BigInteger value) {
             return value.toString();
         }
+        
+        @Override
+        public String toString() {
+            return "big integer";
+        }        
     };
     
     /** Java UUID converter */
@@ -92,6 +117,11 @@ public abstract class StringMarshallable<T> {
         public String write(UUID value) {
             return value.toString();
         }
+        
+        @Override
+        public String toString() {
+            return "uuid";
+        }        
     };
     
     private static <T> Function<Throwable,T> prefixMessage(String msg) {

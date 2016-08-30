@@ -1,9 +1,19 @@
 package com.tradeshift.reaktive.json;
 
+import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
+
+import java.util.Iterator;
+import java.util.Spliterators;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.tradeshift.reaktive.marshal.ReadProtocol;
+import com.tradeshift.reaktive.marshal.Reader;
+import com.tradeshift.reaktive.marshal.WriteProtocol;
+import com.tradeshift.reaktive.marshal.Writer;
 
 import javaslang.control.Try;
 
@@ -13,18 +23,18 @@ import javaslang.control.Try;
 public class FieldProtocol {
     private static final Logger log = LoggerFactory.getLogger(FieldProtocol.class);
     
-    public static <T> JSONReadProtocol<T> read(String fieldName, JSONReadProtocol<T> innerProtocol) {
+    public static <T> ReadProtocol<JSONEvent, T> read(String fieldName, ReadProtocol<JSONEvent, T> innerProtocol) {
         JSONEvent field = new JSONEvent.FieldName(fieldName);
-        return new JSONReadProtocol<T>() {
+        return new ReadProtocol<JSONEvent, T>() {
             @Override
-            protected Try<T> empty() {
+            public Try<T> empty() {
                 return innerProtocol.empty();
             }
             
             @Override
-            public Reader<T> reader() {
-                return new Reader<T>() {
-                    private final Reader<T> inner = innerProtocol.reader();
+            public Reader<JSONEvent, T> reader() {
+                return new Reader<JSONEvent, T>() {
+                    private final Reader<JSONEvent, T> inner = innerProtocol.reader();
                     private boolean matched;
                     private int nestedObjects = 0;
                     
@@ -71,25 +81,21 @@ public class FieldProtocol {
         };
     }
     
-    public static <T> JSONWriteProtocol<T> write(String fieldName, JSONWriteProtocol<T> innerProtocol) {
+    public static <T> WriteProtocol<JSONEvent, T> write(String fieldName, WriteProtocol<JSONEvent, T> innerProtocol) {
         JSONEvent field = new JSONEvent.FieldName(fieldName);
         
-        return new JSONWriteProtocol<T>() {
-            final Writer<T> writer = value -> {
-                if (!innerProtocol.isEmpty(value)) {
-                    return Stream.concat(Stream.of(field), innerProtocol.writer().apply(value));                
-                } else {
-                    return Stream.empty();
-                }
+        return new WriteProtocol<JSONEvent, T>() {
+            final Writer<JSONEvent, T> writer = value -> {
+                return concatIfSecondNotEmpty(Stream.of(field), innerProtocol.writer().apply(value));
             };
             
             @Override
-            public boolean isEmpty(T value) {
-                return innerProtocol.isEmpty(value);
+            public Class<? extends JSONEvent> getEventType() {
+                return JSONEvent.class;
             }
             
             @Override
-            public Writer<T> writer() {
+            public Writer<JSONEvent, T> writer() {
                 return writer;
             }
             
@@ -100,35 +106,28 @@ public class FieldProtocol {
         };
     }
     
-    public static <T> JSONProtocol<T> readWrite(String fieldName, JSONProtocol<T> inner) {
-        JSONEvent field = new JSONEvent.FieldName(fieldName);
-        JSONReadProtocol<T> read = read(fieldName, inner);
-        JSONWriteProtocol<T> write = write(fieldName, inner);
-        return new JSONProtocol<T>() {
-            @Override
-            protected Try<T> empty() {
-                return read.empty();
+    /**
+     * Returns a stream consisting of [first] and then [second], unless second is empty (or an empty JSON array);
+     * then an empty stream is returned.
+     */
+    static Stream<JSONEvent> concatIfSecondNotEmpty(Stream<JSONEvent> first, Stream<JSONEvent> second) {
+        Iterator<JSONEvent> iterator = second.iterator();
+        if (iterator.hasNext()) {
+            JSONEvent ev1 = iterator.next();
+            if (iterator.hasNext()) {
+                JSONEvent ev2 = iterator.next();
+                if (iterator.hasNext()) {
+                    return Stream.concat(first, Stream.concat(Stream.of(ev1, ev2), StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, 0), false)));
+                } else if (ev1 == JSONEvent.START_ARRAY && ev2 == JSONEvent.END_ARRAY) {
+                    return Stream.empty();
+                } else {
+                    return Stream.concat(first, Stream.of(ev1, ev2));
+                }
+            } else {
+                return Stream.concat(first, Stream.of(ev1));
             }
-            
-            @Override
-            public boolean isEmpty(T value) {
-                return write.isEmpty(value);
-            }
-
-            @Override
-            public Writer<T> writer() {
-                return write.writer();
-            }
-
-            @Override
-            public Reader<T> reader() {
-                return read.reader();
-            }
-            
-            @Override
-            public String toString() {
-                return "" + field + inner;
-            }            
-        };
+        } else {
+            return Stream.empty();
+        }
     }
 }

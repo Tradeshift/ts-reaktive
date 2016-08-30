@@ -10,6 +10,9 @@ import javax.xml.stream.XMLEventFactory;
 import javax.xml.stream.events.Attribute;
 import javax.xml.stream.events.XMLEvent;
 
+import com.tradeshift.reaktive.marshal.WriteProtocol;
+import com.tradeshift.reaktive.marshal.Writer;
+
 import javaslang.Function1;
 import javaslang.Tuple2;
 import javaslang.collection.Seq;
@@ -17,34 +20,35 @@ import javaslang.collection.Vector;
 import javaslang.control.Option;
 
 @SuppressWarnings("unchecked")
-public class TagWriteProtocol<T> implements XMLWriteProtocol<T> {
+public class TagWriteProtocol<T> implements WriteProtocol<XMLEvent,T> {
     private static final XMLEventFactory factory = XMLEventFactory.newFactory();    
     
     private final Function<T,QName> getName;
-    private final Seq<XMLWriteProtocol<?>> attrProtocols;
-    private final Seq<XMLWriteProtocol<?>> otherProtocols;
+    private final Seq<WriteProtocol<XMLEvent,?>> attrProtocols;
+    private final Seq<WriteProtocol<XMLEvent,?>> otherProtocols;
     private final Seq<Function1<T,?>> attrGetters;
     private final Seq<Function1<T,?>> otherGetters;
-    private final Writer<T> writer;
+    private final Writer<XMLEvent,T> writer;
+    private final Option<QName> name;
     
     /**
      * @param name The qualified name of the tag to write, or none() to have the last item of [getters] deliver a {@link QName}.
      * @param getters Getter function for each sub-protocol to write (and additional first element delivering a QName, if name == none())
      * @param protocols Protocols to use to write each of the getter elements
      */
-    public TagWriteProtocol(Option<QName> name, Vector<? extends XMLWriteProtocol<?>> protocols, Vector<Function1<T, ?>> g) {
+    public TagWriteProtocol(Option<QName> name, Vector<? extends WriteProtocol<XMLEvent,?>> protocols, Vector<Function1<T, ?>> g) {
         if (name.isDefined() && (protocols.size() != g.size()) ||
             name.isEmpty() && (protocols.size() != g.size() - 1)) {
             throw new IllegalArgumentException ("Number of protocols and getters does not match");
         }
-        
+        this.name = name;
         this.getName = t -> name.getOrElse(() -> (QName) g.head().apply(t));
         
         Vector<Function1<T, ?>> getters = (name.isEmpty()) ? g.drop(1) : g;
         
-        Tuple2<Vector<Tuple2<XMLWriteProtocol<?>, Function1<T, ?>>>, Vector<Tuple2<XMLWriteProtocol<?>, Function1<T, ?>>>> partition = 
-            ((Vector<XMLWriteProtocol<?>>)protocols).zip(getters)
-            .partition(t -> t._1.isAttributeProtocol());
+        Tuple2<Vector<Tuple2<WriteProtocol<XMLEvent,?>, Function1<T, ?>>>, Vector<Tuple2<WriteProtocol<XMLEvent,?>, Function1<T, ?>>>> partition = 
+            ((Vector<WriteProtocol<XMLEvent,?>>)protocols).zip(getters)
+            .partition(t -> Attribute.class.isAssignableFrom(t._1.getEventType()));
         
         this.attrProtocols = partition._1().map(t -> t._1());
         this.attrGetters = partition._1().map(t -> t._2());
@@ -53,8 +57,9 @@ public class TagWriteProtocol<T> implements XMLWriteProtocol<T> {
         this.writer = createWriter();
     }
 
-    private TagWriteProtocol(Function<T, QName> getName, Seq<XMLWriteProtocol<?>> attrProtocols,
-        Seq<XMLWriteProtocol<?>> otherProtocols, Seq<Function1<T, ?>> attrGetters, Seq<Function1<T, ?>> otherGetters) {
+    private TagWriteProtocol(Option<QName> name, Function<T, QName> getName, Seq<WriteProtocol<XMLEvent,?>> attrProtocols,
+        Seq<WriteProtocol<XMLEvent,?>> otherProtocols, Seq<Function1<T, ?>> attrGetters, Seq<Function1<T, ?>> otherGetters) {
+        this.name = name;
         this.getName = getName;
         this.attrProtocols = attrProtocols;
         this.otherProtocols = otherProtocols;
@@ -63,18 +68,18 @@ public class TagWriteProtocol<T> implements XMLWriteProtocol<T> {
         this.writer = createWriter();
     }
     
-    public <U> TagWriteProtocol<T> having(XMLWriteProtocol<U> nestedProtocol, U value) {
-        return nestedProtocol.isAttributeProtocol() 
-            ? new TagWriteProtocol<T>(getName, attrProtocols.append(nestedProtocol), otherProtocols, attrGetters.append(t -> value), otherGetters)
-            : new TagWriteProtocol<T>(getName, attrProtocols, otherProtocols.append(nestedProtocol), attrGetters, otherGetters.append(t -> value));
+    public <U> TagWriteProtocol<T> having(WriteProtocol<XMLEvent,U> nestedProtocol, U value) {
+        return Attribute.class.isAssignableFrom(nestedProtocol.getEventType()) 
+            ? new TagWriteProtocol<T>(name, getName, attrProtocols.append(nestedProtocol), otherProtocols, attrGetters.append(t -> value), otherGetters)
+            : new TagWriteProtocol<T>(name, getName, attrProtocols, otherProtocols.append(nestedProtocol), attrGetters, otherGetters.append(t -> value));
     }
 
-    private Writer<T> createWriter() {
+    private Writer<XMLEvent,T> createWriter() {
         return value -> Stream.of (
             Stream.of(startElement(value)),
             
             Stream.iterate(0, i -> i + 1).limit(otherProtocols.size()).map(i -> {
-                Writer<Object> w = (Writer<Object>) otherProtocols.get(i).writer();
+                Writer<XMLEvent,Object> w = (Writer<XMLEvent,Object>) otherProtocols.get(i).writer();
                 return w.apply(otherGetters.get(i).apply(value));
             }).flatMap(Function.identity()),            
             
@@ -86,20 +91,33 @@ public class TagWriteProtocol<T> implements XMLWriteProtocol<T> {
         List<Attribute> attributes = new ArrayList<>();
         for (int i = 0; i < attrGetters.size(); i++) {
             Object o = attrGetters.get(i).apply(value);
-            XMLWriteProtocol<Object> attributeProtocol = (XMLWriteProtocol<Object>) attrProtocols.get(i);
+            WriteProtocol<XMLEvent,Object> attributeProtocol = (WriteProtocol<XMLEvent,Object>) attrProtocols.get(i);
             attributeProtocol.writer().apply(o).map(Attribute.class::cast).forEach(attributes::add);
         }
         return factory.createStartElement(getName.apply(value), attributes.iterator(), null);
     }
 
     @Override
-    public Writer<T> writer() {
+    public Writer<XMLEvent,T> writer() {
         return writer;
     }
     
     @Override
-    public boolean isAttributeProtocol() {
-        return false;
+    public Class<? extends XMLEvent> getEventType() {
+        return XMLEvent.class;
     }
+    
+    @Override
+    public String toString() {
+        StringBuilder msg = new StringBuilder("<");
+        msg.append(name.map(Object::toString).getOrElse("*"));
+        msg.append(">");
+        Seq<WriteProtocol<XMLEvent,?>> protocols = attrProtocols.appendAll(otherProtocols);
+        if (!protocols.isEmpty()) {
+            msg.append(" with ");
+            msg.append(protocols.map(p -> p.toString()).mkString(","));
+        }
+        return msg.toString();
+   }
 }
  

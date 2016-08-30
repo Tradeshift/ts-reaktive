@@ -4,24 +4,25 @@ import static com.tradeshift.reaktive.json.JSONEvent.END_ARRAY;
 import static com.tradeshift.reaktive.json.JSONEvent.END_OBJECT;
 import static com.tradeshift.reaktive.json.JSONEvent.START_ARRAY;
 import static com.tradeshift.reaktive.json.JSONEvent.START_OBJECT;
-import static com.tradeshift.reaktive.json.JSONProtocol.alternatively;
 import static com.tradeshift.reaktive.json.JSONProtocol.anyField;
 import static com.tradeshift.reaktive.json.JSONProtocol.array;
 import static com.tradeshift.reaktive.json.JSONProtocol.field;
-import static com.tradeshift.reaktive.json.JSONProtocol.foldLeft;
-import static com.tradeshift.reaktive.json.JSONProtocol.hashMap;
 import static com.tradeshift.reaktive.json.JSONProtocol.integerValue;
 import static com.tradeshift.reaktive.json.JSONProtocol.longValue;
 import static com.tradeshift.reaktive.json.JSONProtocol.object;
-import static com.tradeshift.reaktive.json.JSONProtocol.option;
 import static com.tradeshift.reaktive.json.JSONProtocol.stringValue;
-import static com.tradeshift.reaktive.json.JSONProtocol.vector;
+import static com.tradeshift.reaktive.marshal.Protocol.alternatively;
+import static com.tradeshift.reaktive.marshal.Protocol.foldLeft;
+import static com.tradeshift.reaktive.marshal.Protocol.hashMap;
+import static com.tradeshift.reaktive.marshal.Protocol.option;
+import static com.tradeshift.reaktive.marshal.Protocol.vector;
 import static javaslang.control.Option.none;
 import static javaslang.control.Option.some;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
+import static org.forgerock.cuppa.Cuppa.only;
 
 import java.util.Arrays;
 import java.util.List;
@@ -35,8 +36,10 @@ import com.tradeshift.reaktive.Regex;
 import com.tradeshift.reaktive.json.JSONEvent.FieldName;
 import com.tradeshift.reaktive.json.JSONEvent.NumericValue;
 import com.tradeshift.reaktive.json.JSONEvent.StringValue;
-import com.tradeshift.reaktive.json.JSONReadProtocol.Reader;
 import com.tradeshift.reaktive.json.jackson.Jackson;
+import com.tradeshift.reaktive.marshal.Protocol;
+import com.tradeshift.reaktive.marshal.ReadProtocol;
+import com.tradeshift.reaktive.marshal.Reader;
 
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
@@ -50,7 +53,7 @@ public class JSONProtocolSpec {{
     final Jackson jackson = new Jackson();
     
     describe("a JSONProtocol for a type with a required and repeated field", () -> {
-        JSONProtocol<DTO1> proto = 
+        Protocol<JSONEvent, DTO1> proto = 
             object(
                 field("l", longValue),
                 option(
@@ -70,7 +73,7 @@ public class JSONProtocolSpec {{
             );        
         
         it("should unmarshal a JSON document containing all fields", () -> {
-            Reader<DTO1> r = proto.reader();
+            Reader<JSONEvent, DTO1> r = proto.reader();
             
             Try<DTO1> emitted = null;
             for (JSONEvent evt: Arrays.asList(
@@ -91,7 +94,7 @@ public class JSONProtocolSpec {{
         });
 
         it("should unmarshal a JSON document missing an optional field", () -> {
-            Reader<DTO1> r = proto.reader();
+            Reader<JSONEvent, DTO1> r = proto.reader();
             
             Try<DTO1> emitted = null;
             for (JSONEvent evt: Arrays.asList(
@@ -150,7 +153,7 @@ public class JSONProtocolSpec {{
     });
     
     describe("a JSONProtocol explicitly marking an array field as optional", () -> {
-        JSONProtocol<Option<Seq<String>>> proto = object(
+        Protocol<JSONEvent, Option<Seq<String>>> proto = object(
             option(
                 field("s", 
                     array(
@@ -198,7 +201,7 @@ public class JSONProtocolSpec {{
     });
     
     describe("a JSONProtocol for reading an array root", () -> {
-        JSONReadProtocol<DTO2> proto = array(
+        ReadProtocol<JSONEvent, DTO2> proto = array(
             object(
                 option(field("i", integerValue)),
                 i -> new DTO2(Option.none(), i)
@@ -221,7 +224,7 @@ public class JSONProtocolSpec {{
     
     describe("a JSONProtocol with several alternatives", () -> {
         
-        JSONReadProtocol<DTO2> proto = alternatively(
+        ReadProtocol<JSONEvent, DTO2> proto = alternatively(
             object(
                 option(field("i", integerValue)),
                 i -> new DTO2(Option.none(), i)
@@ -237,7 +240,7 @@ public class JSONProtocolSpec {{
         );        
         
         it("should pick the right alternative when 'having' is matched", () -> {
-            Reader<DTO2> r = proto.reader();
+            Reader<JSONEvent, DTO2> r = proto.reader();
             
             assertThat(jackson.parse("{\"alternative\":1,\"i\":42}", r).findFirst()).contains(
                 new DTO2(none(), some(42)));
@@ -297,7 +300,7 @@ public class JSONProtocolSpec {{
     });
     
     describe("a JSONProtocol with a string field matching a regex", () -> {
-        JSONProtocol<UUID> proto = 
+        Protocol<JSONEvent, UUID> proto = 
             object(
                 field("id", stringValue.matching(Regex.aUUID, uuid -> uuid.toString())),
                 uuid -> uuid,
@@ -364,7 +367,7 @@ public class JSONProtocolSpec {{
     });
     
     describe("a JSONProtocol folding all array elements into a single value", () -> {
-        JSONReadProtocol<Integer> proto = array(
+        ReadProtocol<JSONEvent, Integer> proto = array(
             foldLeft(
             integerValue,
             () -> 0,

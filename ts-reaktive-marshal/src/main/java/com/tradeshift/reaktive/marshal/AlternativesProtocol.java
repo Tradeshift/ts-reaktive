@@ -1,4 +1,7 @@
-package com.tradeshift.reaktive.json;
+package com.tradeshift.reaktive.marshal;
+
+import static com.tradeshift.reaktive.marshal.ReadProtocol.isNone;
+import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,26 +12,24 @@ import javaslang.control.Try;
 /**
  * Forwards read events to multiple alternative protocols, emitting whenever any of the alternatives emit. If multiple 
  * alternatives emit for the same event, the first one wins.
- * 
- * TODO how to do writing
  */
-public class AlternativesProtocol<T> extends JSONReadProtocol<T> {
-    private static final Logger log = LoggerFactory.getLogger(AlternativesProtocol.class); 
+public class AlternativesProtocol<E,T> implements ReadProtocol<E,T> {
+    private static final Logger log = LoggerFactory.getLogger(AlternativesProtocol.class);
     
-    private final Seq<JSONReadProtocol<T>> alternatives;
+    private final Seq<ReadProtocol<E,T>> alternatives;
 
-    public AlternativesProtocol(Seq<JSONReadProtocol<T>> alternatives) {
+    public AlternativesProtocol(Seq<ReadProtocol<E,T>> alternatives) {
         this.alternatives = alternatives;
     }
 
     @Override
-    public Reader<T> reader() {
-        Seq<Reader<T>> readers = alternatives.map(p -> p.reader());
-        return new Reader<T>() {
+    public Reader<E,T> reader() {
+        Seq<Reader<E,T>> readers = alternatives.map(p -> p.reader());
+        return new Reader<E,T>() {
             @Override
             public Try<T> reset() {
                 Try<T> result = none();
-                for (Reader<T> reader: readers) {
+                for (Reader<E,T> reader: readers) {
                     Try<T> readerResult = reader.reset();
                     log.debug("reset: reader {} said {}", reader, readerResult);
                     if (!isNone(readerResult)) {
@@ -43,11 +44,11 @@ public class AlternativesProtocol<T> extends JSONReadProtocol<T> {
             }
 
             @Override
-            public Try<T> apply(JSONEvent evt) {
+            public Try<T> apply(E evt) {
                 Try<T> result = none();
-                for (Reader<T> reader: readers) {
+                for (Reader<E,T> reader: readers) {
                     Try<T> readerResult = reader.apply(evt);
-                    log.debug("apply: reader {} said {}", reader, readerResult);
+                    log.debug("reader {} said {}", reader, readerResult);
                     if (!isNone(readerResult)) {
                         if (isNone(result) || (result.isFailure() && readerResult.isSuccess())) {
                             result = readerResult;
@@ -58,34 +59,29 @@ public class AlternativesProtocol<T> extends JSONReadProtocol<T> {
                 }
                 return result;
             }
+            
         };
     }
-
     
     /**
-     * Returns an JSONProtocol that uses an AlternativesProtocol for reading, and always picks the first alternative when writing.
+     * Returns a Protocol that uses an AlternativesProtocol for reading, and always picks the first alternative when writing.
      */
-    public static <T> JSONProtocol<T> readWrite(Seq<JSONProtocol<T>> alternatives) {
-        JSONProtocol<T> write = alternatives.head();
-        AlternativesProtocol<T> read = new AlternativesProtocol<T>(Seq.narrow(alternatives));
-        return new JSONProtocol<T>() {
+    public static <E,T> Protocol<E,T> readWrite(Seq<Protocol<E,T>> alternatives) {
+        Protocol<E,T> write = alternatives.head();
+        AlternativesProtocol<E,T> read = new AlternativesProtocol<E,T>(Seq.narrow(alternatives));
+        return new Protocol<E,T>() {
             @Override
-            protected Try<T> empty() {
-                return read.empty();
-            }
-            
-            @Override
-            public boolean isEmpty(T value) {
-                return write.isEmpty(value);
-            }
-            
-            @Override
-            public Writer<T> writer() {
+            public Writer<E,T> writer() {
                 return write.writer();
             }
 
             @Override
-            public Reader<T> reader() {
+            public Class<? extends E> getEventType() {
+                return write.getEventType();
+            }
+
+            @Override
+            public Reader<E,T> reader() {
                 return read.reader();
             }
         };

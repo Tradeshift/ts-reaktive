@@ -14,9 +14,9 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.tradeshift.reaktive.json.JSONEvent;
-import com.tradeshift.reaktive.json.JSONReadProtocol;
-import com.tradeshift.reaktive.json.JSONReadProtocol.Reader;
-import com.tradeshift.reaktive.json.JSONWriteProtocol.Writer;
+import com.tradeshift.reaktive.marshal.ReadProtocol;
+import com.tradeshift.reaktive.marshal.Reader;
+import com.tradeshift.reaktive.marshal.Writer;
 
 import javaslang.control.Option;
 import javaslang.control.Try;
@@ -24,7 +24,7 @@ import javaslang.control.Try;
 public class Jackson {
     private static final JsonFactory factory = new JsonFactory();
     
-    public <T> String write(T obj, Writer<T> writer) {
+    public <T> String write(T obj, Writer<JSONEvent, T> writer) {
         StringWriter out = new StringWriter();
         try {
             JsonGenerator gen = factory.createGenerator(out);
@@ -62,7 +62,7 @@ public class Jackson {
         }
     }
     
-    public <T> Stream<T> parse(String s, Reader<T> reader) {
+    public <T> Stream<T> parse(String s, Reader<JSONEvent, T> reader) {
         try {
             return parse(factory.createParser(s), reader);
         } catch (IOException e) {
@@ -70,7 +70,7 @@ public class Jackson {
         }
     }
     
-    public <T> Stream<T> parse(JsonParser input, Reader<T> reader) {
+    public <T> Stream<T> parse(JsonParser input, Reader<JSONEvent, T> reader) {
         reader.reset();
         
         Iterator<T> iterator = new Iterator<T>() {
@@ -81,7 +81,7 @@ public class Jackson {
                     Try<T> read = reader.apply(evt.get());
                     if (read.isSuccess()) {
                         return read.toOption();
-                    } else if (read.isFailure() && read != JSONReadProtocol.NONE) {
+                    } else if (read.isFailure() && read != ReadProtocol.NONE) {
                         throw (RuntimeException) read.failed().get();
                     }                    
                 }
