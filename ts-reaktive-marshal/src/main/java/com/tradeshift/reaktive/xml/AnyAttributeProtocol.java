@@ -3,8 +3,6 @@ package com.tradeshift.reaktive.xml;
 
 import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
 
-import java.util.stream.Stream;
-
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventFactory;
 import javax.xml.stream.events.Attribute;
@@ -16,10 +14,11 @@ import com.tradeshift.reaktive.marshal.Writer;
 
 import javaslang.Tuple;
 import javaslang.Tuple2;
+import javaslang.collection.Vector;
 import javaslang.control.Try;
 
 /**
- * Handles reading and writing a single attribute of a tag, matching any name 
+ * Handles reading and writing a single attribute of a tag, matching any name
  */
 public class AnyAttributeProtocol implements Protocol<XMLEvent,Tuple2<QName,String>> {
     public static final AnyAttributeProtocol INSTANCE = new AnyAttributeProtocol();
@@ -29,7 +28,7 @@ public class AnyAttributeProtocol implements Protocol<XMLEvent,Tuple2<QName,Stri
     private final Writer<XMLEvent,Tuple2<QName,String>> writer;
 
     private AnyAttributeProtocol() {
-        this.writer = t -> Stream.of(factory.createAttribute(t._1(), t._2()));
+        this.writer = Writer.of(t -> Vector.of(factory.createAttribute(t._1(), t._2())));
     }
     
     @Override

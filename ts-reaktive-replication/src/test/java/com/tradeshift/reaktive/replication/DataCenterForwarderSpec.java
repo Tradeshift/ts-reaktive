@@ -63,7 +63,7 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
 {
     describe("DataCenterForwarder", () -> {
         it("should forward events to data centers as indicated by EventRepository.getDataCenterNames", () -> {
-            TestDataCenter remote1 = new TestDataCenter("remote1"); 
+            TestDataCenter remote1 = new TestDataCenter("remote1");
             TestDataCenter remote2 = new TestDataCenter("remote2");
             
             DataCenterRepository dataRepo = mock(DataCenterRepository.class);
@@ -88,8 +88,8 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
                 return completedFuture(Done.getInstance());
             }).when(visibilityRepo).setMaster("doc1", true);
             
-            AtomicLong lastOffset1 = new AtomicLong(); 
-            AtomicLong lastOffset2 = new AtomicLong(); 
+            AtomicLong lastOffset1 = new AtomicLong();
+            AtomicLong lastOffset2 = new AtomicLong();
             doAnswer(i -> completedFuture(lastOffset1.get())).when(visibilityRepo).getLastEventOffset(remote1, "TestEvent");
             doAnswer(i -> completedFuture(lastOffset2.get())).when(visibilityRepo).getLastEventOffset(remote2, "TestEvent");
             doAnswer(i -> {lastOffset1.set(i.getArgumentAt(2, Long.class)); return DONE; }).when(visibilityRepo).setLastEventOffset(eq(remote1), eq("TestEvent"), anyLong());
@@ -99,9 +99,11 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
             EventEnvelope event2 = EventEnvelope.apply(2, "doc1", 2, event("dc:remote1"));
             EventEnvelope event3 = EventEnvelope.apply(3, "doc1", 3, event("dc:remote2"));
             EventEnvelope event4 = EventEnvelope.apply(4, "doc1", 4, event("hello"));
-            CompletableFuture<EventEnvelope> realTimeEvent = new CompletableFuture<EventEnvelope>(); // this will be completed with event4 later on in the test
+            CompletableFuture<EventEnvelope> realTimeEvent = new CompletableFuture<>(); // this will be completed with event4 later on in the test
             
             EventsByTagQuery qTag = mock(EventsByTagQuery.class);
+            // FIXME this test is racey. Sometimes event4 doesn't get seen. If it persists, rewrite this source to be queue or actor
+            // driven, and make sure it's only read once.
             when(qTag.eventsByTag("TestEvent", 0)).thenReturn(Source.from(Arrays.asList(event1, event2, event3)).concat(Source.fromCompletionStage(realTimeEvent)));
             
             CurrentEventsByPersistenceIdQuery qPid = mock(CurrentEventsByPersistenceIdQuery.class);
@@ -123,11 +125,11 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
             eventuallyDo(() -> {
                 assertThat(lastOffset1.get()).isEqualTo(4);
                 assertThat(lastOffset2.get()).isEqualTo(4);
-            });            
+            });
         });
         
         it("should roll back the event offset a bit when resuming operations, to compensate for clock drifts and eventual consistency", () -> {
-            TestDataCenter remote1 = new TestDataCenter("remote1"); 
+            TestDataCenter remote1 = new TestDataCenter("remote1");
             
             DataCenterRepository dataRepo = mock(DataCenterRepository.class);
             when(dataRepo.getLocalName()).thenReturn("local");
@@ -138,7 +140,7 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
             doAnswer(i -> completedFuture(false)).when(visibilityRepo).isVisibleTo(remote1, "doc1");
             doAnswer(i -> completedFuture(100000l)).when(visibilityRepo).getLastEventOffset(remote1, "TestEvent");
             
-            CompletableFuture<EventEnvelope> realTimeEvent = new CompletableFuture<EventEnvelope>(); // this will be completed with event3 later on in the test
+            CompletableFuture<EventEnvelope> realTimeEvent = new CompletableFuture<>(); // this will be completed with event3 later on in the test
             
             EventsByTagQuery qTag = mock(EventsByTagQuery.class);
             when(qTag.eventsByTag(eq("TestEvent"), anyLong())).thenReturn(Source.fromCompletionStage(realTimeEvent));
@@ -152,7 +154,7 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
         });
         
         it("should not forward events for persistenceIds that have their master datacenter somewhere else", () -> {
-            TestDataCenter remote1 = new TestDataCenter("remote1"); 
+            TestDataCenter remote1 = new TestDataCenter("remote1");
             
             DataCenterRepository dataRepo = mock(DataCenterRepository.class);
             when(dataRepo.getLocalName()).thenReturn("local");
@@ -170,7 +172,7 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
                 return completedFuture(Done.getInstance());
             }).when(visibilityRepo).setMaster("doc1", false);
             
-            AtomicLong lastOffset1 = new AtomicLong(); 
+            AtomicLong lastOffset1 = new AtomicLong();
             doAnswer(i -> completedFuture(lastOffset1.get())).when(visibilityRepo).getLastEventOffset(remote1, "TestEvent");
             doAnswer(i -> {lastOffset1.set(i.getArgumentAt(2, Long.class)); return DONE; }).when(visibilityRepo).setLastEventOffset(eq(remote1), eq("TestEvent"), anyLong());
             

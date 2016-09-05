@@ -17,10 +17,13 @@ import javaslang.control.Option;
 public class TagProtocol<T> implements Protocol<XMLEvent,T> {
     private final TagReadProtocol<T> read;
     private final TagWriteProtocol<T> write;
-   
+
+    public TagProtocol(Option<QName> name, Protocol<XMLEvent,T> protocol) {
+        this(new TagReadProtocol<>(name, protocol), new TagWriteProtocol<>(name, Vector.of(protocol), Vector.of(Function1.identity())));
+    }
+    
     public TagProtocol(Option<QName> name, Vector<Protocol<XMLEvent,?>> protocols, Function<List<?>, T> produce, Vector<Function1<T, ?>> getters) {
-        this.read = new TagReadProtocol<T>(name, protocols, produce, Vector.empty());
-        this.write = new TagWriteProtocol<T>(name, protocols, getters);
+        this(new TagReadProtocol<>(name, protocols, produce), new TagWriteProtocol<>(name, protocols, getters));
     }
     
     private TagProtocol(TagReadProtocol<T> read, TagWriteProtocol<T> write) {
@@ -49,7 +52,7 @@ public class TagProtocol<T> implements Protocol<XMLEvent,T> {
     }
     
     public <U> TagProtocol<T> having(Protocol<XMLEvent,U> nestedProtocol, U value) {
-        return new TagProtocol<T>(read.having(nestedProtocol, value), write.having(nestedProtocol, value)); 
+        return new TagProtocol<>(read.having(nestedProtocol, value), write.having(nestedProtocol, value));
     }
 }
  

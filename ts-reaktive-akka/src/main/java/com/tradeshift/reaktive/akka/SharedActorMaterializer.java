@@ -9,7 +9,7 @@ import akka.stream.ActorMaterializer;
 
 /**
  * Maintains a singleton actor materializer that can be shared and looked up amongst an actor system without the need
- * to pass it along constructors. 
+ * to pass it along constructors.
  */
 public class SharedActorMaterializer implements Extension {
     private static class Id extends AbstractExtensionId<SharedActorMaterializer> implements ExtensionIdProvider {

@@ -34,12 +34,6 @@ import javaslang.control.Try;
 
 /**
  * Interface to and from stax to the XML marshalling framework.
- * 
- * TODO re-implement in terms of XMLStreamWriter / XMLStreamReader, so that
- *   - real empty tags can be written
- *   - upgrading to Aalto XML is easier
- *   
- * TODO write another class that hooks in https://github.com/drewhk/akka-xml-stream/
  */
 public class Stax {
     public static final Logger log = LoggerFactory.getLogger(Stax.class);
@@ -56,7 +50,7 @@ public class Stax {
     public <T> void write(T obj, Writer<XMLEvent,T> writer, OutputStream out) {
         try {
             XMLEventWriter xmlW = outFactory.createXMLEventWriter(out);
-            writer.apply(obj).forEach(evt -> {
+            writer.applyAndReset(obj).forEach(evt -> {
                 try {
                     log.debug("Writing {}", evt);
                     xmlW.add(evt);
@@ -108,6 +102,12 @@ public class Stax {
                         } else if (read.isFailure() && !ReadProtocol.isNone(read)) {
                             throw (RuntimeException) read.failed().get();
                         }
+                    }
+                    Try<T> read = reader.reset();
+                    if (read.isSuccess()) {
+                        return read.toOption();
+                    } else if (read.isFailure() && !ReadProtocol.isNone(read)) {
+                        throw (RuntimeException) read.failed().get();
                     }
                     return Option.none();
                 } catch (XMLStreamException e) {

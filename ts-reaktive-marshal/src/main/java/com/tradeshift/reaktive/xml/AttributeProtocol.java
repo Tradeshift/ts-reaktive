@@ -1,7 +1,6 @@
 package com.tradeshift.reaktive.xml;
 
-import static com.tradeshift.reaktive.marshal.ReadProtocol.*;
-import java.util.stream.Stream;
+import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
 
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventFactory;
@@ -13,17 +12,18 @@ import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.StringProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
+import javaslang.collection.Vector;
 import javaslang.control.Try;
 
 /**
- * Handles reading and writing a single attribute of a tag. 
+ * Handles reading and writing a single attribute of a tag.
  */
 public class AttributeProtocol extends StringProtocol<XMLEvent> {
     private static final XMLEventFactory factory = XMLEventFactory.newFactory();
     
     public AttributeProtocol(QName name) {
         super(new Protocol<XMLEvent,String>() {
-            Writer<XMLEvent,String> writer = s -> Stream.of(factory.createAttribute(name, s));
+            Writer<XMLEvent,String> writer = Writer.of(s -> Vector.of(factory.createAttribute(name, s)));
             @Override
             public Class<? extends XMLEvent> getEventType() {
                 return Attribute.class;
@@ -70,7 +70,7 @@ public class AttributeProtocol extends StringProtocol<XMLEvent> {
             @Override
             public Writer<XMLEvent,String> writer() {
                 return writer;
-            }            
+            }
         }, XMLProtocol.locator);
-    }    
+    }
 }

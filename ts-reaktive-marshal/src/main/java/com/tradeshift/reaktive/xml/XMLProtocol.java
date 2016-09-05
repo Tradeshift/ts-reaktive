@@ -19,7 +19,7 @@ import javaslang.collection.Vector;
 import javaslang.control.Option;
 
 @SuppressWarnings("unchecked")
-public class XMLProtocol<T> {
+public class XMLProtocol {
     private static final XMLEventFactory factory = XMLEventFactory.newFactory();
     static final Locator<XMLEvent> locator = evt -> evt.getLocation().getLineNumber() + ":" + evt.getLocation().getColumnNumber();
 
@@ -29,21 +29,21 @@ public class XMLProtocol<T> {
      * Reads and writes a tag and one child element (tag or attribute), where the result of this tag is the result of the single child.
      */
     public static <T> TagProtocol<T> tag(QName name, Protocol<XMLEvent,T> p1) {
-        return tag(name, p1, Function1.identity(), Function1.identity());
+        return new TagProtocol<>(Option.of(name), p1);
     }
     
     /**
      * Reads a tag and one child element (tag or attribute), where the result of this tag is the result of the single child.
      */
     public static <T> TagReadProtocol<T> tag(QName name, ReadProtocol<XMLEvent,T> p1) {
-        return tag(name, p1, Function1.identity());
+        return new TagReadProtocol<>(Option.of(name), p1);
     }
     
     /**
      * Writes a tag and one child element (tag or attribute), where the result of this tag is the result of the single child.
      */
     public static <T> TagWriteProtocol<T> tag(QName name, WriteProtocol<XMLEvent,T> p1) {
-        return tag(name, Function1.identity(), p1);
+        return new TagWriteProtocol<>(Option.of(name), Vector.of(p1), Vector.of(Function1.identity()));
     }
     
     /**
@@ -232,21 +232,21 @@ public class XMLProtocol<T> {
      */
     public static AttributeProtocol attribute(Namespace ns, String name) {
         return attribute(qname(ns, name));
-    }    
+    }
     
     /**
      * Reads a string attribute in the default namespace
      */
     public static AttributeProtocol attribute(String name) {
         return attribute(qname(name));
-    }    
+    }
     
     /**
      * Reads and writes a namespaced string attribute
      */
     public static AttributeProtocol attribute(QName name) {
         return new AttributeProtocol(name);
-    }    
+    }
     
     /**
      * Reads and writes the body of the current XML tag

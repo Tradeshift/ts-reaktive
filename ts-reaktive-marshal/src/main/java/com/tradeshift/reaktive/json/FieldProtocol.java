@@ -2,11 +2,6 @@ package com.tradeshift.reaktive.json;
 
 import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
 
-import java.util.Iterator;
-import java.util.Spliterators;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +10,8 @@ import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.WriteProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
+import javaslang.collection.Seq;
+import javaslang.collection.Vector;
 import javaslang.control.Try;
 
 /**
@@ -36,19 +33,27 @@ public class FieldProtocol {
                 return new Reader<JSONEvent, T>() {
                     private final Reader<JSONEvent, T> inner = innerProtocol.reader();
                     private boolean matched;
+                    private boolean wasMatched = false;
                     private int nestedObjects = 0;
                     
                     @Override
                     public Try<T> reset() {
                         matched = false;
                         nestedObjects = 0;
-                        return inner.reset();
+                        Try<T> r = inner.reset();
+                        if (wasMatched) {
+                            wasMatched = false;
+                            return r;
+                        } else {
+                            return none();
+                        }
                     }
                     
                     @Override
                     public Try<T> apply(JSONEvent evt) {
                         if (!matched && nestedObjects == 0 && evt.equals(field)) {
                             matched = true;
+                            wasMatched = true;
                             return none();
                         } else if (matched && nestedObjects == 0 && (evt == JSONEvent.START_OBJECT || evt == JSONEvent.START_ARRAY)) {
                             nestedObjects++;
@@ -64,7 +69,7 @@ public class FieldProtocol {
                         } else {
                             Try<T> result = (matched) ? inner.apply(evt) : none();
                             if (evt == JSONEvent.START_OBJECT || evt == JSONEvent.START_ARRAY) {
-                                nestedObjects++;                        
+                                nestedObjects++;
                             } else if (evt == JSONEvent.END_OBJECT || evt == JSONEvent.END_ARRAY) {
                                 nestedObjects--;
                             }
@@ -77,7 +82,7 @@ public class FieldProtocol {
             @Override
             public String toString() {
                 return "" + field + innerProtocol;
-            }            
+            }
         };
     }
     
@@ -85,10 +90,6 @@ public class FieldProtocol {
         JSONEvent field = new JSONEvent.FieldName(fieldName);
         
         return new WriteProtocol<JSONEvent, T>() {
-            final Writer<JSONEvent, T> writer = value -> {
-                return concatIfSecondNotEmpty(Stream.of(field), innerProtocol.writer().apply(value));
-            };
-            
             @Override
             public Class<? extends JSONEvent> getEventType() {
                 return JSONEvent.class;
@@ -96,7 +97,47 @@ public class FieldProtocol {
             
             @Override
             public Writer<JSONEvent, T> writer() {
-                return writer;
+                Writer<JSONEvent, T> inner = innerProtocol.writer();
+                return new Writer<JSONEvent, T>() {
+                    Seq<JSONEvent> buffer = Vector.empty();
+                    boolean fieldStarted = false;
+
+                    @Override
+                    public Seq<JSONEvent> apply(T value) {
+                        if (fieldStarted) {
+                            return inner.apply(value);
+                        } else {
+                            buffer = buffer.appendAll(inner.apply(value));
+                            if (buffer.size() > 2) {
+                                Vector<JSONEvent> result = Vector.of(field).appendAll(buffer);
+                                buffer = Vector.empty();
+                                fieldStarted = true;
+                                return result;
+                            } else {
+                                return Vector.empty();
+                            }
+                        }
+                    }
+                    
+                    @Override
+                    public Seq<JSONEvent> reset() {
+                        Seq<JSONEvent> result;
+                        if (fieldStarted) {
+                            result = inner.reset();
+                        } else {
+                            buffer = buffer.appendAll(inner.reset());
+                            if (buffer.isEmpty() || buffer.eq(Vector.of(JSONEvent.START_ARRAY, JSONEvent.END_ARRAY))) {
+                                result = Vector.empty();
+                            } else {
+                                result = Vector.of(field).appendAll(buffer);
+                            }
+                        }
+                        buffer = Vector.empty();
+                        fieldStarted = false;
+                        return result;
+                    }
+
+                };
             }
             
             @Override
@@ -104,30 +145,5 @@ public class FieldProtocol {
                 return "" + field + innerProtocol;
             }
         };
-    }
-    
-    /**
-     * Returns a stream consisting of [first] and then [second], unless second is empty (or an empty JSON array);
-     * then an empty stream is returned.
-     */
-    static Stream<JSONEvent> concatIfSecondNotEmpty(Stream<JSONEvent> first, Stream<JSONEvent> second) {
-        Iterator<JSONEvent> iterator = second.iterator();
-        if (iterator.hasNext()) {
-            JSONEvent ev1 = iterator.next();
-            if (iterator.hasNext()) {
-                JSONEvent ev2 = iterator.next();
-                if (iterator.hasNext()) {
-                    return Stream.concat(first, Stream.concat(Stream.of(ev1, ev2), StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, 0), false)));
-                } else if (ev1 == JSONEvent.START_ARRAY && ev2 == JSONEvent.END_ARRAY) {
-                    return Stream.empty();
-                } else {
-                    return Stream.concat(first, Stream.of(ev1, ev2));
-                }
-            } else {
-                return Stream.concat(first, Stream.of(ev1));
-            }
-        } else {
-            return Stream.empty();
-        }
     }
 }

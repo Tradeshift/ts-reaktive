@@ -22,12 +22,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
-import static org.forgerock.cuppa.Cuppa.only;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.forgerock.cuppa.junit.CuppaRunner;
 import org.junit.runner.RunWith;
@@ -40,7 +37,10 @@ import com.tradeshift.reaktive.json.jackson.Jackson;
 import com.tradeshift.reaktive.marshal.Protocol;
 import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.Reader;
+import com.tradeshift.reaktive.marshal.Writer;
 
+import javaslang.Tuple;
+import javaslang.Tuple2;
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
 import javaslang.collection.Seq;
@@ -53,16 +53,16 @@ public class JSONProtocolSpec {{
     final Jackson jackson = new Jackson();
     
     describe("a JSONProtocol for a type with a required and repeated field", () -> {
-        Protocol<JSONEvent, DTO1> proto = 
+        Protocol<JSONEvent, DTO1> proto =
             object(
                 field("l", longValue),
                 option(
                     field("i", integerValue)
                 ),
-                field("s", 
+                field("s",
                     array(
                         vector(
-                            stringValue 
+                            stringValue
                         )
                     )
                 ),
@@ -70,7 +70,7 @@ public class JSONProtocolSpec {{
                 t -> t.getL(),
                 t -> t.getI(),
                 t -> t.getS()
-            );        
+            );
         
         it("should unmarshal a JSON document containing all fields", () -> {
             Reader<JSONEvent, DTO1> r = proto.reader();
@@ -80,7 +80,7 @@ public class JSONProtocolSpec {{
                 START_OBJECT,
                 new FieldName("l"), new NumericValue("42"),
                 new FieldName("i"), new NumericValue("84"),
-                new FieldName("s"), 
+                new FieldName("s"),
                     START_ARRAY,
                     new StringValue("Error 1"),
                     new StringValue("Error 2"),
@@ -115,15 +115,15 @@ public class JSONProtocolSpec {{
         });
         
         it("should marshal a complete object into JSON", () -> {
-            List<JSONEvent> events = proto.writer().apply(
+            Seq<JSONEvent> events = proto.writer().applyAndReset(
                 new DTO1(42, Option.some(84), Vector.of("Error 1", "Error 2"))
-            ).collect(Collectors.toList());
+            );
             
             assertThat(events).containsExactly(
                 START_OBJECT,
                 new FieldName("l"), new NumericValue("42"),
                 new FieldName("i"), new NumericValue("84"),
-                new FieldName("s"), 
+                new FieldName("s"),
                     START_ARRAY,
                     new StringValue("Error 1"),
                     new StringValue("Error 2"),
@@ -133,7 +133,7 @@ public class JSONProtocolSpec {{
         });
         
         it("should marshal an object missing optional fields into JSON", () -> {
-            List<JSONEvent> events = proto.writer().apply(new DTO1(42, Option.none(), Vector.empty())).collect(Collectors.toList());
+            Seq<JSONEvent> events = proto.writer().applyAndReset(new DTO1(42, Option.none(), Vector.empty()));
             
             assertThat(events).containsExactly(
                 START_OBJECT,
@@ -149,13 +149,13 @@ public class JSONProtocolSpec {{
                 new DTO1(42, none(), Vector.empty()));
             assertThat(jackson.parse("{\"l\":42,\"i\":[]}", proto.reader()).findFirst()).contains(
                 new DTO1(42, none(), Vector.empty()));
-        });        
+        });
     });
     
     describe("a JSONProtocol explicitly marking an array field as optional", () -> {
         Protocol<JSONEvent, Option<Seq<String>>> proto = object(
             option(
-                field("s", 
+                field("s",
                     array(
                         vector(stringValue)
                     )
@@ -200,11 +200,12 @@ public class JSONProtocolSpec {{
         });
     });
     
-    describe("a JSONProtocol for reading an array root", () -> {
-        ReadProtocol<JSONEvent, DTO2> proto = array(
+    describe("a JSONProtocol for an array root", () -> {
+        Protocol<JSONEvent, DTO2> proto = array(
             object(
                 option(field("i", integerValue)),
-                i -> new DTO2(Option.none(), i)
+                i -> new DTO2(Option.none(), i),
+                DTO2::getI
                 )
             );
         
@@ -219,6 +220,54 @@ public class JSONProtocolSpec {{
                 new DTO2(none(), some(1)),
                 new DTO2(none(), some(2)),
                 new DTO2(none(), some(3)));
+        });
+        
+        it("should write a single array with each written element", () -> {
+            Writer<JSONEvent, DTO2> writer = proto.writer();
+            Seq<JSONEvent> events =
+                writer.apply(new DTO2(none(), some(1))).appendAll(
+                writer.applyAndReset(new DTO2(none(), some(2))));
+            
+            assertThat(jackson.write(events)).isEqualTo("[{\"i\":1},{\"i\":2}]");
+        });
+    });
+    
+    describe("a JSONProtocol for an object root with arbitrary string fields", () -> {
+        ObjectProtocol<Tuple2<String, String>> proto = object(
+            anyField(
+                stringValue
+            )
+        );
+        
+        it("should write a single object with each written element", () -> {
+            Writer<JSONEvent, Tuple2<String, String>> writer = proto.writer();
+            Seq<JSONEvent> events =
+                writer.apply(Tuple.of("hello", "world")).appendAll(
+                writer.applyAndReset(Tuple.of("foo", "bar")));
+            
+            assertThat(jackson.write(events)).isEqualTo("{\"hello\":\"world\",\"foo\":\"bar\"}");
+            
+        });
+    });
+    
+    describe("a JSONProtocol with arbitrary fields with array values", () -> {
+        ObjectProtocol<Tuple2<String, Seq<String>>> proto = object(
+            anyField(
+                array(
+                    vector(
+                        stringValue
+                    )
+                )
+            )
+        );
+        
+        it("should write the field if the array is empty", () -> {
+            // This is different from field(), but for anyField there actually is semantic
+            // value in the field name being present. Hence, we don't want empty array values to
+            // be filtered out.
+            
+            Seq<JSONEvent> events = proto.writer().applyAndReset(Tuple.of("hello", Vector.empty()));
+            assertThat(jackson.write(events)).isEqualTo("{\"hello\":[]}");
         });
     });
     
@@ -237,7 +286,7 @@ public class JSONProtocolSpec {{
                 ))),
                 o -> new DTO2(o, Option.none())
             ).having(field("alternative", integerValue), 2)
-        );        
+        );
         
         it("should pick the right alternative when 'having' is matched", () -> {
             Reader<JSONEvent, DTO2> r = proto.reader();
@@ -266,12 +315,12 @@ public class JSONProtocolSpec {{
                 .hasMessageContaining("1")
                 .hasMessageContaining("alternative")
                 .hasMessageContaining("2");
-        });        
+        });
     });
     
     describe("a JSONProtocol with a condition on a required sub-object that is also mapped", () -> {
         ObjectProtocol<DTO2> proto = object(
-            field("d", 
+            field("d",
                 object(
                     field("l", longValue),
                     (Long l) -> new DTO1(l, Option.none(), Vector.empty()),
@@ -285,22 +334,22 @@ public class JSONProtocolSpec {{
         
         it("should unmarshal JSON where the condition is present", () -> {
             assertThat(jackson.parse("{\"d\":{\"l\":42,\"hello\":\"world\"}}", proto.reader()).findFirst()).contains(
-                new DTO2(some(new DTO1(42, none(), Vector.empty())), none()));            
+                new DTO2(some(new DTO1(42, none(), Vector.empty())), none()));
         });
         
         it("should fail if the condition is not present", () -> {
             assertThatThrownBy(() -> jackson.parse("{\"d\":{\"l\":42,\"hello\":\"mars\"}}", proto.reader()))
-                .hasMessageContaining("hello: (string) with value world");
+                .hasMessageContaining("hello: (string)=world");
         });
         
         it("should write the conditon out when marshalling JSON", () -> {
             assertThat(jackson.write(new DTO2(some(new DTO1(42, none(), Vector.empty())), none()), proto.writer()))
-            .isEqualTo("{\"d\":{\"hello\":\"world\",\"l\":42}}");
+            .isEqualTo("{\"d\":{\"l\":42,\"hello\":\"world\"}}");
         });
     });
     
     describe("a JSONProtocol with a string field matching a regex", () -> {
-        Protocol<JSONEvent, UUID> proto = 
+        Protocol<JSONEvent, UUID> proto =
             object(
                 field("id", stringValue.matching(Regex.aUUID, uuid -> uuid.toString())),
                 uuid -> uuid,
@@ -309,7 +358,7 @@ public class JSONProtocolSpec {{
         
         it("should unmarshal JSON where the regex matches", () -> {
             assertThat(jackson.parse("{\"id\":\"0c5317ef-fb33-446d-b02e-8a73e9d033c4\"}", proto.reader()).findFirst())
-                .contains(UUID.fromString("0c5317ef-fb33-446d-b02e-8a73e9d033c4"));            
+                .contains(UUID.fromString("0c5317ef-fb33-446d-b02e-8a73e9d033c4"));
         });
         
         it("should fail JSON where the regex does not match", () -> {
@@ -383,7 +432,7 @@ public class JSONProtocolSpec {{
         });
         
         it("should fail early if an item doesn't fit", () -> {
-            assertThatThrownBy(() -> 
+            assertThatThrownBy(() ->
                 jackson.parse("[1,false,3]", proto.reader()).findFirst()
             ).hasMessageContaining("false");
         });

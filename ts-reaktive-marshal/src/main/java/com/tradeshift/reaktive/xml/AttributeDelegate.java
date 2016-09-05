@@ -12,7 +12,7 @@ import javax.xml.stream.events.StartElement;
 
 /**
  * Groups an Attribute with a Location since the StaX XMLEventFactory (and the default JDK implementation) seem
- * to think that attributes never have a location. With this class, we can at least point at the location of 
+ * to think that attributes never have a location. With this class, we can at least point at the location of
  * the tag owning the attribute.
  */
 public class AttributeDelegate implements Attribute {
@@ -84,6 +84,7 @@ public class AttributeDelegate implements Attribute {
     public void writeAsEncodedUnicode(Writer writer) throws XMLStreamException {
         delegate.writeAsEncodedUnicode(writer);
     }
-
-    
+    public String toString() {
+        return delegate.toString();
+    }
 }

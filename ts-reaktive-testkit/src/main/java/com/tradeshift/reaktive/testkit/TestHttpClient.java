@@ -6,10 +6,15 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import akka.actor.ActorSystem;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.model.ContentTypes;
 import akka.http.javadsl.model.HttpEntity;
+import akka.http.javadsl.model.HttpEntity.Strict;
 import akka.http.javadsl.model.HttpRequest;
 import akka.http.javadsl.model.HttpResponse;
 import akka.http.javadsl.model.MediaRanges;
@@ -17,10 +22,6 @@ import akka.http.javadsl.model.MediaTypes;
 import akka.http.javadsl.model.headers.Accept;
 import akka.stream.Materializer;
 import akka.util.ByteString;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Wrapper for akka's http client to a predefined base URL, with convenience methods to put and get JSON and XML.
@@ -38,9 +39,39 @@ public class TestHttpClient {
         this.baseUrl = baseUrl;
     }
 
+    public void putJSON(String path, String content) {
+        perform(HttpRequest
+            .PUT(getHttpUri(path))
+            .withEntity(ContentTypes.APPLICATION_JSON, content.getBytes(Charset.forName("UTF-8"))));
+    }
+    
+    public Strict postJSON(String path, String content) {
+        return perform(HttpRequest
+            .POST(getHttpUri(path))
+            .withEntity(ContentTypes.APPLICATION_JSON, content.getBytes(Charset.forName("UTF-8"))));
+    }
+    
+    public HttpResponse tryPostJSON(String path, String content) {
+        return send(HttpRequest
+            .PUT(getHttpUri(path))
+            .withEntity(ContentTypes.APPLICATION_JSON, content.getBytes(Charset.forName("UTF-8"))));
+    }
+    
     public void putXML(String path, String content) {
         perform(HttpRequest
             .PUT(getHttpUri(path))
+            .withEntity(ContentTypes.TEXT_XML_UTF8, content.getBytes(Charset.forName("UTF-8"))));
+    }
+    
+    public Strict postXML(String path, String content) {
+        return perform(HttpRequest
+            .POST(getHttpUri(path))
+            .withEntity(ContentTypes.TEXT_XML_UTF8, content.getBytes(Charset.forName("UTF-8"))));
+    }
+    
+    public HttpResponse tryPostXML(String path, String content) {
+        return send(HttpRequest
+            .POST(getHttpUri(path))
             .withEntity(ContentTypes.TEXT_XML_UTF8, content.getBytes(Charset.forName("UTF-8"))));
     }
     
@@ -84,7 +115,7 @@ public class TestHttpClient {
     private HttpEntity.Strict perform(HttpRequest request) {
         try {
             HttpResponse response = send(request);
-            if (response.status().intValue() >= 400 && response.status().intValue() < 500) { 
+            if (response.status().intValue() >= 400 && response.status().intValue() < 500) {
                 throw new AssertionError("Expected " + request + " to succeed, but failed with " + response);
             } else if (response.status().isFailure()) {
                 throw new RuntimeException("Request " + request + " failed unexpectedly with " + response);
@@ -94,7 +125,7 @@ public class TestHttpClient {
             throw (RuntimeException) x.getCause();
         } catch (InterruptedException | TimeoutException e) {
             throw new RuntimeException(e);
-        }        
+        }
     }
     
     private HttpResponse send(HttpRequest request) {
@@ -107,7 +138,7 @@ public class TestHttpClient {
             throw (RuntimeException) x.getCause();
         } catch (InterruptedException | TimeoutException e) {
             throw new RuntimeException(e);
-        }        
+        }
     }
 
     private String getHttpUri(String path) {
@@ -115,5 +146,5 @@ public class TestHttpClient {
             path = "/" + path;
         }
         return baseUrl + path;
-    }    
+    }
 }

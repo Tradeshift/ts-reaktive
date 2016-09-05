@@ -3,7 +3,8 @@ package com.tradeshift.reaktive.marshal;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.StreamSupport;
+
+import javaslang.collection.Vector;
 
 /**
  * Write support for generic Iterable, and read support for mutable collection classes.
@@ -12,7 +13,7 @@ public class IterableProtocol {
     /**
      * @param factory Function that creates a new mutable collection with a single value
      * @param add Consumer that adds an element to the collection
-     * @param empty Empty collection instance (global, it won't be modified) 
+     * @param empty Empty collection instance (global, it won't be modified)
      */
     public static <E,T,C extends Iterable<T>> ReadProtocol<E,C> read(ReadProtocol<E,T> inner, Supplier<C> factory, BiConsumer<C,T> add) {
         return FoldProtocol.read("*", inner, factory, (c,t) -> {
@@ -26,11 +27,10 @@ public class IterableProtocol {
             @Override
             public Writer<E,Iterable<T>> writer() {
                 Writer<E,T> parentWriter = inner.writer();
-                return value -> {
-                    return StreamSupport.stream(value.spliterator(), false)
-                        .map(parentWriter::apply)
-                        .flatMap(Function.identity());                
-                };
+                
+                return Writer.of(iterable -> Vector.ofAll(iterable)
+                    .map(parentWriter::applyAndReset)
+                    .flatMap(Function.identity()));
             }
             
             @Override
@@ -41,7 +41,7 @@ public class IterableProtocol {
             @Override
             public String toString() {
                 return "*(" + inner + ")";
-            }            
+            }
         };
     }
 }

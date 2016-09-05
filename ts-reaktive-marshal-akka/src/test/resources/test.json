@@ -1,0 +1,15 @@
+{
+  "map": {
+    "hello": "world"
+  },
+  "array": [
+    "foo",
+    53,
+    null,
+    true,
+    false,
+    {
+       "boo": null
+    }
+  ]
+}

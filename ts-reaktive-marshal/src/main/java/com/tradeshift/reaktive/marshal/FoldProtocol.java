@@ -22,12 +22,13 @@ public class FoldProtocol {
      * @param name Name for the operation (appears in toString)
      * @param inner Inner protocol that emits the elements
      * @param initial Initial value to start accumulating on
-     * @param combine Function that combines the previous result (or initial) with a parsed element 
+     * @param combine Function that combines the previous result (or initial) with a parsed element
      */
     public static <E,T,U> ReadProtocol<E,U> read(String name, ReadProtocol<E,T> inner, Supplier<U> initial, Function2<U,T,U> combine) {
         Try<U> EMPTY = Try.success(initial.get());
         
         return new ReadProtocol<E,U>() {
+            ReadProtocol<E,U> parent = this;
             @Override
             public Reader<E,U> reader() {
                 Reader<E,T> parentReader = inner.reader();
@@ -54,10 +55,18 @@ public class FoldProtocol {
 
                     @Override
                     public Try<U> reset() {
-                        log.debug("Resetting, now {}", value);
-                        Try<U> result = (value.isDefined()) ? value.toTry() : EMPTY;
+                        Try<T> result = parentReader.reset();
+                        Try<U> r;
+                        if (result.isSuccess()) {
+                            r = Try.success(combine.apply(value.getOrElse(initial), result.get()));
+                        } else if (isNone(result)) {
+                            r = (value.isDefined()) ? value.toTry() : EMPTY;
+                        } else {
+                            r = Try.failure(result.failed().get());
+                        }
                         value = Option.none();
-                        return result;
+                        log.debug("{} reset as {}", parent, r);
+                        return r;
                     }
                 };
             }

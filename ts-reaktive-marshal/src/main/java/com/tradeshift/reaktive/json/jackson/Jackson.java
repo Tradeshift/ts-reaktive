@@ -1,5 +1,6 @@
 package com.tradeshift.reaktive.json.jackson;
 
+import static javaslang.control.Option.none;
 import static javaslang.control.Option.some;
 
 import java.io.IOException;
@@ -25,32 +26,16 @@ public class Jackson {
     private static final JsonFactory factory = new JsonFactory();
     
     public <T> String write(T obj, Writer<JSONEvent, T> writer) {
+        return write(writer.applyAndReset(obj));
+    }
+
+    public String write(Iterable<JSONEvent> events) {
         StringWriter out = new StringWriter();
         try {
             JsonGenerator gen = factory.createGenerator(out);
-            writer.apply(obj).forEach(evt -> {
+            events.forEach(evt -> {
                 try {
-                    if (evt == JSONEvent.START_OBJECT) {
-                        gen.writeStartObject();
-                    } else if (evt == JSONEvent.END_OBJECT) {
-                        gen.writeEndObject();
-                    } else if (evt == JSONEvent.START_ARRAY) {
-                        gen.writeStartArray();
-                    } else if (evt == JSONEvent.END_ARRAY) {
-                        gen.writeEndArray();
-                    } else if (evt == JSONEvent.TRUE) {
-                        gen.writeBoolean(true);
-                    } else if (evt == JSONEvent.FALSE) {
-                        gen.writeBoolean(false);
-                    } else if (evt == JSONEvent.NULL) {
-                        gen.writeNull();
-                    } else if (evt instanceof JSONEvent.FieldName) {
-                        gen.writeFieldName(JSONEvent.FieldName.class.cast(evt).getName());
-                    } else if (evt instanceof JSONEvent.StringValue) {
-                        gen.writeString(JSONEvent.StringValue.class.cast(evt).getValueAsString());
-                    } else if (evt instanceof JSONEvent.NumericValue) {
-                        gen.writeNumber(JSONEvent.NumericValue.class.cast(evt).getValueAsString());
-                    } 
+                    writeTo(gen, evt);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -59,6 +44,30 @@ public class Jackson {
             return out.toString();
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+    
+    public static void writeTo(JsonGenerator gen, JSONEvent evt) throws IOException {
+        if (evt == JSONEvent.START_OBJECT) {
+            gen.writeStartObject();
+        } else if (evt == JSONEvent.END_OBJECT) {
+            gen.writeEndObject();
+        } else if (evt == JSONEvent.START_ARRAY) {
+            gen.writeStartArray();
+        } else if (evt == JSONEvent.END_ARRAY) {
+            gen.writeEndArray();
+        } else if (evt == JSONEvent.TRUE) {
+            gen.writeBoolean(true);
+        } else if (evt == JSONEvent.FALSE) {
+            gen.writeBoolean(false);
+        } else if (evt == JSONEvent.NULL) {
+            gen.writeNull();
+        } else if (evt instanceof JSONEvent.FieldName) {
+            gen.writeFieldName(JSONEvent.FieldName.class.cast(evt).getName());
+        } else if (evt instanceof JSONEvent.StringValue) {
+            gen.writeString(JSONEvent.StringValue.class.cast(evt).getValueAsString());
+        } else if (evt instanceof JSONEvent.NumericValue) {
+            gen.writeNumber(JSONEvent.NumericValue.class.cast(evt).getValueAsString());
         }
     }
     
@@ -81,32 +90,20 @@ public class Jackson {
                     Try<T> read = reader.apply(evt.get());
                     if (read.isSuccess()) {
                         return read.toOption();
-                    } else if (read.isFailure() && read != ReadProtocol.NONE) {
+                    } else if (read.isFailure() && !ReadProtocol.isNone(read)) {
                         throw (RuntimeException) read.failed().get();
-                    }                    
+                    }
                 }
                 return Option.none();
             }
             
             private Option<JSONEvent> nextEvent() {
                 try {
-                    while (input.nextToken() != null) {
-                        switch (input.getCurrentToken()) {
-                        case START_OBJECT: return some(JSONEvent.START_OBJECT);
-                        case END_OBJECT: return some(JSONEvent.END_OBJECT);
-                        case START_ARRAY: return some(JSONEvent.START_ARRAY);
-                        case END_ARRAY: return some(JSONEvent.END_ARRAY);
-                        case VALUE_FALSE: return some(JSONEvent.FALSE);
-                        case VALUE_TRUE: return some(JSONEvent.TRUE);
-                        case VALUE_NULL: return some(JSONEvent.NULL);
-                        case FIELD_NAME: return some(new JSONEvent.FieldName(input.getCurrentName()));
-                        case VALUE_NUMBER_FLOAT: return some(new JSONEvent.NumericValue(input.getValueAsString()));
-                        case VALUE_NUMBER_INT: return some(new JSONEvent.NumericValue(input.getValueAsString()));
-                        case VALUE_STRING: return some(new JSONEvent.StringValue(input.getValueAsString()));
-                        default: throw new IllegalArgumentException("Unexpected token " + input.getCurrentToken() + " at " + input.getCurrentLocation());
-                        }
+                    if (input.nextToken() != null) {
+                        return some(getEvent(input));
+                    } else {
+                        return none(); // end of stream
                     }
-                    return Option.none(); // end of stream
                 } catch (IOException e) {
                     throw new IllegalArgumentException(e);
                 }
@@ -129,4 +126,25 @@ public class Jackson {
             Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED),
             false);
     }
+    
+    /**
+     * Returns the current token that [input] is pointing to as a JSONEvent.
+     */
+    public static JSONEvent getEvent(JsonParser input) throws IOException {
+        switch (input.getCurrentToken()) {
+        case START_OBJECT: return JSONEvent.START_OBJECT;
+        case END_OBJECT: return JSONEvent.END_OBJECT;
+        case START_ARRAY: return JSONEvent.START_ARRAY;
+        case END_ARRAY: return JSONEvent.END_ARRAY;
+        case VALUE_FALSE: return JSONEvent.FALSE;
+        case VALUE_TRUE: return JSONEvent.TRUE;
+        case VALUE_NULL: return JSONEvent.NULL;
+        case FIELD_NAME: return new JSONEvent.FieldName(input.getCurrentName());
+        case VALUE_NUMBER_FLOAT: return new JSONEvent.NumericValue(input.getValueAsString());
+        case VALUE_NUMBER_INT: return new JSONEvent.NumericValue(input.getValueAsString());
+        case VALUE_STRING: return new JSONEvent.StringValue(input.getValueAsString());
+        default: throw new IllegalArgumentException("Unexpected token " + input.getCurrentToken() + " at " + input.getCurrentLocation());
+        }
+    }
+    
 }
