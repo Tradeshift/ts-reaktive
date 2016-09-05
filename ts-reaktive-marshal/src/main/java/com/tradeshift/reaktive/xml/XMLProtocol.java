@@ -1,5 +1,6 @@
 package com.tradeshift.reaktive.xml;
 
+import javax.xml.bind.JAXBContext;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventFactory;
 import javax.xml.stream.events.Namespace;
@@ -297,4 +298,27 @@ public class XMLProtocol {
      * Reads and writes every top-level attribute's QName and its value as a Tuple2.
      */
     public static final QNameStringProtocol anyAttribute = new QNameStringProtocol(AnyAttributeProtocol.INSTANCE);
+    
+    /**
+     * Reads and writes a JAXB-annotated class of a known type, by creating a default JAXBContext containing just that type.
+     */
+    public static <T> Protocol<XMLEvent,T> jaxbType(Class<T> targetType) {
+        return JAXBProtocol.jaxbType(targetType);
+    }
+    
+    /**
+     * Reads and writes a JAXB-annotated class of a known type, by using the given JAXB context.
+     */
+    public static <T> Protocol<XMLEvent,T> jaxbType(Class<T> targetType, JAXBContext context) {
+        return JAXBProtocol.jaxbType(targetType, context);
+    }
+    
+    /**
+     * Reads and writes a JAXB-annotated class of an arbitrary type, by using the given JAXB context.
+     * Since this method is not type-safe, it's up to the user to ensure that the given JAXB context
+     * can handle instances and XML given to the protocol.
+     */
+    public static Protocol<XMLEvent,Object> jaxbType(JAXBContext context) {
+        return JAXBProtocol.jaxbType(context);
+    }
 }

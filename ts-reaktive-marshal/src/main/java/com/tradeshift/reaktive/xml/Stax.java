@@ -14,16 +14,26 @@ import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import javax.xml.namespace.QName;
 import javax.xml.stream.FactoryConfigurationError;
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLEventWriter;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.events.Attribute;
+import javax.xml.stream.events.Characters;
+import javax.xml.stream.events.EndElement;
+import javax.xml.stream.events.Namespace;
+import javax.xml.stream.events.ProcessingInstruction;
+import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.ContentHandler;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.AttributesImpl;
 
 import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.Reader;
@@ -131,5 +141,47 @@ public class Stax {
         return StreamSupport.stream(
             Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED),
             false);
+    }
+
+    public static void apply(XMLEvent event, ContentHandler handler) throws SAXException {
+        if (event.isEndDocument()) {
+            handler.endDocument();
+        } else if (event.isEndElement()) {
+            EndElement e = event.asEndElement();
+            handler.endElement(e.getName().getNamespaceURI(), e.getName().getLocalPart(), qname(e.getName()));
+        } else if (event.isStartElement()) {
+            StartElement e = event.asStartElement();
+            AttributesImpl attr = new AttributesImpl();
+            @SuppressWarnings("rawtypes") Iterator i = e.getAttributes();
+            while (i.hasNext()) {
+                Attribute a = (Attribute) i.next();
+                attr.addAttribute(a.getName().getNamespaceURI(), a.getName().getLocalPart(), qname(a.getName()), "CDATA", a.getValue());
+            }
+            handler.startElement(e.getName().getNamespaceURI(), e.getName().getLocalPart(), qname(e.getName()), attr);
+        } else if (event.isAttribute()) {
+            // ignore, should be embedded into StartElement
+        } else if (event.isCharacters()) {
+            Characters e = event.asCharacters();
+            String s = e.asCharacters().getData();
+            handler.characters(s.toCharArray(), 0, s.length());
+        } else if (event.isNamespace()) {
+            Namespace n = (Namespace) event;
+            handler.startPrefixMapping(n.getPrefix(), n.getNamespaceURI());
+        } else if (event.isEntityReference()) {
+            // ignore
+        } else if (event.isProcessingInstruction()) {
+            ProcessingInstruction e = (ProcessingInstruction) event;
+            handler.processingInstruction(e.getTarget(), e.getData());
+        } else if (event.isStartDocument()) {
+            handler.startDocument();
+        }
+    }
+
+    private static String qname(QName name) {
+        if (name.getPrefix() != null && !name.getPrefix().isEmpty()) {
+            return name.getPrefix() + ":" + name.getLocalPart();
+        } else {
+            return name.getLocalPart();
+        }
     }
 }
