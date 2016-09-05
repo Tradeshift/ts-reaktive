@@ -1,7 +1,5 @@
 package com.tradeshift.reaktive.marshal;
 
-import java.util.NoSuchElementException;
-
 import com.tradeshift.reaktive.Regex;
 
 import javaslang.Function1;
@@ -62,7 +60,7 @@ public class StringProtocol<E> implements Protocol<E,String> {
     }
 
     /**
-     * Returns an XMLProtocol that only reads strings that match the given regular expression. 
+     * Returns an XMLProtocol that only reads strings that match the given regular expression.
      * During writing, the given function is called. It's the callers responsibility to ensure that
      * the result of the function matches the regex.
      */
@@ -71,7 +69,7 @@ public class StringProtocol<E> implements Protocol<E,String> {
         return new Protocol<E,T>() {
             @Override
             public Reader<E,T> reader() {
-                return parent.reader().flatMap(s -> regex.match(s).toTry().orElse(() -> Try.failure(new NoSuchElementException("Should match " + regex))));
+                return parent.reader().flatMap(s -> regex.match(s).toTry().orElse(() -> Try.failure(new ValidationException(parent.toString() + " should match " + regex))));
             }
 
             @Override

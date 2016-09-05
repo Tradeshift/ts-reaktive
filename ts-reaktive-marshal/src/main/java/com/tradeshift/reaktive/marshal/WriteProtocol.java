@@ -2,9 +2,12 @@ package com.tradeshift.reaktive.marshal;
 
 import javaslang.Function1;
 
+/**
+ * Protocol for writing possibly multiple instances of T into events E.
+ */
 public interface WriteProtocol<E,T> {
     /**
-     * Narrows a protocol for writing T to become a writer for a subclass of T. 
+     * Narrows a protocol for writing T to become a writer for a subclass of T.
      * This is OK, since a writer that accepts a T for writing will also accept a U.
      */
     @SuppressWarnings("unchecked")
@@ -38,6 +41,6 @@ public interface WriteProtocol<E,T> {
                 return parent.getEventType();
             }
         };
-    };    
+    };
     
 }

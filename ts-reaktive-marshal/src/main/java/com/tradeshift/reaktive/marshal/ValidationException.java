@@ -1,7 +1,7 @@
 package com.tradeshift.reaktive.marshal;
 
 @SuppressWarnings("serial")
-public class ValidationException extends RuntimeException {
+public class ValidationException extends IllegalArgumentException {
 
     public ValidationException() {
         super();

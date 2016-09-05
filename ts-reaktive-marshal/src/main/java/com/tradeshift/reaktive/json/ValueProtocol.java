@@ -4,7 +4,6 @@ import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,40 +14,41 @@ import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.Writer;
 
 import javaslang.Function1;
+import javaslang.collection.Vector;
 import javaslang.control.Try;
 
 public class ValueProtocol<T> implements Protocol<JSONEvent, T> {
-    // Only numeric and boolean types are defined here, since they have to marshal to numbers and booleans in JSON. 
+    // Only numeric and boolean types are defined here, since they have to marshal to numbers and booleans in JSON.
     // For everything that marshals to strings, use stringValue.as(...)
     
     /** A Java integer represented as a JSON number (on reading, JSON string is also allowed) */
     public static final ValueProtocol<Integer> INTEGER = of("(signed 32-bit integer)",
-        evt -> Try.of(() -> Integer.parseInt(evt.getValueAsString())), 
+        evt -> Try.of(() -> Integer.parseInt(evt.getValueAsString())),
         i -> new JSONEvent.NumericValue(String.valueOf(i)));
     
     /** A Java long represented as a JSON number (on reading, JSON string is also allowed) */
     public static final ValueProtocol<Long> LONG = of("(signed 64-bit integer)",
-        evt -> Try.of(() -> Long.parseLong(evt.getValueAsString())), 
+        evt -> Try.of(() -> Long.parseLong(evt.getValueAsString())),
         l -> new JSONEvent.NumericValue(String.valueOf(l)));
 
     /** A Java big decimal represented as a JSON number (on reading, JSON string is also allowed) */
     public static final ValueProtocol<BigDecimal> BIGDECIMAL = of("(arbitrary precision decimal)",
-        evt -> Try.of(() -> new BigDecimal(evt.getValueAsString())), 
+        evt -> Try.of(() -> new BigDecimal(evt.getValueAsString())),
         d -> new JSONEvent.NumericValue(String.valueOf(d)));
     
     /** A Java big integer represented as a JSON number (on reading, JSON string is also allowed) */
     public static final ValueProtocol<BigInteger> BIGINTEGER = of("(arbitrary precision integer)",
-        evt -> Try.of(() -> new BigInteger(evt.getValueAsString())), 
+        evt -> Try.of(() -> new BigInteger(evt.getValueAsString())),
         d -> new JSONEvent.NumericValue(String.valueOf(d)));
     
-    /** A Java boolean represented a JSON boolean (on reading, a JSON string of "true" or "false" is also allowed) */ 
-    public static final ValueProtocol<Boolean> BOOLEAN = of("(boolean)", 
-        v -> Try.of(() -> v.getValueAsString().equals("true")), 
+    /** A Java boolean represented a JSON boolean (on reading, a JSON string of "true" or "false" is also allowed) */
+    public static final ValueProtocol<Boolean> BOOLEAN = of("(boolean)",
+        v -> Try.of(() -> v.getValueAsString().equals("true")),
         b -> b ? JSONEvent.TRUE : JSONEvent.FALSE);
     
     /** A Java String. Internal implementation, @see {@link StringValueProtocol} */
     static final ValueProtocol<String> STRING = of("(string)",
-        evt -> Try.success(evt.getValueAsString()), 
+        evt -> Try.success(evt.getValueAsString()),
         s -> new JSONEvent.StringValue(s));
     
     private static final Logger log = LoggerFactory.getLogger(ValueProtocol.class);
@@ -66,13 +66,6 @@ public class ValueProtocol<T> implements Protocol<JSONEvent, T> {
         this.tryRead = tryRead;
         this.write = write;
     }
-
-    private final Writer<JSONEvent, T> writer = new Writer<JSONEvent, T>() {
-        @Override
-        public Stream<JSONEvent> apply(T value) {
-            return Stream.of(write.apply(value));
-        }
-    };
 
     @Override
     public Reader<JSONEvent, T> reader() {
@@ -112,7 +105,7 @@ public class ValueProtocol<T> implements Protocol<JSONEvent, T> {
 
     @Override
     public Writer<JSONEvent, T> writer() {
-        return writer;
+        return Writer.of(value -> Vector.of(write.apply(value)));
     }
 
     @Override

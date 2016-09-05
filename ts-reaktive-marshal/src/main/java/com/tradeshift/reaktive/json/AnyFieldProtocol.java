@@ -2,8 +2,6 @@ package com.tradeshift.reaktive.json;
 
 import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
 
-import java.util.stream.Stream;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +12,7 @@ import com.tradeshift.reaktive.marshal.Writer;
 
 import javaslang.Tuple;
 import javaslang.Tuple2;
+import javaslang.collection.Vector;
 import javaslang.control.Option;
 import javaslang.control.Try;
 
@@ -71,7 +70,7 @@ public class AnyFieldProtocol {
                         } else {
                             Try<T> result = (matched) ? inner.apply(evt) : none();
                             if (evt == JSONEvent.START_OBJECT || evt == JSONEvent.START_ARRAY) {
-                                nestedObjects++;                        
+                                nestedObjects++;
                             } else if (evt == JSONEvent.END_OBJECT || evt == JSONEvent.END_ARRAY) {
                                 nestedObjects--;
                             }
@@ -84,16 +83,12 @@ public class AnyFieldProtocol {
             @Override
             public String toString() {
                 return "(any): " + innerProtocol;
-            }            
+            }
         };
     }
     
     public static <T> WriteProtocol<JSONEvent, Tuple2<String,T>> write(WriteProtocol<JSONEvent, T> innerProtocol) {
         return new WriteProtocol<JSONEvent, Tuple2<String,T>>() {
-            final Writer<JSONEvent, Tuple2<String,T>> writer = value -> {
-                return FieldProtocol.concatIfSecondNotEmpty(Stream.of(new JSONEvent.FieldName(value._1)), innerProtocol.writer().apply(value._2));
-            };
-            
             @Override
             public Class<? extends JSONEvent> getEventType() {
                 return JSONEvent.class;
@@ -101,7 +96,9 @@ public class AnyFieldProtocol {
             
             @Override
             public Writer<JSONEvent, Tuple2<String,T>> writer() {
-                return writer;
+                return innerProtocol.writer()
+                    .compose((Tuple2<String, T> t) -> t._2)
+                    .mapWithInput((t, events) -> Vector.<JSONEvent>of(new JSONEvent.FieldName(t._1)).appendAll(events));
             }
             
             @Override

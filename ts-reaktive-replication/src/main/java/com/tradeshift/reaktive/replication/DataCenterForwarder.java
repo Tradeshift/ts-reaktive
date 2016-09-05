@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 import akka.Done;
 import akka.NotUsed;
 import akka.actor.AbstractActor;
+import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.actor.Status.Failure;
@@ -31,7 +32,7 @@ import scala.concurrent.duration.Duration;
  * Runs a continuous query for all events matching a certain tag, and forwards those events to a remote data center.
  */
 public class DataCenterForwarder<E> extends AbstractActor {
-    private final LoggingAdapter log = Logging.getLogger(getContext().system(), this);    
+    private final LoggingAdapter log = Logging.getLogger(getContext().system(), this);
     
     /**
      * Starts a DataCenterForwarder for each of the known data centers in the {@link DataCenterRepository}.
@@ -44,7 +45,7 @@ public class DataCenterForwarder<E> extends AbstractActor {
      * @param tag Tag to pass to {@link EventsByTagQuery} (all events must be tagged by this)
      * @param currentEventsByPersistenceIdQuery Query to find all current events for a specific persistenceId
      */
-    public static <E> void startAll(ActorSystem system, Materializer materializer, DataCenterRepository dataRepo, VisibilityRepository visibilityRepo, Class<E> eventType, 
+    public static <E> void startAll(ActorSystem system, Materializer materializer, DataCenterRepository dataRepo, VisibilityRepository visibilityRepo, Class<E> eventType,
         EventsByTagQuery eventsByTagQuery, CurrentEventsByPersistenceIdQuery currentEventsByPersistenceIdQuery) {
         
         String tag = Replication.get(system).getEventTag(eventType);
@@ -52,14 +53,14 @@ public class DataCenterForwarder<E> extends AbstractActor {
             system.actorOf(ClusterSingletonManager.props(
                 BackoffSupervisor.props(
                     Backoff.onFailure(
-                        Props.create(DataCenterForwarder.class, () -> new DataCenterForwarder<E>(materializer, dataCenter, visibilityRepo, eventType,
+                        Props.create(DataCenterForwarder.class, () -> new DataCenterForwarder<>(materializer, dataCenter, visibilityRepo, eventType,
                             eventsByTagQuery, currentEventsByPersistenceIdQuery)),
                         "f",
                         Duration.create(1, TimeUnit.SECONDS),
                         Duration.create(1, TimeUnit.SECONDS), // TODO make these 3 configurable
                         0.2)
-                ),  
-                Done.getInstance(), 
+                ),
+                Done.getInstance(),
                 ClusterSingletonManagerSettings.create(system).withSingletonName("s")), "forwarder_" + dataCenter.getName() + "_" + tag);
         }
         
@@ -90,7 +91,7 @@ public class DataCenterForwarder<E> extends AbstractActor {
      * @param tag Tag to pass to {@link EventsByTagQuery} (all events must be tagged by this)
      * @param currentEventsByPersistenceIdQuery Query to find all current events for a specific persistenceId
      */
-    public DataCenterForwarder(Materializer materializer, DataCenter dataCenter, VisibilityRepository visibilityRepo, Class<E> eventType, 
+    public DataCenterForwarder(Materializer materializer, DataCenter dataCenter, VisibilityRepository visibilityRepo, Class<E> eventType,
         EventsByTagQuery eventsByTagQuery, CurrentEventsByPersistenceIdQuery currentEventsByPersistenceIdQuery) {
         
         final Replication replication = Replication.get(context().system());
@@ -128,7 +129,7 @@ public class DataCenterForwarder<E> extends AbstractActor {
                 log.debug("Updated visibility for {} at {}", msg.offset, updatingVisibilityOffset);
                 if (msg.offset == updatingVisibilityOffset) {
                     if (updatingVisibilityOffsetCount >= 1) {
-                        updatingVisibilityOffsetCount--;                        
+                        updatingVisibilityOffsetCount--;
                     }
                     updateLastEventOffset();
                 }
@@ -154,7 +155,10 @@ public class DataCenterForwarder<E> extends AbstractActor {
     private void updateLastEventOffset() {
         log.debug("Considering updating event offset, count={}, visibility={}, lastDelivered={}", updatingVisibilityOffsetCount, updatingVisibilityOffset, lastDeliveredEventOffset);
         if (updatingVisibilityOffsetCount == 0) {
-            final long offset = 
+         // we're no longer updating visibility.
+         // Hence, visibility has been updated at least until updatingVisibilityOffset.
+         // and normal events at least until lastDeliveredEventOffset.
+            final long offset =
                 (updatingVisibilityOffset == 0) ? lastDeliveredEventOffset :
                 (lastDeliveredEventOffset == 0) ? updatingVisibilityOffset :
                 Math.min(updatingVisibilityOffset, lastDeliveredEventOffset);
@@ -179,7 +183,7 @@ public class DataCenterForwarder<E> extends AbstractActor {
             .mapAsync(parallelism, e -> {
                 return visibilityRepo.isVisibleTo(dataCenter, e.persistenceId()).thenApply(v -> {
                     log.debug("Visibility of {}: {}", e, v);
-                    return Tuple.of(e,v);});   
+                    return Tuple.of(e,v);});
             })
             .filter(t -> t._2)
             .map(t -> t._1)
@@ -192,6 +196,8 @@ public class DataCenterForwarder<E> extends AbstractActor {
     
     @SuppressWarnings("unchecked")
     private Sink<EventEnvelope,NotUsed> updateVisibility() {
+        ActorRef self = self(); // not safe to close over self() inside e.g. mapAsync
+        
         return Flow.<EventEnvelope>create()
             .mapAsync(parallelism, e -> {
                 log.debug("updateVisibility {}", e);
@@ -204,19 +210,19 @@ public class DataCenterForwarder<E> extends AbstractActor {
                 } else {
                     return visibilityRepo.getVisibility(e.persistenceId()).thenApply(v -> {
                         log.debug("visibility of {} is {}/{}", e, v.isMaster(), v.getDatacenters());
-                        return Tuple.of(e, v.isMaster() && !v.isVisibleTo(dataCenter));}); 
+                        return Tuple.of(e, v.isMaster() && !v.isVisibleTo(dataCenter));});
                 }
             })
-            .filter(t -> t._2) 
+            .filter(t -> t._2)
             .map(t -> t._1)
-            .mapAsync(parallelism, e -> 
+            .mapAsync(parallelism, e ->
                 visibilityRepo.makeVisibleTo(dataCenter, e.persistenceId()).thenApply(done -> {
-                    self().tell(new UpdatingVisibility(e.offset()), self());
+                    self.tell(new UpdatingVisibility(e.offset()), self);
                     return e;
                 })
             )
             .mapAsyncUnordered(parallelism, e -> {
-                // TODO (optimization) don't (or queue) replay when a current replay already is in progress. 
+                // TODO (optimization) don't (or queue) replay when a current replay already is in progress.
                 // The above probably should be done at the same time as having clustered (non-persistent) actors per persistenceId.
                 // Currently, subsequent events for the same persistenceId will trigger lots of "WARN: Received duplicate event" in ReplicatedActor.
                 log.info("{} Replaying persistence ID {} into {}", self(), e.persistenceId(), dataCenter.getName());
@@ -227,7 +233,7 @@ public class DataCenterForwarder<E> extends AbstractActor {
                                 .thenApply(done -> e);
             })
             .alsoTo(stopOnError("updateVisibility"))
-            .to(Sink.foreach(event -> self().tell(new VisibilityUpdated(event.offset()), self())));
+            .to(Sink.foreach(event -> self.tell(new VisibilityUpdated(event.offset()), self)));
     }
     
     private <T> Sink<T,NotUsed> stopOnError(String msg) {

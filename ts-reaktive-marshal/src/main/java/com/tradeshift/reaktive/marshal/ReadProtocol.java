@@ -6,7 +6,14 @@ import javaslang.Function1;
 import javaslang.control.Option;
 import javaslang.control.Try;
 
+/**
+ * Protocol for reading a stream of events E into possibly multiple instances of T
+ */
 public interface ReadProtocol<E,T> {
+    public static class Constants {
+        private static final Try<?> NONE = Option.none().toTry();
+    }
+    
     /**
      * Widens a Reader for T to return a superclass S of T instead.
      * This is OK, since a ReadProtocol that produces T always produces a subclass of S.
@@ -16,14 +23,13 @@ public interface ReadProtocol<E,T> {
         return (ReadProtocol<E,S>) p;
     }
     
-    public static final Try<?> NONE = Option.none().toTry();
 
     /**
      * Returns a failed Try that indicates no value was found.
      */
     @SuppressWarnings("unchecked")
     public static <T> Try<T> none() {
-        return (Try<T>) NONE;
+        return (Try<T>) Constants.NONE;
     }
 
     /**

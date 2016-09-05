@@ -25,6 +25,7 @@ import static org.forgerock.cuppa.Cuppa.it;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.xml.stream.events.XMLEvent;
 
@@ -42,7 +43,7 @@ import javaslang.control.Option;
 public class XMLProtocolSpec {{
     final Stax stax = new Stax();
     
-    final Protocol<XMLEvent,DTO1> dto1proto = 
+    final Protocol<XMLEvent,DTO1> dto1proto =
         tag(qname("dto"),
             tag(qname("l"),
                 body.as(LONG)
@@ -59,7 +60,7 @@ public class XMLProtocolSpec {{
             dto -> dto.getL(),
             dto -> dto.getI(),
             dto -> dto.getS()
-        ); 
+        );
     
     describe("An XMLProtocol mapping both attributes and child tags ", () -> {
         it("should read a document from XML where the attribute and child tags are absent", () -> {
@@ -75,7 +76,7 @@ public class XMLProtocolSpec {{
         });
         
         it("should fail if an optional attribute has the wrong content", () -> {
-            assertThatThrownBy(() -> { 
+            assertThatThrownBy(() -> {
                 stax.parse("<dto i='hello'><s>One</s><l>123</l><s>Two</s></dto>", dto1proto.reader());
             })
             .hasMessageContaining("Expecting a signed 32-bit decimal integer")
@@ -110,7 +111,7 @@ public class XMLProtocolSpec {{
     describe("An XMLProtocol that relies on side-effects to allow streamed parsing", () -> {
         List<DTO1> received = new ArrayList<>();
         
-        TagReadProtocol<Void> streamedProto = 
+        TagReadProtocol<Void> streamedProto =
             tag(qname("root"),
                 forEach(dto1proto, received::add)
             );
@@ -183,7 +184,7 @@ public class XMLProtocolSpec {{
             assertThat(
                 stax.parse("<properties hello=\"world\" good=\"stuff\"/>", proto.reader()).findFirst()
             ).contains(HashMap.of("hello", "world").put("good", "stuff"));
-        });        
+        });
     });
     
     describe("An XMLProtocol with several alternatives", () -> {
@@ -201,7 +202,7 @@ public class XMLProtocolSpec {{
             ),
             l -> new DTO1(l, Option.none(), Vector.empty()),
             dto -> dto.getL()
-        ); 
+        );
         
         Protocol<XMLEvent,DTO1> proto = alternatively(
             protoV1.having(attribute("version"), "1"),
@@ -223,19 +224,19 @@ public class XMLProtocolSpec {{
         it("should unmarshal a first alternative correctly", () -> {
             assertThat(
                 stax.parse("<dto version='1'><l>42</l></dto>", proto.reader()).findFirst()
-            ).contains(new DTO1(42, Option.none(), Vector.empty()));            
+            ).contains(new DTO1(42, Option.none(), Vector.empty()));
         });
         
         it("should unmarshal a second alternative correctly", () -> {
             assertThat(
                 stax.parse("<dtov2 version='2'><l>42</l></dtov2>", proto.reader()).findFirst()
-            ).contains(new DTO1(42, Option.none(), Vector.empty()));            
+            ).contains(new DTO1(42, Option.none(), Vector.empty()));
         });
         
         it("should pick the first alternative when writing", () -> {
             assertThat(
                 stax.writeAsString(new DTO1(42, Option.none(), Vector.empty()), proto.writer())
-            ).isEqualTo("<dto version=\"1\"><l>42</l></dto>");            
+            ).isEqualTo("<dto version=\"1\"><l>42</l></dto>");
         });
     });
     
@@ -254,7 +255,7 @@ public class XMLProtocolSpec {{
             ),
             l -> new DTO1(l, Option.none(), Vector.of("v1")),
             dto -> dto.getL()
-        ); 
+        );
         
         Protocol<XMLEvent,DTO1> proto = alternatively(
             protoV2.having(
@@ -266,13 +267,13 @@ public class XMLProtocolSpec {{
         it("should unmarshal a first alternative correctly", () -> {
             assertThat(
                 stax.parse("<dto version='2'><l>42</l></dto>", proto.reader()).findFirst()
-            ).contains(new DTO1(42, Option.none(), Vector.of("v2")));            
+            ).contains(new DTO1(42, Option.none(), Vector.of("v2")));
         });
         
         it("should unmarshal a second alternative correctly", () -> {
             assertThat(
                 stax.parse("<dto><l>42</l></dto>", proto.reader()).findFirst()
-            ).contains(new DTO1(42, Option.none(), Vector.of("v1")));            
+            ).contains(new DTO1(42, Option.none(), Vector.of("v1")));
         });
     });
     
@@ -289,11 +290,27 @@ public class XMLProtocolSpec {{
             list.add("world");
             assertThat(
                 stax.writeAsString(list, proto.writer())
-            ).isEqualTo("<list><item>hello</item><item>world</item></list>");                        
+            ).isEqualTo("<list><item>hello</item><item>world</item></list>");
         });
         
         it("should unmarshal several items correctly", () -> {
-            List<String> list = stax.parse("<list><item>hello</item><item>world</item></list>", proto.reader()).findFirst().get(); 
+            List<String> list = stax.parse("<list><item>hello</item><item>world</item></list>", proto.reader()).findFirst().get();
+            assertThat(list).containsExactly("hello", "world");
+        });
+    });
+    
+    describe("An XMLProtocol that describes strings as nested tags", () -> {
+        Protocol<XMLEvent,String> proto = tag(qname("root"),
+            tag(qname("element"),
+                body
+            )
+            .having(
+                attribute("important"), "true"
+            )
+        );
+        
+        it("should unmarshal multiple tags into multiple strings", () -> {
+            List<String> list = stax.parse("<root><element important='true'>hello</element><element important='true'>world</element></root>", proto.reader()).collect(Collectors.toList());
             assertThat(list).containsExactly("hello", "world");
         });
     });

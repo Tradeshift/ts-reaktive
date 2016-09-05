@@ -3,8 +3,6 @@ package com.tradeshift.reaktive.json;
 import static com.tradeshift.reaktive.marshal.ReadProtocol.isNone;
 import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
 
-import java.util.stream.Stream;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +11,8 @@ import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.WriteProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
+import javaslang.collection.Seq;
+import javaslang.collection.Vector;
 import javaslang.control.Try;
 
 public class ArrayProtocol<E> {
@@ -33,9 +33,9 @@ public class ArrayProtocol<E> {
                     @Override
                     public Try<E> reset() {
                         nestedObjects = 0;
-                        matched = false;  
+                        matched = false;
                         wasEmpty = true;
-                        return inner.reset();
+                        return none();
                     }
 
                     @Override
@@ -54,7 +54,8 @@ public class ArrayProtocol<E> {
                             }
                         } else if (matched && evt == JSONEvent.END_ARRAY && nestedObjects == 1) {
                             log.debug("Array has ended: {}", owner);
-                            Try<E> result = reset();
+                            reset();
+                            Try<E> result = inner.reset();
                             return (wasEmpty && isNone(result)) ? innerProtocol.empty() : result;
                         } else {
                             Try<E> result = none();
@@ -93,17 +94,28 @@ public class ArrayProtocol<E> {
 
     public static <E> WriteProtocol<JSONEvent, E> write(WriteProtocol<JSONEvent, E> innerProtocol) {
         return new WriteProtocol<JSONEvent, E>() {
-            private final Writer<JSONEvent, E> writer = e -> {
+            WriteProtocol<JSONEvent, E> parent = this;
+            private final Writer<JSONEvent, E> writer = new Writer<JSONEvent,E>() {
                 Writer<JSONEvent, E> inner = innerProtocol.writer();
-                return
-                    Stream.concat(
-                        Stream.concat(
-                            Stream.of(JSONEvent.START_ARRAY),
-                            inner.apply(e)
-                        ),
-                        Stream.of(JSONEvent.END_ARRAY)
-                    );
+                boolean started = false;
+
+                @Override
+                public Seq<JSONEvent> apply(E value) {
+                    log.debug("{}: Writing {}", parent, value);
+                    Seq<JSONEvent> prefix = (started) ? Vector.empty() : Vector.of(JSONEvent.START_ARRAY);
+                    started = true;
                     
+                    return prefix.appendAll(inner.applyAndReset(value));
+                }
+                    
+                @Override
+                public Seq<JSONEvent> reset() {
+                    log.debug("{}: Resetting ", parent);
+                    Seq<JSONEvent> prefix = (started) ? Vector.empty() : Vector.of(JSONEvent.START_ARRAY);
+                    started = false;
+                    
+                    return prefix.append(JSONEvent.END_ARRAY);
+                }
             };
             
             @Override
@@ -119,7 +131,7 @@ public class ArrayProtocol<E> {
             @Override
             public String toString() {
                 return "[ " + innerProtocol + "]";
-            }            
+            }
         };
     }
 }

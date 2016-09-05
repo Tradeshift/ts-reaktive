@@ -21,7 +21,7 @@ import javaslang.collection.Vector;
 import javaslang.control.Try;
 
 /**
- * Generic class to combine several nested FieldProtocols into reading/writing a Java object instance.  
+ * Generic class to combine several nested FieldProtocols into reading/writing a Java object instance.
  */
 @SuppressWarnings("unchecked")
 public class ObjectReadProtocol<T> implements ReadProtocol<JSONEvent, T> {
@@ -53,7 +53,7 @@ public class ObjectReadProtocol<T> implements ReadProtocol<JSONEvent, T> {
         return new Reader<JSONEvent, T>() {
             private final Seq<ReadProtocol<JSONEvent, Object>> all = protocols.appendAll(conditions).map(p -> (ReadProtocol<JSONEvent, Object>)p);
             private final List<Reader<JSONEvent, Object>> readers = all.map(p -> p.reader()).toJavaList();
-            private Try<Object>[] values = (Try<Object>[]) new Try<?>[readers.size()];
+            private final Try<Object>[] values = (Try<Object>[]) new Try<?>[readers.size()];
             private int nestedObjects = 0;
             private boolean matched = false;
             
@@ -85,7 +85,7 @@ public class ObjectReadProtocol<T> implements ReadProtocol<JSONEvent, T> {
                         nestedObjects++;
                         return none();
                     } else { // literal, just skip
-                        return none();                    
+                        return none();
                     }
                 } else if (matched && evt == JSONEvent.END_OBJECT && nestedObjects == 1) {
                     AtomicReference<Throwable> failure = new AtomicReference<>();
@@ -100,7 +100,7 @@ public class ObjectReadProtocol<T> implements ReadProtocol<JSONEvent, T> {
                         Try<Object> r = readers.get(i).reset();
                         
                         if (!isNone(r) && values[i].eq(protocols.get(i).empty())) {
-                            values[i] = r;                            
+                            values[i] = r;
                         }
                     }
                     
@@ -110,12 +110,12 @@ public class ObjectReadProtocol<T> implements ReadProtocol<JSONEvent, T> {
                         Try<Object> t = values[i];
                         log.debug("{} said {}", p, t);
                         t.failed().forEach(failure::set);
-                        args[i] = t.getOrElse((Object)null);                            
+                        args[i] = t.getOrElse((Object)null);
                     }
                     log.debug("Object has {}, failure is ", values, failure.get());
-                    Try<T> result = (failure.get() != null) 
-                        ? Try.failure(failure.get()) 
-                        : Try.success(produce.apply(Arrays.asList(args))); 
+                    Try<T> result = (failure.get() != null)
+                        ? Try.failure(failure.get())
+                        : Try.success(produce.apply(Arrays.asList(args)));
                     reset();
                     return result;
                 } else {
@@ -124,7 +124,7 @@ public class ObjectReadProtocol<T> implements ReadProtocol<JSONEvent, T> {
                             int idx = i;
                             Reader<JSONEvent, Object> r = readers.get(i);
                             Try<Object> t = r.apply(evt);
-                            if (t != ReadProtocol.NONE) {
+                            if (!ReadProtocol.isNone(t)) {
                                 values[idx] = t;
                                 log.debug("   -> {}", values[idx]);
                             }
@@ -152,11 +152,12 @@ public class ObjectReadProtocol<T> implements ReadProtocol<JSONEvent, T> {
      * Returns a new protocol that, in addition, also requires the given nested protocol to be present with the given constant value
      */
     public <U> ObjectReadProtocol<T> having(ReadProtocol<JSONEvent, U> nestedProtocol, U value) {
-        return new ObjectReadProtocol<T>(protocols, produce, conditions.append(ConstantProtocol.read(nestedProtocol, value)));
+        return new ObjectReadProtocol<>(protocols, produce, conditions.append(ConstantProtocol.read(nestedProtocol, value)));
     }
     
     @Override
     public String toString() {
-        return "{ " + protocols.mkString(",") + " }";
+        String c = conditions.isEmpty() ? "" : ", " + conditions.mkString(", ");
+        return "{ " + protocols.mkString(", ") + c + " }";
     }
 }

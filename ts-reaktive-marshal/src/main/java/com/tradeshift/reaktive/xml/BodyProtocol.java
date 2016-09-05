@@ -5,7 +5,6 @@ import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.xml.stream.XMLEventFactory;
 import javax.xml.stream.events.XMLEvent;
@@ -15,6 +14,7 @@ import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.StringProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
+import javaslang.collection.Vector;
 import javaslang.control.Try;
 
 /**
@@ -28,7 +28,7 @@ public class BodyProtocol extends StringProtocol<XMLEvent> {
     
     private BodyProtocol() {
         super(new Protocol<XMLEvent,String>(){
-            Writer<XMLEvent,String> writer = value -> Stream.of(factory.createCharacters(value));
+            Writer<XMLEvent,String> writer = Writer.of(value -> Vector.of(factory.createCharacters(value)));
             
             @Override
             public Writer<XMLEvent,String> writer() {

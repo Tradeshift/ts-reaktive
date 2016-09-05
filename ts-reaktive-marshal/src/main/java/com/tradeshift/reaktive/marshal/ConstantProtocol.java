@@ -10,7 +10,14 @@ public class ConstantProtocol {
      * Marker type to indicate that the constant was indeed found in the incoming event stream (during reading).
      * During writing, the constant is always output whenever the writer is invoked.
      */
-    public static class Present { private Present() {} }
+    public static class Present {
+        private Present() {}
+        
+        @Override
+        public String toString() {
+            return "present";
+        }
+    }
     public static final Present PRESENT = new Present();
     
     public static <E,T> ReadProtocol<E,Present> read(ReadProtocol<E,T> inner, T value) {
@@ -38,7 +45,7 @@ public class ConstantProtocol {
             
             @Override
             public String toString() {
-                return inner.toString() + " with value " + value;
+                return inner.toString() + "=" + value;
             }
         };
     }
@@ -47,7 +54,7 @@ public class ConstantProtocol {
         return new WriteProtocol<E,Present>() {
             @Override
             public Writer<E,Present> writer() {
-                return v -> inner.writer().apply(value);
+                return inner.writer().compose(present -> value);
             }
 
             @Override
@@ -57,7 +64,7 @@ public class ConstantProtocol {
             
             @Override
             public String toString() {
-                return inner.toString() + " with value " + value;
+                return inner.toString() + "=" + value;
             }
         };
     }
