@@ -22,6 +22,8 @@ import javax.xml.stream.events.Attribute;
 import javax.xml.stream.events.Namespace;
 import javax.xml.stream.events.XMLEvent;
 
+import org.codehaus.stax2.LocationInfo;
+
 import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
@@ -44,7 +46,6 @@ import javaslang.control.Option;
  * @see https://github.com/FasterXML/aalto-xml
  */
 public class AaltoReader extends GraphStage<FlowShape<ByteString,XMLEvent>> {
-    private static final XMLEventFactory efactory = XMLEventFactory.newFactory();
     private static final AsyncXMLInputFactory factory = new InputFactoryImpl();
     
     public static final AaltoReader instance = new AaltoReader();
@@ -60,6 +61,7 @@ public class AaltoReader extends GraphStage<FlowShape<ByteString,XMLEvent>> {
 
     @Override
     public GraphStageLogic createLogic(Attributes attr) throws Exception {
+        XMLEventFactory efactory = XMLEventFactory.newFactory();
         AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = factory.createAsyncForByteBuffer();
         return new GraphStageLogic(shape) {
             {
@@ -95,6 +97,8 @@ public class AaltoReader extends GraphStage<FlowShape<ByteString,XMLEvent>> {
             private void emitNext() throws XMLStreamException {
                 if (parser.hasNext()) {
                     Option<XMLEvent> next = next();
+                    // calling into Stax2 directly gives more accurate location information within a byte chunk
+                    efactory.setLocation(((LocationInfo) parser).getCurrentLocation());
                     if (next.isDefined()) {
                         push(out, next.get());
                     } else {

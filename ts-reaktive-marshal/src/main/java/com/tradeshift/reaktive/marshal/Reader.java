@@ -12,6 +12,23 @@ public interface Reader<E,T> {
         return (Reader<E,T>) p;
     }
     
+    /**
+     * Returns a reader that emits a result on every event, the result being the event itself.
+     */
+    public static <T, E extends T> Reader<E,T> identity() {
+        return new Reader<E, T>() {
+            @Override
+            public Try<T> reset() {
+                return ReadProtocol.none();
+            }
+
+            @Override
+            public Try<T> apply(E event) {
+                return Try.success(event);
+            }
+        };
+    }
+    
     Try<T> reset();
     Try<T> apply(E event);
     

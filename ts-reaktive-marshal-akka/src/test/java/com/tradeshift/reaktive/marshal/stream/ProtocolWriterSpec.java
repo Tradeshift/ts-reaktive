@@ -34,7 +34,7 @@ public class ProtocolWriterSpec extends SharedActorSystemSpec {{
             when(writer.apply("world")).thenReturn(Vector.of(new JSONEvent.StringValue("world")));
             when(writer.reset()).thenReturn(Vector.of(JSONEvent.END_ARRAY));
             
-            List<JSONEvent> result = Source.from(Arrays.asList("hello", "world")).via(ProtocolWriter.flow(proto)).runWith(Sink.seq(), materializer)
+            List<JSONEvent> result = Source.from(Arrays.asList("hello", "world")).via(ProtocolWriter.of(proto)).runWith(Sink.seq(), materializer)
                 .toCompletableFuture().get(1, TimeUnit.SECONDS);
             assertThat(result).containsExactly(
                 JSONEvent.START_ARRAY, new JSONEvent.StringValue("hello"), new JSONEvent.StringValue("world"), JSONEvent.END_ARRAY

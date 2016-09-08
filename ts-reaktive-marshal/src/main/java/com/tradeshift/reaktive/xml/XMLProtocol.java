@@ -3,6 +3,7 @@ package com.tradeshift.reaktive.xml;
 import javax.xml.bind.JAXBContext;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventFactory;
+import javax.xml.stream.events.Characters;
 import javax.xml.stream.events.Namespace;
 import javax.xml.stream.events.XMLEvent;
 
@@ -24,6 +25,15 @@ public class XMLProtocol {
     private static final XMLEventFactory factory = XMLEventFactory.newFactory();
     static final Locator<XMLEvent> locator = evt -> evt.getLocation().getLineNumber() + ":" + evt.getLocation().getColumnNumber();
 
+    //---------------------- 0-arity tag methods -----------------------------------
+    
+    /**
+     * Matches an exact XML tag, and emits the start and end tags themselves, including any sub-events that make up its body.
+     */
+    public static Protocol<XMLEvent, XMLEvent> tag(QName name) {
+        return new SelectedTagProtocol(name);
+    }
+    
     //---------------------- 1-arity tag methods -----------------------------------
     
     /**
@@ -253,6 +263,11 @@ public class XMLProtocol {
      * Reads and writes the body of the current XML tag
      */
     public static final BodyProtocol body = BodyProtocol.INSTANCE;
+    
+    /**
+     * Reads and writes the body of the current XML tag as actual XML {@link Characters} events.
+     */
+    public static final Protocol<XMLEvent, Characters> bodyEvents = BodyEventsProtocol.INSTANCE;
     
     /**
      * Returns a QName for a tag in the default namespace.

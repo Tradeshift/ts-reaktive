@@ -26,6 +26,7 @@ libraryDependencies ++= {
     "org.forgerock.cuppa" % "cuppa" % "1.1.0" % "test",
     "org.forgerock.cuppa" % "cuppa-junit" % "1.1.0" % "test",
     "org.xmlunit" % "xmlunit-core" % "2.2.1" % "test",
-    "org.xmlunit" % "xmlunit-matchers" % "2.2.1" % "test"
+    "org.xmlunit" % "xmlunit-matchers" % "2.2.1" % "test",
+    "com.github.tomakehurst" % "wiremock" % "1.58" % "test"    
   )
 }

@@ -1,3 +1,11 @@
+About this module
+=================
+
+This module contains the following functionality:
+- A convenient base class `AbstractStatefulPersistentActor` that serves as a good starting point for writing clustered, event-sourced applications
+- An akka http route `EventRoute` which can expose an HTTP API for querying an akka persistence event journal
+ 
+
 Using the UUID protobuf type
 ============================
 

@@ -34,7 +34,7 @@ public class XMLMarshallers {
         return HttpStreamingMarshallers
             .sourceToEntity(contentType)
             .compose((Source<T,?> source) -> source
-                .via(ProtocolWriter.flow(protocol))
+                .via(ProtocolWriter.of(protocol))
                 .via(StaxWriter.flow()));
     }
     

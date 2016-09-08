@@ -28,7 +28,7 @@ public class JSONMarshallers {
         return HttpStreamingMarshallers
             .sourceToEntity(MediaTypes.APPLICATION_JSON.toContentType())
             .compose((Source<T,?> source) -> source
-                .via(ProtocolWriter.flow(protocol))
+                .via(ProtocolWriter.of(protocol))
                 .via(JacksonWriter.flow()));
     }
  

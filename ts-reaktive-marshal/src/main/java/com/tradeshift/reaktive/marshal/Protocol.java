@@ -16,11 +16,32 @@ import javaslang.control.Option;
 import javaslang.control.Try;
 
 public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
+    /**
+     * Returns a protocol that considers all events emitted results, and vice-versa.
+     */
+    public static <T> Protocol<T,T> identity(Class<T> type) {
+        return new Protocol<T,T>() {
+            @Override
+            public Reader<T, T> reader() {
+                return Reader.identity();
+            }
+
+            @Override
+            public Class<? extends T> getEventType() {
+                return type;
+            }
+
+            @Override
+            public Writer<T, T> writer() {
+                return Writer.identity();
+            }
+        };
+    }
     
     // ----------------------- Alternatives -----------------------------
     
     /**
-     * Forwards read events to multiple alternative protocols, emitting whenever any of the alternatives emit. If multiple 
+     * Forwards read events to multiple alternative protocols, emitting whenever any of the alternatives emit. If multiple
      * alternatives emit for the same event, the first one wins.
      */
     @SafeVarargs
@@ -30,7 +51,7 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
     }
 
     /**
-     * Forwards read events to multiple alternative protocols, emitting whenever any of the alternatives emit. If multiple 
+     * Forwards read events to multiple alternative protocols, emitting whenever any of the alternatives emit. If multiple
      * alternatives emit for the same event, the first one wins.
      */
     @SafeVarargs
@@ -49,7 +70,7 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
     }
     
     /**
-     * Reads and writes an inner protocol multiple times. On reading, creates a {@link javaslang.collection.Vector} to hold the values. 
+     * Reads and writes an inner protocol multiple times. On reading, creates a {@link javaslang.collection.Vector} to hold the values.
      * On writing, any {@link javaslang.collection.Seq} will do.
      */
     public static <E,T> Protocol<E,Seq<T>> vector(Protocol<E,T> inner) {
@@ -92,7 +113,7 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
     }
     
     /**
-     * Reads and writes an inner protocol multiple times. On reading, creates a {@link java.util.ArrayList} to hold the values. 
+     * Reads and writes an inner protocol multiple times. On reading, creates a {@link java.util.ArrayList} to hold the values.
      * On writing, any {@link java.util.List} will do.
      */
     public static <E,T> Protocol<E,java.util.List<T>> arrayList(Protocol<E,T> inner) {
@@ -147,7 +168,7 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
     // -------------------------------------------------------------------------------------------
     
     /**
-     * Combines a read-only and a write-only protocol into a read/write protocol 
+     * Combines a read-only and a write-only protocol into a read/write protocol
      */
     public static <E,T> Protocol<E,T> of(ReadProtocol<E,T> read, WriteProtocol<E,T> write) {
         return new Protocol<E,T>() {
@@ -174,7 +195,7 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
             @Override
             public String toString() {
                 return read.toString();
-            }            
+            }
         };
     }
     

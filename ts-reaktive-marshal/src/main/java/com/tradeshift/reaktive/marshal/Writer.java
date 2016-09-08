@@ -39,6 +39,23 @@ public interface Writer<E,T> {
     }
     
     /**
+     * Returns a writer that emits an event for every element, the event being the element itself.
+     */
+    public static <E, T extends E> Writer<E,T> identity() {
+        return new Writer<E,T>() {
+            @Override
+            public Seq<E> apply(T value) {
+                return Vector.of(value);
+            }
+            
+            @Override
+            public Seq<E> reset() {
+                return Vector.empty();
+            }
+        };
+    }
+    
+    /**
      * Writes out the given value, and resets the writer.
      */
     public default Seq<E> applyAndReset(T value) {

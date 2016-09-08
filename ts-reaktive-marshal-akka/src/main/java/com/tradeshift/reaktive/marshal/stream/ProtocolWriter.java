@@ -3,12 +3,10 @@ package com.tradeshift.reaktive.marshal.stream;
 import com.tradeshift.reaktive.marshal.WriteProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import akka.NotUsed;
 import akka.stream.Attributes;
 import akka.stream.FlowShape;
 import akka.stream.Inlet;
 import akka.stream.Outlet;
-import akka.stream.javadsl.Flow;
 import akka.stream.stage.AbstractInHandler;
 import akka.stream.stage.AbstractOutHandler;
 import akka.stream.stage.GraphStage;
@@ -20,8 +18,8 @@ import javaslang.collection.Seq;
  */
 public class ProtocolWriter<T,E> extends GraphStage<FlowShape<T, E>> {
     
-    public static <T,E> Flow<T,E,NotUsed> flow(WriteProtocol<E,T> protocol) {
-        return Flow.fromGraph(new ProtocolWriter<>(protocol));
+    public static <T,E> GraphStage<FlowShape<T, E>> of(WriteProtocol<E,T> protocol) {
+        return new ProtocolWriter<>(protocol);
     }
 
     private final Inlet<T> in = Inlet.create("in");
