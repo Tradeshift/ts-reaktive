@@ -1,6 +1,5 @@
 package com.tradeshift.reaktive.actors;
 
-import java.util.UUID;
 import java.util.function.Function;
 
 import akka.actor.ActorRef;
@@ -14,33 +13,42 @@ import akka.persistence.AbstractPersistentActor;
 /**
  * Base class for setting up sharding of persistent actors that:
  * 
- * - Have their persistenceId conform to [prefix] + "_" + [uuid], e.g. "doc_249e1098-1cd9-4ffe-a494-73a430983590"
+ * - Have their persistenceId conform to [prefix] + "_" + [id], e.g. "doc_249e1098-1cd9-4ffe-a494-73a430983590"
  * - Respond to a specific base class of commands
  * - Send the commands unchanged from the SharedRegion router onto the persistent actors themselves
+ * 
+ * @param C Base class of commands that the actor will respond to
  */
 public class PersistentActorSharding<C> {
     private final Props props;
-    private final String entityIdPrefix;
-    private final Function<C, UUID> entityIdPostfix;
+    private final String persistenceIdPrefix;
+    private final Function<C, String> persistenceIdPostfix;
     
     /**
      * Creates a PersistentActorSharding for an actor that has a no-args constructor
+     * 
+     * @param actorType Persistence actor to instantiate
+     * @param persistenceIdPrefix Fixed prefix for each persistence id. This is typically the name of your aggregate root, e.g. "document" or "user".
+     * @param persistenceIdPostfix Function that returns the last part of the persistence id that a command is routed to. This typically is the real ID of your entity, or UUID.
      */
-    public static <A extends AbstractPersistentActor, C> PersistentActorSharding<C> of(Class<A> actorType, String entityIdPrefix, Function<C, UUID> entityIdPostfix) {
-        return new PersistentActorSharding<>(Props.create(actorType), entityIdPrefix, entityIdPostfix);
+    public static <A extends AbstractPersistentActor, C> PersistentActorSharding<C> of(Class<A> actorType, String persistenceIdPrefix, Function<C, String> persistenceIdPostfix) {
+        return new PersistentActorSharding<>(Props.create(actorType), persistenceIdPrefix, persistenceIdPostfix);
     }
     
     /**
      * Creates a PersistentActorSharding for an actor that is created according to [props]. The actor must be a subclass of {@link AbstractPersistentActor}.
+     * 
+     * @param persistenceIdPrefix Fixed prefix for each persistence id. This is typically the name of your aggregate root, e.g. "document" or "user".
+     * @param persistenceIdPostfix Function that returns the last part of the persistence id that a command is routed to. This typically is the real ID of your entity, or UUID.
      */
-    public static <C> PersistentActorSharding<C> of(Props props, String entityIdPrefix, Function<C, UUID> entityIdPostfix) {
-        return new PersistentActorSharding<>(props, entityIdPrefix, entityIdPostfix);
+    public static <C> PersistentActorSharding<C> of(Props props, String persistenceIdPrefix, Function<C, String> persistenceIdPostfix) {
+        return new PersistentActorSharding<>(props, persistenceIdPrefix, persistenceIdPostfix);
     }
     
-    protected PersistentActorSharding(Props props, String entityIdPrefix, Function<C, UUID> entityIdPostfix) {
+    protected PersistentActorSharding(Props props, String persistenceIdPrefix, Function<C, String> entityIdForCommand) {
         this.props = props;
-        this.entityIdPrefix = entityIdPrefix;
-        this.entityIdPostfix = entityIdPostfix;
+        this.persistenceIdPrefix = persistenceIdPrefix;
+        this.persistenceIdPostfix = entityIdForCommand;
     }
 
     private final MessageExtractor messageExtractor = new MessageExtractor() {
@@ -70,24 +78,27 @@ public class PersistentActorSharding<C> {
      */
     public ActorRef shardRegion(ActorSystem system) {
         return ClusterSharding.get(system).start(
-            entityIdPrefix, 
-            props, 
-            ClusterShardingSettings.create(system), 
+            persistenceIdPrefix,
+            props,
+            ClusterShardingSettings.create(system),
             messageExtractor);
     }
     
-    /** 
-     * Returns the UUID from a generated persistence ID.
-     * @param persistenceId A persistenceId of an actor that was spawned by sending a command to it through the 
-     * ActorRef returned by {@link #shardRegion}. 
+    /**
+     * Returns the postfix part of a generated persistence ID.
+     * @param persistenceId A persistenceId of an actor that was spawned by sending a command to it through the
+     * ActorRef returned by {@link #shardRegion}.
      */
-    public UUID getUUIDFromPersistenceId(String persistenceId) {
-        return UUID.fromString(persistenceId.substring(entityIdPrefix.length() + 1));
+    public String getPersistenceIdPostfix(String persistenceId) {
+        return persistenceId.substring(persistenceIdPrefix.length() + 1);
     };
     
+    /**
+     * Returns the entityId (=persistenceId) to which the given command should be routed
+     */
     @SuppressWarnings("unchecked")
     protected String getEntityId(Object command) {
-        return entityIdPrefix + "_" + entityIdPostfix.apply((C) command);
+        return persistenceIdPrefix + "_" + persistenceIdPostfix.apply((C) command);
     }
     
 }
