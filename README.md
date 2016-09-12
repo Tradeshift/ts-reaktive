@@ -16,6 +16,7 @@ The repository consists of the following modules:
   - [ts-reaktive-kamon-akka-cluster](ts-reaktive-kamon-akka-cluster) provides cluster membership monitoring for akka clustering. Just have it on your classpath to enable.
   - [ts-reaktive-kamon-log4j](ts-reaktive-kamon-log4j) provides log4j error and warning monitoring. Just have it on your classpath to enable.
   - [ts-reaktive-marshal](ts-reaktive-marshal) provides a non-blocking marshalling DSL for XML and JSON
+  - [ts-reaktive-marshal-akka](ts-reaktive-marshal-akka) uses the above marshalling inside akka reactive streams
   - [ts-reaktive-ssl](ts-reaktive-ssl) provides utility classes to read SSL keys and certs in PEM format
   - [ts-reaktive-testkit](ts-reaktive-testkit)  provides a test framework for testing akka routes with real HTTP
   - [ts-reaktive-testkit-assertj](ts-reaktive-testkit-assertj)  provides [AssertJ](http://joel-costigliola.github.io/assertj/)-style 
@@ -30,12 +31,13 @@ If you use SBT, you can use this library by adding the following:
     resolvers += Resolver.bintrayRepo("jypma", "maven")
     
     libraryDependencies ++= {
-      val version = "0.0.8"
+      val version = "0.0.11"
       Seq(
         "com.tradeshift" % "ts-reaktive-actors" % version,
         "com.tradeshift" %% "ts-reaktive-akka" % version,
         "com.tradeshift" % "ts-reaktive-cassandra" % version,
         "com.tradeshift" % "ts-reaktive-marshal" % version,
+        "com.tradeshift" % "ts-reaktive-marshal-akka" % version,
         "com.tradeshift" % "ts-reaktive-ssl" % version,
         "com.tradeshift" % "ts-reaktive-testkit" % version % "test",
         "com.tradeshift" % "ts-reaktive-testkit-assertj" % version % "test",
