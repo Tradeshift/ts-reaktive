@@ -78,5 +78,8 @@ public class SelectedTagProtocol implements Protocol<XMLEvent, XMLEvent> {
         return Writer.identity();
     }
     
-    
+    @Override
+    public String toString() {
+        return "<" + name + ">";
+    }
 }

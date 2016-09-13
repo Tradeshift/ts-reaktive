@@ -10,6 +10,7 @@ import static com.tradeshift.reaktive.marshal.Protocol.vector;
 import static com.tradeshift.reaktive.marshal.StringMarshallable.INTEGER;
 import static com.tradeshift.reaktive.marshal.StringMarshallable.LONG;
 import static com.tradeshift.reaktive.xml.XMLProtocol.anyAttribute;
+import static com.tradeshift.reaktive.xml.XMLProtocol.anyTag;
 import static com.tradeshift.reaktive.xml.XMLProtocol.anyTagWithAttribute;
 import static com.tradeshift.reaktive.xml.XMLProtocol.anyTagWithBody;
 import static com.tradeshift.reaktive.xml.XMLProtocol.attribute;
@@ -22,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
+import static org.forgerock.cuppa.Cuppa.only;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +35,7 @@ import org.forgerock.cuppa.junit.CuppaRunner;
 import org.junit.runner.RunWith;
 
 import com.tradeshift.reaktive.marshal.Protocol;
+import com.tradeshift.reaktive.marshal.ReadProtocol;
 
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
@@ -312,6 +315,21 @@ public class XMLProtocolSpec {{
         it("should unmarshal multiple tags into multiple strings", () -> {
             List<String> list = stax.parse("<root><element important='true'>hello</element><element important='true'>world</element></root>", proto.reader()).collect(Collectors.toList());
             assertThat(list).containsExactly("hello", "world");
+        });
+    });
+    
+    describe("An XMLProtocol matching inner XML events", () -> {
+        
+        ReadProtocol<XMLEvent, XMLEvent> proto = anyTag( // accept any root tag
+            tag(qname("innerTag"))
+        );
+        
+        it("should extract the matched inner tags as events", () -> {
+            List<XMLEvent> list = stax.parse("<root><tag></tag><innerTag>hello</innerTag></root>", proto.reader()).collect(Collectors.toList());
+            assertThat(list).hasSize(3);
+            assertThat(list.get(0).asStartElement().getName().getLocalPart()).isEqualTo("innerTag");
+            assertThat(list.get(1).asCharacters().getData()).isEqualTo("hello");
+            assertThat(list.get(2).asEndElement().getName().getLocalPart()).isEqualTo("innerTag");
         });
     });
 }}

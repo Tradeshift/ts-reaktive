@@ -34,6 +34,13 @@ public class XMLProtocol {
         return new SelectedTagProtocol(name);
     }
     
+    /**
+     * Accepts any single tag when reading, routing its body through to the given inner protocol.
+     */
+    public static <T> ReadProtocol<XMLEvent, T> anyTag(ReadProtocol<XMLEvent, T> inner) {
+        return new TagReadProtocol<>(Option.none(), inner);
+    }
+    
     //---------------------- 1-arity tag methods -----------------------------------
     
     /**
@@ -143,96 +150,96 @@ public class XMLProtocol {
         return new TagWriteProtocol<>(Option.of(qname), Vector.of(p1, p2, p3), Vector.of(g1, g2, g3));
     }
     
-    //---------------------- 1-arity anyTag methods -----------------------------------
+    //---------------------- 1-arity tagName methods -----------------------------------
     
     /**
      * Reads and writes a tag with any name
      */
-    public static final Protocol<XMLEvent,QName> anyTag = anyTag(Function1.identity(), Function1.identity());
+    public static final Protocol<XMLEvent,QName> tagName = tagName(Function1.identity(), Function1.identity());
     
     /**
      * Reads and writes a tag with any name, using [f] to create the result on reading, getting values using [g1] for writing.
      */
-    public static <T> TagProtocol<T> anyTag(Function1<QName,T> f, Function1<T,QName> g1) {
+    public static <T> TagProtocol<T> tagName(Function1<QName,T> f, Function1<T,QName> g1) {
         return new TagProtocol<>(Option.none(), Vector.empty(), args -> f.apply((QName) args.get(0)), Vector.of(g1));
     }
     
     /**
      * Reads a tag with any name, creating its result using [f].
      */
-    public static <T> TagReadProtocol<T> anyTagR(Function1<QName,T> f) {
+    public static <T> TagReadProtocol<T> readTagName(Function1<QName,T> f) {
         return new TagReadProtocol<>(Option.none(), Vector.empty(), args -> f.apply((QName) args.get(0)));
     }
     
     /**
      * Writes a tag and with any name, getting values using [g1] for writing.
      */
-    public static <T> TagWriteProtocol<T> anyTagW(Function1<T,QName> g1) {
+    public static <T> TagWriteProtocol<T> writeTagName(Function1<T,QName> g1) {
         return new TagWriteProtocol<>(Option.none(), Vector.empty(), Vector.of(g1));
     }
     
-    //---------------------- 2-arity anyTag methods -----------------------------------
+    //---------------------- 2-arity tagName methods -----------------------------------
     
     /**
      * Reads and writes a tag with any name and inner protocols using [p*], using [f] to create the result on reading, getting values using [g*] for writing.
      */
-    public static <F2,T> TagProtocol<T> anyTag(Protocol<XMLEvent,F2> p2, Function2<QName,F2,T> f, Function1<T,QName> g1, Function1<T,F2> g2) {
+    public static <F2,T> TagProtocol<T> tagName(Protocol<XMLEvent,F2> p2, Function2<QName,F2,T> f, Function1<T,QName> g1, Function1<T,F2> g2) {
         return new TagProtocol<>(Option.none(), Vector.of(p2), args -> f.apply((QName) args.get(0), (F2) args.get(1)), Vector.of(g1, g2));
     }
     
     /**
      * Reads a tag with any name and inner protocols using [p*], using [f] to create the result on reading.
      */
-    public static <F2,T> TagReadProtocol<T> anyTag(ReadProtocol<XMLEvent,F2> p2, Function2<QName,F2,T> f) {
+    public static <F2,T> TagReadProtocol<T> tagName(ReadProtocol<XMLEvent,F2> p2, Function2<QName,F2,T> f) {
         return new TagReadProtocol<>(Option.none(), Vector.of(p2), args -> f.apply((QName) args.get(0), (F2) args.get(1)));
     }
     
     /**
      * Writes a tag with any name and inner protocols using [p*], getting values using [g*] for writing.
      */
-    public static <F2,T> TagWriteProtocol<T> anyTag(Function1<T,QName> g1, Function1<T,F2> g2, WriteProtocol<XMLEvent,F2> p2) {
+    public static <F2,T> TagWriteProtocol<T> tagName(Function1<T,QName> g1, Function1<T,F2> g2, WriteProtocol<XMLEvent,F2> p2) {
         return new TagWriteProtocol<>(Option.none(), Vector.of(p2), Vector.of(g1, g2));
     }
     
     /**
      * Reads and writes a tag with any name and inner protocols using [p*], represented by a Tuple2.
      */
-    public static <F2> TagProtocol<Tuple2<QName,F2>> anyTag(Protocol<XMLEvent,F2> p2) {
-        return anyTag(p2, Tuple::of, Tuple2::_1, Tuple2::_2);
+    public static <F2> TagProtocol<Tuple2<QName,F2>> tagNameAnd(Protocol<XMLEvent,F2> p2) {
+        return tagName(p2, Tuple::of, Tuple2::_1, Tuple2::_2);
     }
     
     /**
      * Reads a tag with any name and inner protocols using [p*], represented by a Tuple2.
      */
-    public static <F2> TagReadProtocol<Tuple2<QName,F2>> anyTag(ReadProtocol<XMLEvent,F2> p2) {
-        return anyTag(p2, Tuple::of);
+    public static <F2> TagReadProtocol<Tuple2<QName,F2>> tagNameAnd(ReadProtocol<XMLEvent,F2> p2) {
+        return tagName(p2, Tuple::of);
     }
     
     /**
      * Writes a tag with any name and inner protocols using [p*], represented by a Tuple2.
      */
-    public static <F2> TagWriteProtocol<Tuple2<QName,F2>> anyTag(WriteProtocol<XMLEvent,F2> p2) {
-        return anyTag(Tuple2::_1, Tuple2::_2, p2);
+    public static <F2> TagWriteProtocol<Tuple2<QName,F2>> tagNameAnd(WriteProtocol<XMLEvent,F2> p2) {
+        return tagName(Tuple2::_1, Tuple2::_2, p2);
     }
     
-    //---------------------- 3-arity anyTag methods -----------------------------------
+    //---------------------- 3-arity tagName methods -----------------------------------
     
     /**
      * Reads and writes a tag with any name and inner protocols using [p*], using [f] to create the result on reading, getting values using [g*] for writing.
      */
-    public static <F2,F3,T> TagProtocol<T> anyTag(Protocol<XMLEvent,F2> p2, Protocol<XMLEvent,F3> p3, Function3<QName,F2,F3,T> f, Function1<T,QName> g1, Function1<T,F2> g2, Function1<T,F3> g3) {
+    public static <F2,F3,T> TagProtocol<T> tagName(Protocol<XMLEvent,F2> p2, Protocol<XMLEvent,F3> p3, Function3<QName,F2,F3,T> f, Function1<T,QName> g1, Function1<T,F2> g2, Function1<T,F3> g3) {
         return new TagProtocol<>(Option.none(), Vector.of(p2, p3), args -> f.apply((QName) args.get(0), (F2) args.get(1), (F3) args.get(2)), Vector.of(g1, g2, g3));
     }
     /**
      * Reads a tag with any name and inner protocols using [p*], using [f] to create the result on reading.
      */
-    public static <F2,F3,T> TagReadProtocol<T> anyTag(ReadProtocol<XMLEvent,F2> p2, ReadProtocol<XMLEvent,F3> p3, Function3<QName,F2,F3,T> f) {
+    public static <F2,F3,T> TagReadProtocol<T> tagName(ReadProtocol<XMLEvent,F2> p2, ReadProtocol<XMLEvent,F3> p3, Function3<QName,F2,F3,T> f) {
         return new TagReadProtocol<>(Option.none(), Vector.of(p2, p3), args -> f.apply((QName) args.get(0), (F2) args.get(1), (F3) args.get(2)));
     }
     /**
      * Writes a tag with any name and inner protocols using [p*], getting values using [g*] for writing.
      */
-    public static <F2,F3,T> TagWriteProtocol<T> anyTag(Function1<T,QName> g1, Function1<T,F2> g2, WriteProtocol<XMLEvent,F2> p2, Function1<T,F3> g3, WriteProtocol<XMLEvent,F3> p3) {
+    public static <F2,F3,T> TagWriteProtocol<T> tagName(Function1<T,QName> g1, Function1<T,F2> g2, WriteProtocol<XMLEvent,F2> p2, Function1<T,F3> g3, WriteProtocol<XMLEvent,F3> p3) {
         return new TagWriteProtocol<>(Option.none(), Vector.of(p2, p3), Vector.of(g1, g2, g3));
     }
     
@@ -300,13 +307,13 @@ public class XMLProtocol {
     /**
      * Reads and writes every top-level tag's QName and its body as a Tuple2.
      */
-    public static final QNameStringProtocol anyTagWithBody = new QNameStringProtocol(anyTag(body));
+    public static final QNameStringProtocol anyTagWithBody = new QNameStringProtocol(tagNameAnd(body));
     
     /**
      * Reads and writes every top-level tag's QName and the (required) attribute [name] as a Tuple2.
      */
     public static QNameStringProtocol anyTagWithAttribute(String name) {
-        return new QNameStringProtocol(anyTag(attribute(name)));
+        return new QNameStringProtocol(tagNameAnd(attribute(name)));
     }
     
     /**
