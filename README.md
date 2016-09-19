@@ -31,7 +31,7 @@ If you use SBT, you can use this library by adding the following:
     resolvers += Resolver.bintrayRepo("jypma", "maven")
     
     libraryDependencies ++= {
-      val version = "0.0.11"
+      val version = "0.0.12"
       Seq(
         "com.tradeshift" % "ts-reaktive-actors" % version,
         "com.tradeshift" %% "ts-reaktive-akka" % version,
