@@ -23,7 +23,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
-import static org.forgerock.cuppa.Cuppa.only;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -318,7 +317,7 @@ public class XMLProtocolSpec {{
         });
     });
     
-    describe("An XMLProtocol matching inner XML events", () -> {
+    describe("An XMLProtocol for anyTag matching inner XML events", () -> {
         
         ReadProtocol<XMLEvent, XMLEvent> proto = anyTag( // accept any root tag
             tag(qname("innerTag"))
@@ -330,6 +329,22 @@ public class XMLProtocolSpec {{
             assertThat(list.get(0).asStartElement().getName().getLocalPart()).isEqualTo("innerTag");
             assertThat(list.get(1).asCharacters().getData()).isEqualTo("hello");
             assertThat(list.get(2).asEndElement().getName().getLocalPart()).isEqualTo("innerTag");
+        });
+    });
+    
+    describe("An XMLProtocol for anyTag matching an inner protocol", () -> {
+        ReadProtocol<XMLEvent, Option<String>> proto = anyTag(
+            option(
+                tag(qname("innerTag"),
+                    body
+                )
+            )
+        );
+        
+        it("should extract matched inner tags, ignoring the outer tag", () -> {
+            assertThat(
+                stax.parse("<root><tag>foo</tag><innerTag>hello</innerTag></root>", proto.reader()).findFirst()
+            ).contains(Option.some("hello"));
         });
     });
 }}

@@ -146,9 +146,10 @@ public class TagReadProtocol<T> implements ReadProtocol<XMLEvent,T> {
                     // Wrap up and emit result
                     
                     AtomicReference<Throwable> failure = new AtomicReference<>();
-                    Object[] args = new Object[name.isDefined() ?  values.length : values.length + 1];
+                    boolean includeName = name.isEmpty() && !isIdentity();
+                    Object[] args = new Object[includeName ? values.length + 1: values.length];
                     
-                    if (name.isEmpty()) {
+                    if (includeName) {
                         args[0] = evt.asEndElement().getName();
                     }
                     
@@ -172,7 +173,7 @@ public class TagReadProtocol<T> implements ReadProtocol<XMLEvent,T> {
                     for (int i = 0; i < protocols.size(); i++) {
                         Try<Object> t = values[i];
                         t.failed().forEach(failure::set);
-                        args[name.isEmpty() ? i+1 : i] = t.getOrElse((Object)null);
+                        args[includeName ? i+1 : i] = t.getOrElse((Object)null);
                     }
                     
                     Try<T> result = (failure.get() != null) ? Try.failure(failure.get()) : Try.success(produce.apply(Arrays.asList(args)));
