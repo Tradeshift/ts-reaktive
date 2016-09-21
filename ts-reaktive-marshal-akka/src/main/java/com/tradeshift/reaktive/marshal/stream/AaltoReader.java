@@ -86,10 +86,17 @@ public class AaltoReader extends GraphStage<FlowShape<ByteString,XMLEvent>> {
                         parser.getInputFeeder().endOfInput();
                         List<XMLEvent> events = new ArrayList<>();
                         while (parser.hasNext()) {
-                            events.add(next().getOrElseThrow(() -> new XMLStreamException("Unexpected end of XML stream")));
+                            Option<XMLEvent> n = next();
+                            if (n.isDefined()) {
+                                events.add(n.get());
+                            } else {
+                                emitMultiple(out, events.iterator());
+                                failStage(new XMLStreamException("Unexpected end of XML stream"));
+                                return;
+                            }
                         }
                         emitMultiple(out, events.iterator());
-                        complete(out);
+                        completeStage();
                     };
                 });
             }

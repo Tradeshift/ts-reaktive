@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- This XML file is missing it final closing root tag. -->
+<ns16:Invoice xmlns:ns16="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+  xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2" xmlns:cec="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2"
+  xmlns:ns10="urn:oasis:names:specification:ubl:schema:xsd:RequestForQuotation-2" xmlns:ns11="urn:oasis:names:specification:ubl:schema:xsd:Order-2"
+  xmlns:ns12="urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2" xmlns:ns13="urn:oasis:names:specification:ubl:schema:xsd:ReceiptAdvice-2"
+  xmlns:ns14="urn:oasis:names:specification:ubl:schema:xsd:RemittanceAdvice-2" xmlns:ns15="urn:oasis:names:specification:ubl:schema:xsd:OrderCancellation-2"
+  xmlns:ns17="urn:oasis:names:specification:ubl:schema:xsd:OrderChange-2" xmlns:ns18="urn:oasis:names:specification:ubl:schema:xsd:Catalogue-2"
+  xmlns:ns19="urn:oasis:names:specification:ubl:schema:xsd:OrderResponseSimple-2" xmlns:ns20="urn:oasis:names:specification:ubl:schema:xsd:OrderResponse-2"
+  xmlns:ns21="urn:oasis:names:specification:ubl:schema:xsd:Reminder-2" xmlns:ns22="urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2"
+  xmlns:ns6="http://tradeshift.com/api/2.0" xmlns:ns7="urn:oasis:names:specification:ubl:schema:xsd:Quotation-2"
+  xmlns:ns8="http://tradeshift.com/api/1.0" xmlns:ns9="urn:oasis:names:specification:ubl:schema:xsd:DespatchAdvice-2"
+  xmlns:ts="http://tradeshift.com/api/public/1.0">
+  <cbc:UBLVersionID>2.0</cbc:UBLVersionID>
+  <cbc:CustomizationID>urn:tradeshift.com:ubl-2.0-customizations:2010-06</cbc:CustomizationID>
+  <cbc:ProfileID schemeAgencyID="CEN/ISSS WS/BII" schemeID="CWA 16073:2010" schemeVersionID="1">urn:www.cenbii.eu:profile:bii04:ver1.0
+  </cbc:ProfileID>
+  <cbc:ID>123454321</cbc:ID>
+  <cbc:IssueDate>2015-03-25</cbc:IssueDate>
+  <cbc:DocumentCurrencyCode>GBP</cbc:DocumentCurrencyCode>
+  <cbc:AccountingCost />
+  <cac:OrderReference>
+    <cbc:ID />
+  </cac:OrderReference>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>ts-sourcepage.xml</cbc:ID>
+    <cbc:DocumentTypeCode listID="urn:tradeshift.com:api:1.0:documenttypecode">sourcepage</cbc:DocumentTypeCode>
+    <cac:Attachment>
+      <cac:ExternalReference>
+        <cbc:URI>uri:example:somewhere1</cbc:URI>
+      </cac:ExternalReference>
+    </cac:Attachment>
+  </cac:AdditionalDocumentReference>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>ts-sourcepage2.xml</cbc:ID>
+    <cbc:DocumentTypeCode listID="urn:tradeshift.com:api:1.0:documenttypecode">sourcepage</cbc:DocumentTypeCode>
+    <cac:Attachment>
+      <cac:ExternalReference>
+        <cbc:URI>uri:example:somewhere2</cbc:URI>
+      </cac:ExternalReference>
+    </cac:Attachment>
+  </cac:AdditionalDocumentReference>
+  <cac:AccountingSupplierParty />
+  <cac:AccountingCustomerParty />
+  <cac:LegalMonetaryTotal>
+    <cbc:PayableAmount currencyID='GBP'>0</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+  <cac:InvoiceLine>
+    <cbc:ID />
+    <cbc:LineExtensionAmount currencyID='GBP'>0</cbc:LineExtensionAmount>
+    <cac:Item />
+  </cac:InvoiceLine>
