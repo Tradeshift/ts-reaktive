@@ -67,36 +67,48 @@ public class AaltoReader extends GraphStage<FlowShape<ByteString,XMLEvent>> {
             {
                 setHandler(out, new AbstractOutHandler() {
                     @Override
-                    public void onPull() throws Exception {
-                        emitNext();
+                    public void onPull() {
+                        try {
+                            emitNext();
+                        } catch (XMLStreamException x) {
+                            failStage(x);
+                        }
                     }
                 });
                 
                 setHandler(in, new AbstractInHandler() {
                     @Override
-                    public void onPush() throws Exception {
-                        ByteString bytes = grab(in);
-                        for (ByteBuffer b: bytes.getByteBuffers()) {
-                            parser.getInputFeeder().feedInput(b);
+                    public void onPush() {
+                        try {
+                            ByteString bytes = grab(in);
+                            for (ByteBuffer b: bytes.getByteBuffers()) {
+                                parser.getInputFeeder().feedInput(b);
+                            }
+                            emitNext();
+                        } catch (XMLStreamException x) {
+                            failStage(x);
                         }
-                        emitNext();
                     }
                     
-                    public void onUpstreamFinish() throws Exception {
+                    public void onUpstreamFinish() {
                         parser.getInputFeeder().endOfInput();
                         List<XMLEvent> events = new ArrayList<>();
-                        while (parser.hasNext()) {
-                            Option<XMLEvent> n = next();
-                            if (n.isDefined()) {
-                                events.add(n.get());
-                            } else {
-                                emitMultiple(out, events.iterator());
-                                failStage(new XMLStreamException("Unexpected end of XML stream"));
-                                return;
+                        try {
+                            while (parser.hasNext()) {
+                                Option<XMLEvent> n = next();
+                                if (n.isDefined()) {
+                                    events.add(n.get());
+                                } else {
+                                    emitMultiple(out, events.iterator());
+                                    failStage(new XMLStreamException("Unexpected end of XML stream"));
+                                    return;
+                                }
                             }
+                            emitMultiple(out, events.iterator());
+                            completeStage();
+                        } catch (XMLStreamException x) {
+                            failStage(x);
                         }
-                        emitMultiple(out, events.iterator());
-                        completeStage();
                     };
                 });
             }
