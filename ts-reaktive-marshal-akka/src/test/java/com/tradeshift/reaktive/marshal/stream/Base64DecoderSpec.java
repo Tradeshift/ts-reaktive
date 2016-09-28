@@ -37,7 +37,7 @@ public class Base64DecoderSpec extends SharedActorSystemSpec {{
                 Source.single("aGVsbG=")
                 .via(Base64Decoder.decodeBase64Strings)
                 .runFold("", (s,b) -> s + b.utf8String(), materializer)
-            ).failure().hasMessageContaining("Illegal base64 ending sequence");
+            ).failure().isInstanceOf(IllegalArgumentException.class);
         });
     });
 }}
