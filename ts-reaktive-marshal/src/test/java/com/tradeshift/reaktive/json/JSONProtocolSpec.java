@@ -11,7 +11,7 @@ import static com.tradeshift.reaktive.json.JSONProtocol.integerValue;
 import static com.tradeshift.reaktive.json.JSONProtocol.longValue;
 import static com.tradeshift.reaktive.json.JSONProtocol.object;
 import static com.tradeshift.reaktive.json.JSONProtocol.stringValue;
-import static com.tradeshift.reaktive.marshal.Protocol.alternatively;
+import static com.tradeshift.reaktive.marshal.Protocol.anyOf;
 import static com.tradeshift.reaktive.marshal.Protocol.foldLeft;
 import static com.tradeshift.reaktive.marshal.Protocol.hashMap;
 import static com.tradeshift.reaktive.marshal.Protocol.option;
@@ -273,7 +273,7 @@ public class JSONProtocolSpec {{
     
     describe("a JSONProtocol with several alternatives", () -> {
         
-        ReadProtocol<JSONEvent, DTO2> proto = alternatively(
+        ReadProtocol<JSONEvent, DTO2> proto = anyOf(
             object(
                 option(field("i", integerValue)),
                 i -> new DTO2(Option.none(), i)

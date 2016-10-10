@@ -1,7 +1,6 @@
 package com.tradeshift.reaktive.xml;
 
-
-import static com.tradeshift.reaktive.marshal.Protocol.alternatively;
+import static com.tradeshift.reaktive.marshal.Protocol.anyOf;
 import static com.tradeshift.reaktive.marshal.Protocol.arrayList;
 import static com.tradeshift.reaktive.marshal.Protocol.forEach;
 import static com.tradeshift.reaktive.marshal.Protocol.hashMap;
@@ -206,7 +205,7 @@ public class XMLProtocolSpec {{
             dto -> dto.getL()
         );
         
-        Protocol<XMLEvent,DTO1> proto = alternatively(
+        Protocol<XMLEvent,DTO1> proto = anyOf(
             protoV1.having(attribute("version"), "1"),
             protoV2.having(attribute("version"), "2")
         );
@@ -259,7 +258,7 @@ public class XMLProtocolSpec {{
             dto -> dto.getL()
         );
         
-        Protocol<XMLEvent,DTO1> proto = alternatively(
+        Protocol<XMLEvent,DTO1> proto = anyOf(
             protoV2.having(
                 attribute("version"), "2"
             ),
