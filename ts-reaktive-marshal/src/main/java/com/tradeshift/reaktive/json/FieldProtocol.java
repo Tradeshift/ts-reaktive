@@ -81,7 +81,7 @@ public class FieldProtocol {
             
             @Override
             public String toString() {
-                return "" + field + innerProtocol;
+                return "" + field + "(" + innerProtocol + ")";
             }
         };
     }
@@ -142,7 +142,7 @@ public class FieldProtocol {
             
             @Override
             public String toString() {
-                return "" + field + innerProtocol;
+                return "" + field + "(" + innerProtocol + ")";
             }
         };
     }

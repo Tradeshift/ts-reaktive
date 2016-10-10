@@ -22,46 +22,46 @@ public class ValueProtocol<T> implements Protocol<JSONEvent, T> {
     // For everything that marshals to strings, use stringValue.as(...)
     
     /** A Java integer represented as a JSON number (on reading, JSON string is also allowed) */
-    public static final ValueProtocol<Integer> INTEGER = of("(signed 32-bit integer)",
-        evt -> Try.of(() -> Integer.parseInt(evt.getValueAsString())),
+    public static final ValueProtocol<Integer> INTEGER = of("signed 32-bit integer",
+        evt -> Integer.parseInt(evt.getValueAsString()),
         i -> new JSONEvent.NumericValue(String.valueOf(i)));
     
     /** A Java long represented as a JSON number (on reading, JSON string is also allowed) */
-    public static final ValueProtocol<Long> LONG = of("(signed 64-bit integer)",
-        evt -> Try.of(() -> Long.parseLong(evt.getValueAsString())),
+    public static final ValueProtocol<Long> LONG = of("signed 64-bit integer",
+        evt -> Long.parseLong(evt.getValueAsString()),
         l -> new JSONEvent.NumericValue(String.valueOf(l)));
 
     /** A Java big decimal represented as a JSON number (on reading, JSON string is also allowed) */
-    public static final ValueProtocol<BigDecimal> BIGDECIMAL = of("(arbitrary precision decimal)",
-        evt -> Try.of(() -> new BigDecimal(evt.getValueAsString())),
+    public static final ValueProtocol<BigDecimal> BIGDECIMAL = of("arbitrary precision decimal",
+        evt -> new BigDecimal(evt.getValueAsString()),
         d -> new JSONEvent.NumericValue(String.valueOf(d)));
     
     /** A Java big integer represented as a JSON number (on reading, JSON string is also allowed) */
-    public static final ValueProtocol<BigInteger> BIGINTEGER = of("(arbitrary precision integer)",
-        evt -> Try.of(() -> new BigInteger(evt.getValueAsString())),
+    public static final ValueProtocol<BigInteger> BIGINTEGER = of("arbitrary precision integer",
+        evt -> new BigInteger(evt.getValueAsString()),
         d -> new JSONEvent.NumericValue(String.valueOf(d)));
     
     /** A Java boolean represented a JSON boolean (on reading, a JSON string of "true" or "false" is also allowed) */
-    public static final ValueProtocol<Boolean> BOOLEAN = of("(boolean)",
-        v -> Try.of(() -> v.getValueAsString().equals("true")),
+    public static final ValueProtocol<Boolean> BOOLEAN = of("boolean",
+        v -> v.getValueAsString().equals("true"),
         b -> b ? JSONEvent.TRUE : JSONEvent.FALSE);
     
     /** A Java String. Internal implementation, @see {@link StringValueProtocol} */
-    static final ValueProtocol<String> STRING = of("(string)",
-        evt -> Try.success(evt.getValueAsString()),
+    static final ValueProtocol<String> STRING = of("string",
+        evt -> evt.getValueAsString(),
         s -> new JSONEvent.StringValue(s));
     
     private static final Logger log = LoggerFactory.getLogger(ValueProtocol.class);
     
-    private final Function1<Value, Try<T>> tryRead;
+    private final Function1<Value, T> tryRead;
     private final Function1<T,Value> write;
     private final String description;
     
-    public static <T> ValueProtocol<T> of(String description, Function1<Value, Try<T>> tryRead, Function1<T, Value> write) {
+    public static <T> ValueProtocol<T> of(String description, Function1<Value, T> tryRead, Function1<T, Value> write) {
         return new ValueProtocol<>(description, tryRead, write);
     }
     
-    protected ValueProtocol(String description, Function1<Value, Try<T>> tryRead, Function1<T, Value> write) {
+    protected ValueProtocol(String description, Function1<Value, T> tryRead, Function1<T, Value> write) {
         this.description = description;
         this.tryRead = tryRead;
         this.write = write;
@@ -87,7 +87,15 @@ public class ValueProtocol<T> implements Protocol<JSONEvent, T> {
                 }
                 
                 if (level == 0 && evt instanceof JSONEvent.Value) {
-                    Try<T> result = tryRead.apply(JSONEvent.Value.class.cast(evt));
+                    Try<T> result = Try.of(() -> {
+                        try {
+                            return tryRead.apply(JSONEvent.Value.class.cast(evt));
+                        } catch (IllegalArgumentException x) {
+                            String msg = (x.getMessage() == null) ? "" : ": " + x.getMessage();
+                            throw new IllegalArgumentException ("Expecting " + description + msg);
+                        }
+                    });
+                    
                     log.info("Read {}", result);
                     return result;
                 } else {

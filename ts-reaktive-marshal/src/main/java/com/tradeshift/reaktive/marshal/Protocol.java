@@ -46,20 +46,34 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
      */
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <E,T> ReadProtocol<E,T> alternatively(ReadProtocol<E,T> first, ReadProtocol<E,T> second, ReadProtocol<E,T>... others) {
-        return new AlternativesProtocol<>(Vector.of(first, second).appendAll(Arrays.asList(others)));
+    public static <E,T> ReadProtocol<E,T> anyOf(ReadProtocol<E,T> first, ReadProtocol<E,T> second, ReadProtocol<E,T>... others) {
+        return new AnyOfProtocol<>(Vector.of(first, second).appendAll(Arrays.asList(others)));
     }
 
     /**
      * Forwards read events to multiple alternative protocols, emitting whenever any of the alternatives emit. If multiple
      * alternatives emit for the same event, the first one wins.
+     * 
+     * Always picks the first alternative during writing.
      */
     @SafeVarargs
     @SuppressWarnings("varargs")
-    public static <E,T> Protocol<E,T> alternatively(Protocol<E,T> first, Protocol<E,T> second, Protocol<E,T>... others) {
-        return AlternativesProtocol.readWrite(Vector.of(first, second).appendAll(Arrays.asList(others)));
+    public static <E,T> Protocol<E,T> anyOf(Protocol<E,T> first, Protocol<E,T> second, Protocol<E,T>... others) {
+        return AnyOfProtocol.readWrite(Vector.of(first, second).appendAll(Arrays.asList(others)));
     }
 
+    /**
+     * Forwards read events to multiple alternative protocols, emitting whenever any of the alternatives emit.
+     * If multiple alternatives emit for the same event, all results are emitted.
+     * If at least one alternative emits for an event, any errors on other alternatives are ignored.
+     * If all alternatives yield errors for an event, the errors are concatenated and escalated.
+     */
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    public static <E,T> ReadProtocol<E,Seq<T>> combine(ReadProtocol<E,T> first, ReadProtocol<E,T> second, ReadProtocol<E,T>... others) {
+        return new CombinedProtocol<>(Vector.of(first, second).appendAll(Arrays.asList(others)));
+    }
+    
     // ----------------------- Collections -----------------------------
     
     /**

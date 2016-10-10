@@ -3,6 +3,8 @@ package com.tradeshift.reaktive.marshal;
 import static com.tradeshift.reaktive.marshal.ReadProtocol.isNone;
 import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
 
+import java.util.function.Function;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,15 +12,15 @@ import javaslang.collection.Seq;
 import javaslang.control.Try;
 
 /**
- * Forwards read events to multiple alternative protocols, emitting whenever any of the alternatives emit. If multiple 
+ * Forwards read events to multiple alternative protocols, emitting whenever any of the alternatives emit. If multiple
  * alternatives emit for the same event, the first one wins.
  */
-public class AlternativesProtocol<E,T> implements ReadProtocol<E,T> {
-    private static final Logger log = LoggerFactory.getLogger(AlternativesProtocol.class);
+public class AnyOfProtocol<E,T> implements ReadProtocol<E,T> {
+    private static final Logger log = LoggerFactory.getLogger(AnyOfProtocol.class);
     
     private final Seq<ReadProtocol<E,T>> alternatives;
 
-    public AlternativesProtocol(Seq<ReadProtocol<E,T>> alternatives) {
+    public AnyOfProtocol(Seq<ReadProtocol<E,T>> alternatives) {
         this.alternatives = alternatives;
     }
 
@@ -28,26 +30,18 @@ public class AlternativesProtocol<E,T> implements ReadProtocol<E,T> {
         return new Reader<E,T>() {
             @Override
             public Try<T> reset() {
-                Try<T> result = none();
-                for (Reader<E,T> reader: readers) {
-                    Try<T> readerResult = reader.reset();
-                    log.debug("reset: reader {} said {}", reader, readerResult);
-                    if (!isNone(readerResult)) {
-                        if (isNone(result) || (result.isFailure() && readerResult.isSuccess())) {
-                            result = readerResult;
-                        } else if (readerResult.isFailure() && result.isFailure()) {
-                            result = Try.failure(new IllegalArgumentException(result.failed().get().getMessage() + ", alternatively " + readerResult.failed().get().getMessage()));
-                        }
-                    }
-                }
-                return result;
+                return perform(r -> r.reset());
             }
 
             @Override
             public Try<T> apply(E evt) {
+                return perform(r -> r.apply(evt));
+            }
+            
+            private Try<T> perform(Function<Reader<E,T>, Try<T>> f) {
                 Try<T> result = none();
                 for (Reader<E,T> reader: readers) {
-                    Try<T> readerResult = reader.apply(evt);
+                    Try<T> readerResult = f.apply(reader);
                     log.debug("reader {} said {}", reader, readerResult);
                     if (!isNone(readerResult)) {
                         if (isNone(result) || (result.isFailure() && readerResult.isSuccess())) {
@@ -59,7 +53,6 @@ public class AlternativesProtocol<E,T> implements ReadProtocol<E,T> {
                 }
                 return result;
             }
-            
         };
     }
     
@@ -68,7 +61,7 @@ public class AlternativesProtocol<E,T> implements ReadProtocol<E,T> {
      */
     public static <E,T> Protocol<E,T> readWrite(Seq<Protocol<E,T>> alternatives) {
         Protocol<E,T> write = alternatives.head();
-        AlternativesProtocol<E,T> read = new AlternativesProtocol<E,T>(Seq.narrow(alternatives));
+        AnyOfProtocol<E,T> read = new AnyOfProtocol<>(Seq.narrow(alternatives));
         return new Protocol<E,T>() {
             @Override
             public Writer<E,T> writer() {
