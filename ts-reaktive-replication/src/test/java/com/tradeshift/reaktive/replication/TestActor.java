@@ -11,6 +11,7 @@ import com.tradeshift.reaktive.replication.actors.ReplicatedActor;
 import com.tradeshift.reaktive.replication.actors.ReplicatedActorSharding;
 
 import akka.Done;
+import akka.actor.Props;
 import akka.actor.Status.Failure;
 import akka.japi.pf.PFBuilder;
 import javaslang.collection.Seq;
@@ -19,7 +20,7 @@ import scala.PartialFunction;
 
 public class TestActor extends ReplicatedActor<TestCommand, TestEvent, TestActorState> {
     public static final ReplicatedActorSharding<TestCommand> sharding =
-        ReplicatedActorSharding.of(TestActor.class, "testactor", c -> toJava(c.getAggregateId()).toString());
+        ReplicatedActorSharding.of(Props.create(TestActor.class), "testactor", c -> toJava(c.getAggregateId()).toString());
 
     public TestActor() {
         super(TestCommand.class, TestEvent.class);

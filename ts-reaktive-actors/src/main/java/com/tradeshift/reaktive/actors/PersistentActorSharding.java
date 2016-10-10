@@ -23,37 +23,38 @@ public class PersistentActorSharding<C> {
     private final Props props;
     private final String persistenceIdPrefix;
     private final Function<C, String> persistenceIdPostfix;
-    
-    /**
-     * Creates a PersistentActorSharding for an actor that has a no-args constructor
-     * 
-     * @param actorType Persistence actor to instantiate
-     * @param persistenceIdPrefix Fixed prefix for each persistence id. This is typically the name of your aggregate root, e.g. "document" or "user".
-     * @param persistenceIdPostfix Function that returns the last part of the persistence id that a command is routed to. This typically is the real ID of your entity, or UUID.
-     */
-    public static <A extends AbstractPersistentActor, C> PersistentActorSharding<C> of(Class<A> actorType, String persistenceIdPrefix, Function<C, String> persistenceIdPostfix) {
-        return new PersistentActorSharding<>(Props.create(actorType), persistenceIdPrefix, persistenceIdPostfix);
-    }
+    private final int numberOfShards;
     
     /**
      * Creates a PersistentActorSharding for an actor that is created according to [props]. The actor must be a subclass of {@link AbstractPersistentActor}.
+     * Entities will be sharded onto 256 shards.
      * 
      * @param persistenceIdPrefix Fixed prefix for each persistence id. This is typically the name of your aggregate root, e.g. "document" or "user".
      * @param persistenceIdPostfix Function that returns the last part of the persistence id that a command is routed to. This typically is the real ID of your entity, or UUID.
      */
     public static <C> PersistentActorSharding<C> of(Props props, String persistenceIdPrefix, Function<C, String> persistenceIdPostfix) {
-        return new PersistentActorSharding<>(props, persistenceIdPrefix, persistenceIdPostfix);
+        return new PersistentActorSharding<>(props, persistenceIdPrefix, persistenceIdPostfix, 256);
     }
     
-    protected PersistentActorSharding(Props props, String persistenceIdPrefix, Function<C, String> entityIdForCommand) {
+    /**
+     * Creates a PersistentActorSharding for an actor that is created according to [props]. The actor must be a subclass of {@link AbstractPersistentActor}.
+     *
+     * @param numberOfShards Number of shards to divide all entity/persistence ids into. This can not be changed after the first run.
+     * @param persistenceIdPrefix Fixed prefix for each persistence id. This is typically the name of your aggregate root, e.g. "document" or "user".
+     * @param persistenceIdPostfix Function that returns the last part of the persistence id that a command is routed to. This typically is the real ID of your entity, or UUID.
+     */
+    public static <C> PersistentActorSharding<C> of(Props props, String persistenceIdPrefix, Function<C, String> persistenceIdPostfix, int numberOfShards) {
+        return new PersistentActorSharding<>(props, persistenceIdPrefix, persistenceIdPostfix, numberOfShards);
+    }
+    
+    protected PersistentActorSharding(Props props, String persistenceIdPrefix, Function<C, String> entityIdForCommand, int numberOfShards) {
         this.props = props;
         this.persistenceIdPrefix = persistenceIdPrefix;
         this.persistenceIdPostfix = entityIdForCommand;
+        this.numberOfShards = numberOfShards;
     }
 
     private final MessageExtractor messageExtractor = new MessageExtractor() {
-        private final int numberOfShards = 256;
-        
         @Override
         public String entityId(Object command) {
             return getEntityId(command);
@@ -61,7 +62,7 @@ public class PersistentActorSharding<C> {
 
         @Override
         public String shardId(Object command) {
-            return String.valueOf(entityId(command).hashCode() % numberOfShards);
+            return getShardId(getEntityId(command));
         }
         
         @Override
@@ -101,4 +102,10 @@ public class PersistentActorSharding<C> {
         return persistenceIdPrefix + "_" + persistenceIdPostfix.apply((C) command);
     }
     
+    /**
+     * Returns the shard on which the given entityId should be placed
+     */
+    protected String getShardId(String entityId) {
+        return String.valueOf(entityId.hashCode() % numberOfShards);
+    }
 }
