@@ -37,7 +37,7 @@ public class Replication implements Extension {
         return ReplicationId.INSTANCE.get(system);
     }
     
-    private final Map<String,CompletionStage<Void>> started = new HashMap<String,CompletionStage<Void>>();
+    private final Map<String,CompletionStage<Void>> started = new HashMap<>();
     private final ActorSystem system;
     private final Config config;
     
@@ -64,7 +64,7 @@ public class Replication implements Extension {
     }
     
     public <E> String getEventTag(Class<E> eventType) {
-        return AbstractStatefulPersistentActor.getEventTag(config, eventType);    
+        return AbstractStatefulPersistentActor.getEventTag(config, eventType);
     }
 
     public CompletionStage<Void> start(Class<?> eventType, ActorRef shardRegion) {
@@ -74,6 +74,13 @@ public class Replication implements Extension {
         synchronized(started) {
             if (started.containsKey(eventTag)) return started.get(eventTag);
             
+            try {
+                getEventClassifier(eventType);
+            } catch (RuntimeException x) {
+                throw new IllegalArgumentException("You must configure ts-reaktive.replication.event-classifiers.\"" +
+                    eventType.getClass() + "\" with an EventClassifier implementation.");
+            }
+            
             ActorMaterializer materializer = ActorMaterializer.create(system);
             Config tagConfig = config.hasPath(eventTag) ? config.getConfig(eventTag).withFallback(config) : config;
             EventEnvelopeSerializer serializer = new EventEnvelopeSerializer(system);
@@ -82,7 +89,7 @@ public class Replication implements Extension {
                 String name = e.getKey();
                 Config remote = ((ConfigObject) e.getValue()).toConfig();
                 // FIXME add config options for ConnectionContext
-                return new WebSocketDataCenterClient(system, ConnectionContext.noEncryption(), name, remote.getString("url"), serializer);            
+                return new WebSocketDataCenterClient(system, ConnectionContext.noEncryption(), name, remote.getString("url"), serializer);
             });
             
             DataCenterRepository dataCenterRepository = new DataCenterRepository() {
@@ -101,7 +108,7 @@ public class Replication implements Extension {
             VisibilityRepository visibilityRepo = new VisibilityRepository(session);
             ReadJournal journal = PersistenceQuery.get(system).getReadJournalFor(ReadJournal.class, config.getString("read-journal-plugin-id"));
             
-            DataCenterForwarder.startAll(system, materializer, dataCenterRepository, visibilityRepo, eventType, 
+            DataCenterForwarder.startAll(system, materializer, dataCenterRepository, visibilityRepo, eventType,
                 (EventsByTagQuery)journal, (CurrentEventsByPersistenceIdQuery) journal);
             
             WebSocketDataCenterServer server = new WebSocketDataCenterServer(config.getConfig("server"), shardRegion);
@@ -109,7 +116,7 @@ public class Replication implements Extension {
             final String host = tagConfig.getString("local-datacenter.host");
             log.debug("Binding to {}:{}", host, port);
             
-            CompletionStage<ServerBinding> bind = Http.get(system).bindAndHandle(server.route().flow(system, materializer), 
+            CompletionStage<ServerBinding> bind = Http.get(system).bindAndHandle(server.route().flow(system, materializer),
                 ConnectHttp.toHost(host, port), materializer);
             
             // The returned future completes when both the HTTP binding is ready, and the cassandra visibility session has initialized.

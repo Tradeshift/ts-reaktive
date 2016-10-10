@@ -31,13 +31,14 @@ If you use SBT, you can use this library by adding the following:
     resolvers += Resolver.bintrayRepo("jypma", "maven")
     
     libraryDependencies ++= {
-      val version = "0.0.14"
+      val version = "0.0.15"
       Seq(
         "com.tradeshift" % "ts-reaktive-actors" % version,
         "com.tradeshift" %% "ts-reaktive-akka" % version,
         "com.tradeshift" % "ts-reaktive-cassandra" % version,
         "com.tradeshift" % "ts-reaktive-marshal" % version,
         "com.tradeshift" % "ts-reaktive-marshal-akka" % version,
+        "com.tradeshift" % "ts-reaktive-replication" % version,
         "com.tradeshift" % "ts-reaktive-ssl" % version,
         "com.tradeshift" % "ts-reaktive-testkit" % version % "test",
         "com.tradeshift" % "ts-reaktive-testkit-assertj" % version % "test",
