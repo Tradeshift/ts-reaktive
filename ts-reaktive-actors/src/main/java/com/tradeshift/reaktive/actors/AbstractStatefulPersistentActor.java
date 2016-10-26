@@ -70,7 +70,7 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     public PartialFunction<Object, BoxedUnit> receiveCommand() {
         return ReceiveBuilder
             .match(commandType, this::handleCommand)
-            .matchEquals(ReceiveTimeout.getInstance(), msg -> context().parent().tell(new ShardRegion.Passivate("stop"), self()))
+            .matchEquals(ReceiveTimeout.getInstance(), msg -> passivate())
             .matchEquals("stop", msg -> context().stop(self()))
             .build();
     }
@@ -166,5 +166,21 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
      */
     protected void havePersisted(E evt) {
         state = state.apply(evt);
+    }
+    
+    /**
+     * Persists the given event wrapping it using {@link #tagged(Object)}, and updates this actor's state by
+     * calling {@link #havePersisted(Object)} when the event is persisted.
+     */
+    protected void persistAndUpdate(E evt) {
+        persist(tagged(evt), e -> havePersisted(evt));
+    }
+    
+    /**
+     * Signals the parent actor (which is expected to be a ShardRegion) to passivate this actor, as a result
+     * of not having received any messages for a certain amount of time.
+     */
+    protected void passivate() {
+        context().parent().tell(new ShardRegion.Passivate("stop"), self());
     }
 }
