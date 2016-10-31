@@ -28,11 +28,17 @@ import scala.runtime.BoxedUnit;
  * The actor automatically tags emitted events with the simple class name of E (without package), or with the tag specified
  * under ts-reaktive.actors.tags.[full-class-name].
  *
- * Implementations must define a public, no-arguments constructor that passes in the runtime Class types of C and E.
- *  
- * @param <C> Type of commands that this actor expects to receive. 
- * @param <E> Type of events that this actor emits. 
- * @param <S> Immutable type that contains all the state the actor maintains. 
+ * Implementations must define a public, no-arguments constructor that passes in the runtime Class types of C and E, e.g.
+ * 
+ * <code><pre>
+ *   public MyActor() {
+ *       super(MyCommand.class, MyEvent.class);
+ *   }
+ * </pre></code>
+ * 
+ * @param <C> Type of commands that this actor expects to receive.
+ * @param <E> Type of events that this actor emits.
+ * @param <S> Immutable type that contains all the state the actor maintains.
  */
 public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractState<E,S>> extends AbstractPersistentActor {
     protected final LoggingAdapter log = Logging.getLogger(getContext().system(), this);
@@ -64,7 +70,7 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     public PartialFunction<Object, BoxedUnit> receiveCommand() {
         return ReceiveBuilder
             .match(commandType, this::handleCommand)
-            .matchEquals(ReceiveTimeout.getInstance(), msg -> context().parent().tell(new ShardRegion.Passivate("stop"), self()))
+            .matchEquals(ReceiveTimeout.getInstance(), msg -> passivate())
             .matchEquals("stop", msg -> context().stop(self()))
             .build();
     }
@@ -99,7 +105,7 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
      * Returns the initial value the state should be, when the actor is just created.
      * 
      * Although the implementation of this method is free to investigate the actor's context() and its environment, it must
-     * not apply any changes (i.e. be without side-effect). 
+     * not apply any changes (i.e. be without side-effect).
      */
     protected abstract S initialState();
     
@@ -127,9 +133,9 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
                 persistAll(events.map(this::tagged), evt -> {
                     havePersisted((E) evt.payload());
                     if (need.decrementAndGet() == 0) {
-                        sender().tell(handler.getReply(events, lastSequenceNr()), self());                        
+                        sender().tell(handler.getReply(events, lastSequenceNr()), self());
                     }
-                });                    
+                });
             }
         }
     }
@@ -143,7 +149,7 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     protected void validateFirstEvent(E head) { }
 
     /**
-     * Wraps the given event in a Tagged object, instructing the journal to add a tag to it. 
+     * Wraps the given event in a Tagged object, instructing the journal to add a tag to it.
      * 
      * You should generally not have to deal with this method yourself, unless you're extending the framework.
      */
@@ -160,5 +166,21 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
      */
     protected void havePersisted(E evt) {
         state = state.apply(evt);
+    }
+    
+    /**
+     * Persists the given event wrapping it using {@link #tagged(Object)}, and updates this actor's state by
+     * calling {@link #havePersisted(Object)} when the event is persisted.
+     */
+    protected void persistAndUpdate(E evt) {
+        persist(tagged(evt), e -> havePersisted(evt));
+    }
+    
+    /**
+     * Signals the parent actor (which is expected to be a ShardRegion) to passivate this actor, as a result
+     * of not having received any messages for a certain amount of time.
+     */
+    protected void passivate() {
+        context().parent().tell(new ShardRegion.Passivate("stop"), self());
     }
 }
