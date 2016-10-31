@@ -5,7 +5,7 @@ import sbtprotobuf.{ProtobufPlugin=>PB}
 lazy val projectSettings = PB.protobufSettings ++ Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  version := "0.0.16",
+  version := "0.0.17-SNAPSHOT",
   scalaVersion := "2.11.8",
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
@@ -32,6 +32,7 @@ lazy val commonSettings = projectSettings ++ Seq(
   libraryDependencies ++= {
     val akkaVersion = "2.4.10"
     val kamonVersion = "0.6.2"
+    val httpVersion = "3.0.0-SNAPSHOT"
 
     Seq(
       "com.google.guava" % "guava" % "18.0",
@@ -41,11 +42,11 @@ lazy val commonSettings = projectSettings ++ Seq(
       "com.typesafe.akka" %% "akka-persistence" % akkaVersion,
       "com.typesafe.akka" %% "akka-cluster-sharding" % akkaVersion,
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-experimental" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-core" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-jackson-experimental" % akkaVersion,
+      "com.typesafe.akka" % "akka-http" % httpVersion,
+      "com.typesafe.akka" % "akka-http-core" % httpVersion,
+      "com.typesafe.akka" % "akka-http-jackson" % httpVersion,
       "com.typesafe.akka" %% "akka-persistence-query-experimental" % akkaVersion,
-      "com.typesafe.akka" %% "akka-http-testkit" % akkaVersion % "test",
+      "com.typesafe.akka" % "akka-http-testkit" % httpVersion % "test",
       "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.18",
       "com.readytalk" % "metrics3-statsd" % "4.1.0", // to log cassandra (codahale / dropwizard) metrics into statsd
       "io.kamon" %% "kamon-core" % kamonVersion,
