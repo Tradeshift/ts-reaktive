@@ -22,7 +22,7 @@ import javaslang.control.Try.CheckedConsumer;
  * error scenarios.
  */
 public abstract class HttpIntegrationSpec {
-    public static final Config config = ConfigFactory.defaultReference();
+    public static final Config config = ConfigFactory.defaultApplication();
     public static final ActorSystem system = ActorSystem.create("http-integration-spec", config);
     public static final Materializer materializer = ActorMaterializer.create(system);
 

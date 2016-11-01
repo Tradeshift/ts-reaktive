@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import akka.actor.ActorSystem;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.model.ContentTypes;
+import akka.http.javadsl.model.HttpEntities;
 import akka.http.javadsl.model.HttpEntity;
 import akka.http.javadsl.model.HttpEntity.Strict;
 import akka.http.javadsl.model.HttpRequest;
@@ -20,7 +21,9 @@ import akka.http.javadsl.model.HttpResponse;
 import akka.http.javadsl.model.MediaRanges;
 import akka.http.javadsl.model.MediaTypes;
 import akka.http.javadsl.model.headers.Accept;
+import akka.http.javadsl.model.headers.RawHeader;
 import akka.stream.Materializer;
+import akka.stream.javadsl.Source;
 import akka.util.ByteString;
 
 /**
@@ -29,7 +32,8 @@ import akka.util.ByteString;
 public class TestHttpClient {
     private final ActorSystem system;
     private final Materializer materializer;
-    private final String baseUrl;
+    
+    protected final String baseUrl;
     
     private long timeout = 10000;
     
@@ -55,6 +59,13 @@ public class TestHttpClient {
         return send(HttpRequest
             .PUT(getHttpUri(path))
             .withEntity(ContentTypes.APPLICATION_JSON, content.getBytes(Charset.forName("UTF-8"))));
+    }
+    
+    public HttpResponse tryPostSource(String path, Source<ByteString,?> data) {
+        return send(HttpRequest
+            .POST(getHttpUri(path))
+            .addHeader(RawHeader.create("Expect", "100-continue"))
+            .withEntity(HttpEntities.create(ContentTypes.APPLICATION_OCTET_STREAM, data)));
     }
     
     public void putXML(String path, String content) {
