@@ -85,7 +85,7 @@ public class HttpFlow {
     }
 
     private Flow<ByteString, ByteString, CompletionStage<HttpResponse>> createFlow(HttpMethod method, Uri uri, Option<ContentType> contentType, Predicate<HttpResponse> isSuccess, HttpHeader... headers) {
-        Sink<ByteString, Publisher<ByteString>> in = Sink.asPublisher(AsPublisher.WITHOUT_FANOUT);
+        Sink<ByteString, Publisher<ByteString>> in = Sink.asPublisher(AsPublisher.WITH_FANOUT); // akka internally recreates this twice, on some errors...
         Source<ByteString, Subscriber<ByteString>> out = Source.asSubscriber();
         
         return Flow.fromSinkAndSourceMat(in, out, Keep.both()).mapMaterializedValue(pair -> {
@@ -103,16 +103,18 @@ public class HttpFlow {
                     resp.entity().getDataBytes()
                         .runWith(Sink.fromSubscriber(pair.second()), materializer);
                 } else {
-                    log.error("Http responded error: {}", resp);
+                    log.error("Http responded error: {} for request {}", resp, rq);
                     resp.discardEntityBytes(materializer);
-                    pair.second().onError(new IllegalStateException("Unsuccessful HTTP response: " + resp.status() + " for " + rq));
+                    pair.second().onError(new IllegalStateException("Unsuccessful HTTP response: " + resp + " for " + rq));
                 }
                 return resp;
             }).exceptionally(x -> {
                 Throwable cause = (x instanceof CompletionException) ? x.getCause() : x;
-                log.error("Could not make http request", cause);
+                if (!(cause instanceof IllegalStateException)) {
+                    log.error("Could not make http request " + rq, cause);
+                }
                 pair.second().onError(cause);
-                throw (x instanceof RuntimeException) ? (RuntimeException) x : new RuntimeException(x);
+                throw (cause instanceof RuntimeException) ? (RuntimeException) x : new RuntimeException(cause);
             });
         });
     }
