@@ -103,7 +103,7 @@ public class HttpFlow {
                     resp.entity().getDataBytes()
                         .runWith(Sink.fromSubscriber(pair.second()), materializer);
                 } else {
-                    log.error("Http responded error: {} for request {}", resp, rq);
+                    log.info("Http responded error: {} for request {}", resp, rq);
                     resp.discardEntityBytes(materializer);
                     pair.second().onError(new IllegalStateException("Unsuccessful HTTP response: " + resp + " for " + rq));
                 }
@@ -111,7 +111,7 @@ public class HttpFlow {
             }).exceptionally(x -> {
                 Throwable cause = (x instanceof CompletionException) ? x.getCause() : x;
                 if (!(cause instanceof IllegalStateException)) {
-                    log.error("Could not make http request " + rq, cause);
+                    log.info("Could not make http request " + rq, cause);
                 }
                 pair.second().onError(cause);
                 throw (cause instanceof RuntimeException) ? (RuntimeException) x : new RuntimeException(cause);
