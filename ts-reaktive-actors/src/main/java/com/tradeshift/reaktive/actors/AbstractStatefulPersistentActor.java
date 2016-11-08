@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigObject;
@@ -173,7 +174,20 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
      * calling {@link #havePersisted(Object)} when the event is persisted.
      */
     protected void persistAndUpdate(E evt) {
-        persist(tagged(evt), e -> havePersisted(evt));
+        persistAndUpdate(evt, e -> {});
+    }
+    
+    /**
+     * Persists the given event wrapping it using {@link #tagged(Object)}, and updates this actor's state by
+     * calling {@link #havePersisted(Object)} when the event is persisted.
+     * 
+     * @param callback Callback that will be invoked after the event is successfully persisted.
+     */
+    protected void persistAndUpdate(E evt, Consumer<E> callback) {
+        persist(tagged(evt), e -> {
+            havePersisted(evt);
+            callback.accept(evt);
+        });
     }
     
     /**
