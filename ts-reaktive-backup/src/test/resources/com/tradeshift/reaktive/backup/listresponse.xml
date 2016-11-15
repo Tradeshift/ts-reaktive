@@ -1,0 +1,14 @@
+<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <Name>bucketname</Name>
+  <Prefix>S3BackupIntegrationSpec/1478683083999/MyEvent</Prefix>
+  <KeyCount>1</KeyCount>
+  <MaxKeys>1000</MaxKeys>
+  <IsTruncated>false</IsTruncated>
+  <Contents>
+    <Key>S3BackupIntegrationSpec/1478683083999/MyEvent-from-19700101000000003</Key>
+    <LastModified>2016-11-09T09:18:09.001Z</LastModified>
+    <ETag>&quot;55f1e0c51016e172c49cbeb4b703ec01-1&quot;</ETag>
+    <Size>296</Size>
+    <StorageClass>STANDARD</StorageClass>
+  </Contents>
+</ListBucketResult>

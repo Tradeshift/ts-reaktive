@@ -2,6 +2,7 @@ package com.tradeshift.reaktive.marshal;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.Instant;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -49,7 +50,7 @@ public abstract class StringMarshallable<T> {
         @Override
         public String toString() {
             return "long";
-        }        
+        }
     };
     
     /** Java Integer converter. For JSON, please prefer to use {@link JSONProtocol.integerValue} since it maps to JSON number instead of string. */
@@ -67,7 +68,7 @@ public abstract class StringMarshallable<T> {
         @Override
         public String toString() {
             return "integer";
-        }        
+        }
     };
     
     /** Java BigDecimal converter. For JSON, please prefer to use {@link JSONProtocol.longValue} since it maps to JSON number instead of string. */
@@ -85,7 +86,7 @@ public abstract class StringMarshallable<T> {
         @Override
         public String toString() {
             return "big decimal";
-        }        
+        }
     };
     
     /** Java BigInteger converter. For JSON, please prefer to use {@link JSONProtocol.longValue} since it maps to JSON number instead of string. */
@@ -103,7 +104,7 @@ public abstract class StringMarshallable<T> {
         @Override
         public String toString() {
             return "big integer";
-        }        
+        }
     };
     
     /** Java UUID converter */
@@ -121,7 +122,27 @@ public abstract class StringMarshallable<T> {
         @Override
         public String toString() {
             return "uuid";
-        }        
+        }
+    };
+    
+    /**
+     * (un)marshals an Instant using ISO 8601 ( "2014-10-23T00:35:14.800Z" )
+     */
+    public static final StringMarshallable<Instant> INSTANT = new StringMarshallable<Instant>() {
+        @Override
+        public Try<Instant> tryRead(String value) {
+            return Try.of(() -> Instant.parse(value)).recover(prefixMessage("Expecting an ISO 8601 date"));
+        }
+
+        @Override
+        public String write(Instant value) {
+            return value.toString(); // formats as ISO 8601
+        }
+        
+        @Override
+        public String toString() {
+            return "ISO 8601 date";
+        }
     };
     
     private static <T> Function<Throwable,T> prefixMessage(String msg) {

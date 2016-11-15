@@ -1,5 +1,6 @@
 package com.tradeshift.reaktive.replication;
 
+import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
@@ -14,6 +15,7 @@ import com.tradeshift.reaktive.replication.io.WebSocketDataCenterClient;
 import com.tradeshift.reaktive.replication.io.WebSocketDataCenterServer;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigObject;
+import com.typesafe.config.ConfigValue;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -54,10 +56,18 @@ public class Replication implements Extension {
     @SuppressWarnings("unchecked")
     public <E> EventClassifier<E> getEventClassifier(Class<E> eventType) {
         return (EventClassifier<E>) classifiers.computeIfAbsent(eventType, t -> {
-            String className = (String) config.getConfig("ts-reaktive.replication.event-classifiers").root().get(eventType.getName()).unwrapped();
+            ConfigValue value = config.getConfig("ts-reaktive.replication.event-classifiers").root().get(eventType.getName());
+            if (value == null) {
+                throw new IllegalArgumentException("You must configure ts-reaktive.replication.event-classifiers.\"" +
+                    eventType.getName() + "\" with an EventClassifier implementation.");
+            }
+            String className = (String) value.unwrapped();
             try {
-                return (EventClassifier<E>) getClass().getClassLoader().loadClass(className).newInstance();
-            } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+                Class<?> type = getClass().getClassLoader().loadClass(className);
+                Constructor<?> constr = type.getDeclaredConstructor();
+                constr.setAccessible(true);
+                return (EventClassifier<E>) constr.newInstance();
+            } catch (Exception e) {
                 throw new IllegalArgumentException(e);
             }
         });
@@ -74,12 +84,7 @@ public class Replication implements Extension {
         synchronized(started) {
             if (started.containsKey(eventTag)) return started.get(eventTag);
             
-            try {
-                getEventClassifier(eventType);
-            } catch (RuntimeException x) {
-                throw new IllegalArgumentException("You must configure ts-reaktive.replication.event-classifiers.\"" +
-                    eventType.getClass() + "\" with an EventClassifier implementation.");
-            }
+            getEventClassifier(eventType); // will throw exception if the classifier is undefined, so we get an early error
             
             ActorMaterializer materializer = ActorMaterializer.create(system);
             Config tagConfig = config.hasPath(eventTag) ? config.getConfig(eventTag).withFallback(config) : config;
