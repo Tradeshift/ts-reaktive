@@ -79,6 +79,8 @@ lazy val `ts-reaktive-actors` = project.settings(commonSettings: _*).dependsOn(`
 
 lazy val `ts-reaktive-replication` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-actors`, `ts-reaktive-cassandra`, `ts-reaktive-testkit` % "test")
 
+lazy val `ts-reaktive-backup` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-replication`, `ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test")
+
 lazy val `ts-reaktive-ssl` = project.settings(commonSettings: _*)
 
 lazy val `ts-reaktive-kamon-log4j` = project.settings(commonSettings: _*)
@@ -95,6 +97,7 @@ lazy val root = (project in file(".")).settings(publish := { }, publishLocal := 
   `ts-reaktive-actors`,
   `ts-reaktive-cassandra`,
   `ts-reaktive-replication`,
+  `ts-reaktive-backup`,
   `ts-reaktive-ssl`,
   `ts-reaktive-marshal`,
   `ts-reaktive-marshal-akka`,
