@@ -108,13 +108,13 @@ public class FieldProtocol {
                             return inner.apply(value);
                         } else {
                             buffer = buffer.appendAll(inner.apply(value));
-                            if (buffer.size() > 2) {
+                            if (buffer.isEmpty() || buffer.eq(Vector.of(JSONEvent.START_ARRAY, JSONEvent.END_ARRAY))) {
+                                return Vector.empty();
+                            } else {
                                 Vector<JSONEvent> result = Vector.of(field).appendAll(buffer);
                                 buffer = Vector.empty();
                                 fieldStarted = true;
                                 return result;
-                            } else {
-                                return Vector.empty();
                             }
                         }
                     }

@@ -52,6 +52,9 @@ public class ObjectWriteProtocol<T> implements WriteProtocol<JSONEvent, T> {
 
     @Override
     public Writer<JSONEvent, T> writer() {
+        Vector<Writer<JSONEvent, Object>> writers = Vector.range(0, protocols.size()).map(i ->
+            (Writer<JSONEvent, Object>) protocols.get(i).writer());
+        
         return new Writer<JSONEvent, T>() {
             boolean started = false;
 
@@ -59,28 +62,32 @@ public class ObjectWriteProtocol<T> implements WriteProtocol<JSONEvent, T> {
             public Seq<JSONEvent> apply(T value) {
                 log.debug("{}: Writing {}", ObjectWriteProtocol.this, value);
                 
-                Seq<JSONEvent> prefix = (started) ? Vector.empty() : Vector.of(JSONEvent.START_OBJECT);
+                Seq<JSONEvent> events = startObject();
+                for (int i = 0; i < protocols.size(); i++) {
+                    events = events.appendAll(writers.get(i).apply(getters.get(i).apply(value)));
+                }
                 
                 started = true;
-                return prefix.appendAll(
-                    // write out actual fields
-                    Vector.range(0, protocols.size()).map(i -> {
-                        Writer<JSONEvent, Object> w = (Writer<JSONEvent, Object>) protocols.get(i).writer();
-                        return w.applyAndReset(getters.get(i).apply(value));
-                    }).flatMap(Function.identity())
-                );
+                return events;
             }
             
             @Override
             public Seq<JSONEvent> reset() {
                 log.debug("{}: Resetting ", ObjectWriteProtocol.this);
-                Seq<JSONEvent> prefix = (started) ? Vector.empty() : Vector.of(JSONEvent.START_OBJECT);
-
+                
+                Seq<JSONEvent> events = startObject();
+                for (int i = 0; i < protocols.size(); i++) {
+                    events = events.appendAll(writers.get(i).reset());
+                }
+                
+                events = events.appendAll(conditions.map(c -> c.writer().applyAndReset(ConstantProtocol.PRESENT)).flatMap(Function.identity()));
+                
                 started = false;
-                return prefix.appendAll(
-                    // write out constant-valued conditions
-                    conditions.map(c -> c.writer().applyAndReset(ConstantProtocol.PRESENT)).flatMap(Function.identity())
-                ).append(JSONEvent.END_OBJECT);
+                return events.append(JSONEvent.END_OBJECT);
+            }
+            
+            private Seq<JSONEvent> startObject() {
+                return (started) ? Vector.empty() : Vector.of(JSONEvent.START_OBJECT);
             }
         };
     }

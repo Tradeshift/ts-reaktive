@@ -24,6 +24,7 @@ import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -313,6 +314,12 @@ public class XMLProtocolSpec {{
         it("should unmarshal multiple tags into multiple strings", () -> {
             List<String> list = stax.parse("<root><element important='true'>hello</element><element important='true'>world</element></root>", proto.reader()).collect(Collectors.toList());
             assertThat(list).containsExactly("hello", "world");
+        });
+        
+        it("should marshal multiple strings into a full XML document", () -> {
+            assertThat(
+                stax.writeAllAsString(Arrays.asList("hello", "world").stream(), proto.writer())
+            ).isEqualTo("<root><element important=\"true\">hello</element><element important=\"true\">world</element></root>");
         });
     });
     

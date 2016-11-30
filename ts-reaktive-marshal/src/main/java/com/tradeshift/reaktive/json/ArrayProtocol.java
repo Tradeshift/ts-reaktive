@@ -95,28 +95,6 @@ public class ArrayProtocol<E> {
     public static <E> WriteProtocol<JSONEvent, E> write(WriteProtocol<JSONEvent, E> innerProtocol) {
         return new WriteProtocol<JSONEvent, E>() {
             WriteProtocol<JSONEvent, E> parent = this;
-            private final Writer<JSONEvent, E> writer = new Writer<JSONEvent,E>() {
-                Writer<JSONEvent, E> inner = innerProtocol.writer();
-                boolean started = false;
-
-                @Override
-                public Seq<JSONEvent> apply(E value) {
-                    log.debug("{}: Writing {}", parent, value);
-                    Seq<JSONEvent> prefix = (started) ? Vector.empty() : Vector.of(JSONEvent.START_ARRAY);
-                    started = true;
-                    
-                    return prefix.appendAll(inner.applyAndReset(value));
-                }
-                    
-                @Override
-                public Seq<JSONEvent> reset() {
-                    log.debug("{}: Resetting ", parent);
-                    Seq<JSONEvent> prefix = (started) ? Vector.empty() : Vector.of(JSONEvent.START_ARRAY);
-                    started = false;
-                    
-                    return prefix.append(JSONEvent.END_ARRAY);
-                }
-            };
             
             @Override
             public Class<? extends JSONEvent> getEventType() {
@@ -125,7 +103,29 @@ public class ArrayProtocol<E> {
             
             @Override
             public Writer<JSONEvent, E> writer() {
-                return writer;
+                Writer<JSONEvent, E> inner = innerProtocol.writer();
+                
+                return new Writer<JSONEvent,E>() {
+                    boolean started = false;
+
+                    @Override
+                    public Seq<JSONEvent> apply(E value) {
+                        log.debug("{}: Writing {}, started {}", parent, value, started);
+                        Seq<JSONEvent> prefix = (started) ? Vector.empty() : Vector.of(JSONEvent.START_ARRAY);
+                        started = true;
+                        
+                        return prefix.appendAll(inner.applyAndReset(value));
+                    }
+                        
+                    @Override
+                    public Seq<JSONEvent> reset() {
+                        log.debug("{}: Resetting ", parent);
+                        Seq<JSONEvent> prefix = (started) ? Vector.empty() : Vector.of(JSONEvent.START_ARRAY);
+                        started = false;
+                        
+                        return prefix.append(JSONEvent.END_ARRAY);
+                    }
+                };
             }
             
             @Override
