@@ -25,12 +25,21 @@ import javaslang.control.Try;
  */
 @SuppressWarnings("unchecked")
 public class ObjectReadProtocol<T> implements ReadProtocol<JSONEvent, T> {
+    private static final Function<List<?>, Object> IDENTITY = list -> list.get(0);
     private static final Logger log = LoggerFactory.getLogger(ObjectReadProtocol.class);
+    
+    private static <T> Function<List<?>, T> identity() {
+        return (Function<List<?>, T>) IDENTITY;
+    }
     
     private final Seq<ReadProtocol<JSONEvent, ?>> protocols;
     private final Function<List<?>, T> produce;
     private final Seq<ReadProtocol<JSONEvent, ConstantProtocol.Present>> conditions;
 
+    public ObjectReadProtocol(ReadProtocol<JSONEvent, T> inner) {
+        this(Vector.of(inner), identity(), Vector.empty());
+    }
+    
     public ObjectReadProtocol(
         List<ReadProtocol<JSONEvent, ?>> protocols,
         Function<List<?>, T> produce
@@ -119,15 +128,13 @@ public class ObjectReadProtocol<T> implements ReadProtocol<JSONEvent, T> {
                     reset();
                     return result;
                 } else {
+                    Try<T> result = none();
+                    
                     if (matched) {
-                        for (int i = 0; i < readers.size(); i++) {
-                            int idx = i;
-                            Reader<JSONEvent, Object> r = readers.get(i);
-                            Try<Object> t = r.apply(evt);
-                            if (!ReadProtocol.isNone(t)) {
-                                values[idx] = t;
-                                log.debug("   -> {}", values[idx]);
-                            }
+                        if (isIdentity()) {
+                            result = (Try<T>) readers.get(0).apply(evt);
+                        } else {
+                            forward(evt);
                         }
                     }
                     
@@ -137,7 +144,19 @@ public class ObjectReadProtocol<T> implements ReadProtocol<JSONEvent, T> {
                         nestedObjects++;
                     }
                     
-                    return none();
+                    return result;
+                }
+            }
+
+            private void forward(JSONEvent evt) {
+                for (int i = 0; i < readers.size(); i++) {
+                    int idx = i;
+                    Reader<JSONEvent, Object> r = readers.get(i);
+                    Try<Object> t = r.apply(evt);
+                    if (!ReadProtocol.isNone(t)) {
+                        values[idx] = t;
+                        log.debug("   -> {}", values[idx]);
+                    }
                 }
             }
             
@@ -148,6 +167,10 @@ public class ObjectReadProtocol<T> implements ReadProtocol<JSONEvent, T> {
         };
     }
 
+    private boolean isIdentity() {
+        return conditions.isEmpty() && produce == IDENTITY;
+    }
+    
     /**
      * Returns a new protocol that, in addition, also requires the given nested protocol to be present with the given constant value
      */

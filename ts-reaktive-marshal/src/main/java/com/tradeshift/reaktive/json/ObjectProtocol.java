@@ -1,5 +1,6 @@
 package com.tradeshift.reaktive.json;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 
@@ -11,19 +12,25 @@ import javaslang.Function1;
 import javaslang.collection.Vector;
 
 /**
- * Generic class to combine several nested FieldProtocols into reading/writing a Java object instance.  
+ * Generic class to combine several nested FieldProtocols into reading/writing a Java object instance.
  */
 public class ObjectProtocol<T> implements Protocol<JSONEvent, T> {
     private final ObjectReadProtocol<T> read;
     private final ObjectWriteProtocol<T> write;
 
+    public ObjectProtocol(Protocol<JSONEvent, T> inner) {
+        this.read = new ObjectReadProtocol<>(inner);
+        Protocol<JSONEvent, ?> rawInner = inner;
+        this.write = new ObjectWriteProtocol<>(Vector.of(rawInner), Arrays.asList(Function1.identity()), Vector.empty());
+    }
+    
     public ObjectProtocol(
         List<Protocol<JSONEvent, ?>> protocols,
         Function<List<?>, T> produce,
         List<Function1<T, ?>> getters
     ) {
-        this.read = new ObjectReadProtocol<T>(Vector.ofAll(protocols), produce, Vector.empty());
-        this.write = new ObjectWriteProtocol<T>(Vector.ofAll(protocols), getters, Vector.empty());
+        this.read = new ObjectReadProtocol<>(Vector.ofAll(protocols), produce, Vector.empty());
+        this.write = new ObjectWriteProtocol<>(Vector.ofAll(protocols), getters, Vector.empty());
     }
     
     private ObjectProtocol(ObjectReadProtocol<T> read, ObjectWriteProtocol<T> write) {
@@ -56,7 +63,7 @@ public class ObjectProtocol<T> implements Protocol<JSONEvent, T> {
      * writing out the value when serializing as well.
      */
     public <U> ObjectProtocol<T> having(Protocol<JSONEvent, U> nestedProtocol, U value) {
-        return new ObjectProtocol<T>(read.having(nestedProtocol, value), write.having(nestedProtocol, value));
+        return new ObjectProtocol<>(read.having(nestedProtocol, value), write.having(nestedProtocol, value));
     }
     
 }

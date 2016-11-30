@@ -28,23 +28,42 @@ public class Jackson {
     public <T> String write(T obj, Writer<JSONEvent, T> writer) {
         return write(writer.applyAndReset(obj));
     }
-
-    public String write(Iterable<JSONEvent> events) {
-        StringWriter out = new StringWriter();
+    
+    public <T> String writeAll(Stream<T> items, Writer<JSONEvent, T> writer) {
         try {
+            StringWriter out = new StringWriter();
             JsonGenerator gen = factory.createGenerator(out);
-            events.forEach(evt -> {
-                try {
-                    writeTo(gen, evt);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+            items.forEach(t -> {
+                writeTo(gen, writer.apply(t));
             });
+            writeTo(gen, writer.reset());
             gen.close();
             return out.toString();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public String write(Iterable<JSONEvent> events) {
+        try {
+            StringWriter out = new StringWriter();
+            JsonGenerator gen = factory.createGenerator(out);
+            writeTo(gen, events);
+            gen.close();
+            return out.toString();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    public static void writeTo(JsonGenerator gen, Iterable<JSONEvent> events) {
+        events.forEach(evt -> {
+            try {
+                writeTo(gen, evt);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
     
     public static void writeTo(JsonGenerator gen, JSONEvent evt) throws IOException {

@@ -11,6 +11,7 @@ import java.io.StringReader;
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -51,6 +52,12 @@ public class Stax {
     private static final XMLInputFactory inFactory = XMLInputFactory.newFactory();
     private static final XMLOutputFactory outFactory = XMLOutputFactory.newFactory();
 
+    public <T> String writeAllAsString(Stream<T> stream, Writer<XMLEvent, T> writer) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        writeAll(stream, writer, out);
+        return new String(out.toByteArray());
+    }
+    
     public <T> String writeAsString(T obj, Writer<XMLEvent,T> writer) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         write(obj, writer, out);
@@ -60,14 +67,17 @@ public class Stax {
     public <T> void write(T obj, Writer<XMLEvent,T> writer, OutputStream out) {
         try {
             XMLEventWriter xmlW = outFactory.createXMLEventWriter(out);
-            writer.applyAndReset(obj).forEach(evt -> {
-                try {
-                    log.debug("Writing {}", evt);
-                    xmlW.add(evt);
-                } catch (XMLStreamException e) {
-                    throw new IllegalArgumentException(e);
-                }
-            });
+            writer.applyAndReset(obj).forEach(addTo(xmlW));
+        } catch (XMLStreamException | FactoryConfigurationError e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+    
+    public <T> void writeAll(Stream<T> objs, Writer<XMLEvent,T> writer, OutputStream out) {
+        try {
+            XMLEventWriter xmlW = outFactory.createXMLEventWriter(out);
+            objs.flatMap(obj -> writer.apply(obj).toJavaStream()).forEach(addTo(xmlW));
+            writer.reset().forEach(addTo(xmlW));
         } catch (XMLStreamException | FactoryConfigurationError e) {
             throw new IllegalArgumentException(e);
         }
@@ -183,5 +193,15 @@ public class Stax {
         } else {
             return name.getLocalPart();
         }
+    }
+    
+    private static Consumer<XMLEvent> addTo(XMLEventWriter writer) {
+        return evt -> {
+            try {
+                writer.add(evt);
+            } catch (XMLStreamException e) {
+                throw new IllegalArgumentException(e);
+            }
+        };
     }
 }

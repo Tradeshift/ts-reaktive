@@ -25,6 +25,7 @@ import static org.forgerock.cuppa.Cuppa.it;
 
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.forgerock.cuppa.junit.CuppaRunner;
 import org.junit.runner.RunWith;
@@ -132,14 +133,8 @@ public class JSONProtocolSpec {{
             );
         });
         
-        it("should marshal an object missing optional fields into JSON", () -> {
-            Seq<JSONEvent> events = proto.writer().applyAndReset(new DTO1(42, Option.none(), Vector.empty()));
-            
-            assertThat(events).containsExactly(
-                START_OBJECT,
-                new FieldName("l"), new NumericValue("42"),
-                END_OBJECT
-            );
+        it("should marshal an object missing optional fields into JSON, including an empty array for a required array field", () -> {
+            assertThat(jackson.write(new DTO1(42, Option.none(), Vector.empty()), proto.writer())).isEqualTo("{\"l\":42,\"s\":[]}");
         });
         
         it("should ignore an object or array in place where a string value is expected", () -> {
@@ -436,5 +431,24 @@ public class JSONProtocolSpec {{
                 jackson.parse("[1,false,3]", proto.reader()).findFirst()
             ).hasMessageContaining("false");
         });
+    });
+    
+    describe("a JSONProtocol streaming an array stuck inside an object", () -> {
+        Protocol<JSONEvent, Integer> proto = object(
+            field("root",
+                array(
+                    integerValue
+                )
+            )
+        );
+        
+        it("should return all items", () -> {
+            assertThat(jackson.parse("{\"root\":[1,2,3]}", proto.reader()).collect(Collectors.toList())).containsExactly(1,2,3);
+        });
+        
+        it("should write all items when writing", () -> {
+            assertThat(jackson.writeAll(Arrays.asList(1,2,3).stream(), proto.writer())).isEqualTo("{\"root\":[1,2,3]}");
+        });
+        
     });
 }}
