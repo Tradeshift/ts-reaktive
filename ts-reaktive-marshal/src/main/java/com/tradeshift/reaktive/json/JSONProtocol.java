@@ -17,6 +17,8 @@ import javaslang.Tuple2;
 
 @SuppressWarnings("unchecked")
 public class JSONProtocol<T> {
+    public static final Locator<JSONEvent> locator = evt -> ""; // TODO location reporting for JSON events
+    
     public static final StringProtocol<JSONEvent> stringValue = StringValueProtocol.INSTANCE;
     
     public static final Protocol<JSONEvent,Long> longValue = ValueProtocol.LONG;
@@ -25,8 +27,6 @@ public class JSONProtocol<T> {
     public static final Protocol<JSONEvent,BigDecimal> bigDecimalValue = ValueProtocol.BIGDECIMAL;
     public static final Protocol<JSONEvent,Boolean> booleanValue = ValueProtocol.BOOLEAN;
 
-    public static Locator<JSONEvent> locator = evt -> ""; // TODO location reporting for JSON events
-    
     public static <E> Protocol<JSONEvent, E> array(Protocol<JSONEvent, E> inner) {
         return Protocol.of(ArrayProtocol.read(inner), ArrayProtocol.write(inner));
     }
