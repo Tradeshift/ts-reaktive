@@ -73,6 +73,20 @@ public class JSONProtocol<T> {
     }
     
     /**
+     * Returns a JSON protocol for reading an object having a single field, typed to the field's type.
+     */
+    public static <T> ObjectReadProtocol<T> object(ReadProtocol<JSONEvent, T> field) {
+        return new ObjectReadProtocol<>(field);
+    }
+    
+    /**
+     * Returns a JSON protocol for writing an object having a single field, typed to the field's type.
+     */
+    public static <T> ObjectWriteProtocol<T> object(WriteProtocol<JSONEvent, T> field) {
+        return new ObjectWriteProtocol<>(field);
+    }
+    
+    /**
      * Returns a protocol for a JSON object with a single field [p1], using [f] to turn it into a Java object, and [g1] to get the field when writing.
      */
     public static <F1,T> ObjectProtocol<T> object(Protocol<JSONEvent, F1> p1, Function1<F1, T> f, Function1<T, F1> g1) {
