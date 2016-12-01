@@ -1,6 +1,5 @@
 package com.tradeshift.reaktive.json;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 
@@ -20,8 +19,7 @@ public class ObjectProtocol<T> implements Protocol<JSONEvent, T> {
 
     public ObjectProtocol(Protocol<JSONEvent, T> inner) {
         this.read = new ObjectReadProtocol<>(inner);
-        Protocol<JSONEvent, ?> rawInner = inner;
-        this.write = new ObjectWriteProtocol<>(Vector.of(rawInner), Arrays.asList(Function1.identity()), Vector.empty());
+        this.write = new ObjectWriteProtocol<>(inner);
     }
     
     public ObjectProtocol(

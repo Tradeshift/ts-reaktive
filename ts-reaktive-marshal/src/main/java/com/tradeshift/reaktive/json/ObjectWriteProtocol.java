@@ -1,5 +1,6 @@
 package com.tradeshift.reaktive.json;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 
@@ -7,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.tradeshift.reaktive.marshal.ConstantProtocol;
+import com.tradeshift.reaktive.marshal.Protocol;
 import com.tradeshift.reaktive.marshal.WriteProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
@@ -30,6 +32,10 @@ public class ObjectWriteProtocol<T> implements WriteProtocol<JSONEvent, T> {
         List<Function1<T, ?>> getters
     ) {
         this(Vector.ofAll(protocols), getters, Vector.empty());
+    }
+    
+    public ObjectWriteProtocol(WriteProtocol<JSONEvent, T> inner) {
+        this(Vector.of((Protocol<JSONEvent, ?>)inner), Arrays.asList(Function1.identity()), Vector.empty());
     }
     
     ObjectWriteProtocol(
