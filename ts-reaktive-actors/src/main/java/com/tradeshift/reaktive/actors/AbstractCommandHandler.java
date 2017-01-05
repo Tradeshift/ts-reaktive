@@ -1,8 +1,7 @@
 package com.tradeshift.reaktive.actors;
 
-import java.util.Optional;
-
 import javaslang.collection.Seq;
+import javaslang.control.Option;
 
 /** Base class for handlers that handle specific commands */
 public abstract class AbstractCommandHandler<C,E,S extends AbstractState<E,?>> {
@@ -28,7 +27,7 @@ public abstract class AbstractCommandHandler<C,E,S extends AbstractState<E,?>> {
     
     /**
      * Returns the reply to send back to sender() on successfully having applied the events returned from events()
-     * @param emittedEvents The list of events that was returned from getEventsToEmit() earlier. 
+     * @param emittedEvents The list of events that was returned from getEventsToEmit() earlier.
      * @param lastSequenceNr The current last sequence number emitted on any event
      */
     public abstract Object getReply(Seq<E> emittedEvents, long lastSequenceNr);
@@ -51,10 +50,10 @@ public abstract class AbstractCommandHandler<C,E,S extends AbstractState<E,?>> {
     /**
      * Validates the given command. Default implementation accepts all commands.
      * @param lastSequenceNr The current last sequence number emitted on any earlier event
-     * @return Any validation error that should be sent back to sender() in case the command is invalid, 
+     * @return Any validation error that should be sent back to sender() in case the command is invalid,
      *         or Optional.absent() in case the command is valid.
      */
-    public Optional<Object> getValidationError(long lastSequenceNr) {
-        return Optional.empty();
+    public Option<Object> getValidationError(long lastSequenceNr) {
+        return Option.none();
     }
 }

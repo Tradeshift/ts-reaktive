@@ -5,7 +5,7 @@ import sbtprotobuf.{ProtobufPlugin=>PB}
 lazy val projectSettings = PB.protobufSettings ++ Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  version := "0.0.18",
+  version := "0.0.19",
   scalaVersion := "2.11.8",
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
@@ -22,7 +22,7 @@ lazy val projectSettings = PB.protobufSettings ++ Seq(
     com.github.os72.protocjar.Protoc.runProtoc("-v261" +: args.toArray)
   },
   libraryDependencies ++= Seq(
-    "io.javaslang" % "javaslang" % "2.0.1",
+    "io.javaslang" % "javaslang" % "2.0.5",
     "org.slf4j" % "slf4j-api" % "1.7.12",
     "org.slf4j" % "slf4j-log4j12" % "1.7.12" % "test"
   )
