@@ -1,8 +1,11 @@
 package com.tradeshift.reaktive.actors;
 
+import static akka.pattern.PatternsCS.pipe;
+
+import java.io.Serializable;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -14,11 +17,13 @@ import akka.actor.ReceiveTimeout;
 import akka.cluster.sharding.ShardRegion;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
+import akka.japi.pf.PFBuilder;
 import akka.japi.pf.ReceiveBuilder;
 import akka.persistence.AbstractPersistentActor;
 import akka.persistence.SnapshotOffer;
 import akka.persistence.journal.Tagged;
 import javaslang.collection.Seq;
+import javaslang.control.Option;
 import scala.PartialFunction;
 import scala.concurrent.duration.Duration;
 import scala.runtime.BoxedUnit;
@@ -70,9 +75,13 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     @Override
     public PartialFunction<Object, BoxedUnit> receiveCommand() {
         return ReceiveBuilder
+            .match(CommandWithHandler.class, m -> {
+                @SuppressWarnings("unchecked") CommandWithHandler msg = m;
+                handleCommand(msg.command, msg.handler);
+            })
             .match(commandType, this::handleCommand)
             .matchEquals(ReceiveTimeout.getInstance(), msg -> passivate())
-            .matchEquals("stop", msg -> context().stop(self()))
+            .match(Stop.class, msg -> context().stop(self()))
             .build();
     }
 
@@ -97,8 +106,33 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     }
 
     /**
-     * Returns the partial functions that handles commands sent to this actor.
-     * Use ReceiveBuilder to create partial functions.
+     * Returns the partial function that asynchronously handles commands sent to this actor, allowing multiple
+     * concurrent commands being asynchronously in-flight at the same time. Once the CompletionStage are resolved,
+     * the individual handlers are of course executed sequentially using the actor's normal message processing mechanism.
+     * 
+     * Incoming commands are first tried using applyCommandAsync(), and then applyCommand() if unhandled.
+     * 
+     * The default implementation is empty, i.e. all incoming commands are handled by applyCommand().
+     * 
+     * Use {@link PFBuilder} to create partial functions.
+     */
+    protected PartialFunction<C, CompletionStage<? extends AbstractCommandHandler<C,E,S>>> applyCommandAsync() {
+        return new PFBuilder<C, CompletionStage<? extends AbstractCommandHandler<C,E,S>>>().build();
+    }
+    
+    /**
+     * Returns a {@link PFBuilder} of the right type for applyCommandAsync. Use this method to trim down
+     * on repeating code in your actor class.
+     */
+    protected PFBuilder<C, CompletionStage<? extends AbstractCommandHandler<C,E,S>>> applyCommandAsyncBuilder() {
+        return new PFBuilder<>();
+    }
+    
+    /**
+     * Returns the partial function that handles commands sent to this actor.
+     * Incoming commands are first tried using applyCommandAsync(), and then applyCommand() if unhandled.
+     * 
+     * Use {@link PFBuilder} to create partial functions.
      */
     protected abstract PartialFunction<C, ? extends AbstractCommandHandler<C,E,S>> applyCommand();
     
@@ -110,12 +144,27 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
      */
     protected abstract S initialState();
     
+    /**
+     * Looks up a handler using handleCommandAsync() or handleCommand(), and then invokes
+     * handleCommand(cmd, handler) once the handler is resolved.
+     */
+    protected void handleCommand(C cmd) {
+        if (applyCommandAsync().isDefinedAt(cmd)) {
+            log.info("{} async processing {}", self().path(), cmd);
+            pipe(applyCommandAsync().apply(cmd).thenApply(handler -> new CommandWithHandler(cmd, handler)), context().dispatcher()).to(self(), sender());
+        } else {
+            log.info("{} processing {}", self().path(), cmd);
+            handleCommand(cmd, applyCommand().apply(cmd));
+        }
+    }
+
+    /**
+     * Executes the given command using the given handler, emitting any events, and responding to sender().
+     */
     @SuppressWarnings("unchecked")
-    private void handleCommand(C cmd) {
-        log.info("{} processing {}", self().path(), cmd);
-        AbstractCommandHandler<C,E,S> handler = applyCommand().apply(cmd);
-        Optional<Object> error = handler.getValidationError(lastSequenceNr());
-        if (error.isPresent()) {
+    protected void handleCommand(C cmd, AbstractCommandHandler<C, E, S> handler) {
+        Option<Object> error = handler.getValidationError(lastSequenceNr());
+        if (error.isDefined()) {
             log.debug("  invalid: {}", error.get());
             sender().tell(error.get(), self());
         } else if (handler.isAlreadyApplied()) {
@@ -193,8 +242,25 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     /**
      * Signals the parent actor (which is expected to be a ShardRegion) to passivate this actor, as a result
      * of not having received any messages for a certain amount of time.
+     * 
+     * You can also invoke this method directly if you want to cleanly stop the actor explicitly.
      */
     protected void passivate() {
-        context().parent().tell(new ShardRegion.Passivate("stop"), self());
+        context().parent().tell(new ShardRegion.Passivate(STOP), self());
+    }
+    
+    private static final class Stop implements Serializable {
+        private static final long serialVersionUID = 1L;
+    }
+    private static final Stop STOP = new Stop();
+    
+    private class CommandWithHandler {
+        private final C command;
+        private final AbstractCommandHandler<C, E, S> handler;
+        
+        public CommandWithHandler(C command, AbstractCommandHandler<C, E, S> handler) {
+            this.command = command;
+            this.handler = handler;
+        }
     }
 }

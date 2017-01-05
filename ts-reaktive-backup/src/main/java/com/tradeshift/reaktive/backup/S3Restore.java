@@ -67,7 +67,7 @@ public class S3Restore extends AbstractPersistentActor {
     public PartialFunction<Object, BoxedUnit> receiveCommand() {
         return ReceiveBuilder
             .matchEquals("init", msg -> sender().tell("ack", self()))
-            .match(Long.class, o -> {
+            .match(Long.class, (Long o) -> {
                 log.debug("Persisting {}", o);
                 persist(o, done -> {
                     offset = o;
