@@ -79,4 +79,11 @@ public class ACL<R,C> {
     public int hashCode() {
         return entries.hashCode();
     }
+
+    /**
+     * Returns whether the ACL is empty, i.e. contains no entries at all.
+     */
+    public boolean isEmpty() {
+        return entries.isEmpty();
+    }
 }

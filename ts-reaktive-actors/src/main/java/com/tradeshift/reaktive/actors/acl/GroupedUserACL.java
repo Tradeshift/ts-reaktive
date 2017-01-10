@@ -92,4 +92,11 @@ public class GroupedUserACL<R extends Enum<R>,C> {
         }
         return set;
     }
+    
+    /**
+     * Returns whether the ACL is empty, i.e. contains no entries at all.
+     */
+    public boolean isEmpty() {
+        return userAcl.isEmpty() && groupAcl.isEmpty();
+    }
 }
