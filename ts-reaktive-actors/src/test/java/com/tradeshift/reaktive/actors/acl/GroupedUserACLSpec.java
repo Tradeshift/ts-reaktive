@@ -53,7 +53,7 @@ public class GroupedUserACLSpec {
     
     GroupedUserACL<Right,Change> acl;
     {
-        describe("GroupedUserACL", () -> {
+        describe("A GroupedUserACL that defines a special admin right", () -> {
             UUID userId = UUID.fromString("7dd3ea2d-e922-43b6-b183-82e271546692");
             UUID groupId = UUID.fromString("f4aafd4b-f31f-479c-87d0-80b9fc3e610e");
             List<com.tradeshift.reaktive.protobuf.Types.UUID> groups = Collections.singletonList(toProtobuf(groupId));
@@ -90,6 +90,20 @@ public class GroupedUserACLSpec {
                 assertThat(updated.isAllowed(userId, groups, Right.READ)).isTrue();
                 assertThat(updated.isAllowed(userId, groups, Right.ADMIN)).isTrue();
                 assertThat(updated.getRights(userId, groups)).containsOnly(Right.READ, Right.WRITE, Right.ADMIN);
+            });
+        });
+        
+        describe("A GroupedUserACL without special admin right", () -> {
+            UUID userId = UUID.fromString("7dd3ea2d-e922-43b6-b183-82e271546692");
+            
+            beforeEach(() -> acl = GroupedUserACL.empty(Right.class, Change::getUserId, Change::getUserGroupId, Change::getGranted, Change::getRevoked));
+            
+            it("should not grant further access when a direct user UUID is given admin rights", () -> {
+                GroupedUserACL<Right, Change> updated = acl.apply(new Change(some(userId), none(), some(Right.ADMIN), none()));
+                assertThat(updated.isAllowed(userId, Collections.emptyList(), Right.WRITE)).isFalse();
+                assertThat(updated.isAllowed(userId, Collections.emptyList(), Right.READ)).isFalse();
+                assertThat(updated.isAllowed(userId, Collections.emptyList(), Right.ADMIN)).isTrue();
+                assertThat(updated.getRights(userId, Collections.emptyList())).containsOnly(Right.ADMIN);
             });
         });
     }

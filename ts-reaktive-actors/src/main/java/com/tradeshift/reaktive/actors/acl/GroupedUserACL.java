@@ -9,6 +9,7 @@ import javaslang.Function1;
 import javaslang.collection.HashSet;
 import javaslang.collection.Set;
 import javaslang.control.Option;
+import static javaslang.control.Option.*;
 
 /**
  * Combines an ACL for users and an ACL for groups.
@@ -23,8 +24,27 @@ import javaslang.control.Option;
  */
 public class GroupedUserACL<R extends Enum<R>,C> {
     /**
-     * Creates a new, empty, ACL, based on various lambda expressions for R and C.
-     * @param admin Enumeration literal that is the special "admin" right for this ACL.
+     * Creates a new, empty, ACL, based on various lambda expressions for R and C, without defining a special "admin" right
+     * (meaning all rights are simply checked individually).
+     * @param rightsType The type of enum for which this ACL checks access rights
+     * @param getUserId Function that yields a target user UUID for a change (or none() if that change doesn't target a user)
+     * @param getUserGroupId Function that yields a target user group UUID for a change (or none() if that change doesn't target a user group)
+     * @param getGranted Function that yields a right that was granted for a change (or none() if the change doesn't grant rights)
+     * @param getRevoked Function that yields a right that was revoked for a change (or none() if the change doesn't revoke rights)
+     */
+    public static <R extends Enum<R>,C> GroupedUserACL<R,C> empty(
+        Class<R> rightsType,
+        Function1<C, Option<UUID>> getUserId,
+        Function1<C, Option<UUID>> getUserGroupId,
+        Function1<C, Option<R>> getGranted,
+        Function1<C, Option<R>> getRevoked
+    ) {
+        return new GroupedUserACL<>(rightsType, none(), ACLBuilder.of(getUserId, getGranted, getRevoked).empty(), ACLBuilder.of(getUserGroupId, getGranted, getRevoked).empty());
+    }
+    
+    /**
+     * Creates a new, empty, ACL, based on various lambda expressions for R and C, while defining a special "admin" right.
+     * @param admin Enumeration literal that is the special "admin" right for this ACL. Having this right grants all other rights.
      * @param getUserId Function that yields a target user UUID for a change (or none() if that change doesn't target a user)
      * @param getUserGroupId Function that yields a target user group UUID for a change (or none() if that change doesn't target a user group)
      * @param getGranted Function that yields a right that was granted for a change (or none() if the change doesn't grant rights)
@@ -37,14 +57,16 @@ public class GroupedUserACL<R extends Enum<R>,C> {
         Function1<C, Option<R>> getGranted,
         Function1<C, Option<R>> getRevoked
     ) {
-        return new GroupedUserACL<>(admin, ACLBuilder.of(getUserId, getGranted, getRevoked).empty(), ACLBuilder.of(getUserGroupId, getGranted, getRevoked).empty());
+        return new GroupedUserACL<>(admin.getDeclaringClass(), some(admin), ACLBuilder.of(getUserId, getGranted, getRevoked).empty(), ACLBuilder.of(getUserGroupId, getGranted, getRevoked).empty());
     }
-    
-    private final R admin;
+
+    private final Class<R> rightsType;
+    private final Option<R> admin;
     private final ACL<R,C> userAcl;
     private final ACL<R,C> groupAcl;
     
-    private GroupedUserACL(R admin, ACL<R, C> userAcl, ACL<R, C> groupAcl) {
+    private GroupedUserACL(Class<R> rightsType, Option<R> admin, ACL<R, C> userAcl, ACL<R, C> groupAcl) {
+        this.rightsType = rightsType;
         this.admin = admin;
         this.userAcl = userAcl;
         this.groupAcl = groupAcl;
@@ -54,7 +76,7 @@ public class GroupedUserACL<R extends Enum<R>,C> {
      * Returns a new ACL with the given change applied.
      */
     public GroupedUserACL<R,C> apply(C change) {
-        return new GroupedUserACL<>(admin, userAcl.apply(change), groupAcl.apply(change));
+        return new GroupedUserACL<>(rightsType, admin, userAcl.apply(change), groupAcl.apply(change));
     }
     
     /**
@@ -69,8 +91,8 @@ public class GroupedUserACL<R extends Enum<R>,C> {
         if (userAcl.isAllowed(right, user) ||
             userGroups.stream().map(UUIDs::toJava).anyMatch(group -> groupAcl.isAllowed(right, group))) {
             return true;
-        } else if (right != admin) {
-            return isAllowed(user, userGroups, admin);
+        } else if (admin.filter(r -> r != right).isDefined()) {
+            return isAllowed(user, userGroups, admin.get());
         } else {
             return false;
         }
@@ -85,7 +107,7 @@ public class GroupedUserACL<R extends Enum<R>,C> {
      */
     public Set<R> getRights(UUID userId, List<com.tradeshift.reaktive.protobuf.Types.UUID> userGroups) {
         Set<R> set = HashSet.empty();
-        for (R right: admin.getDeclaringClass().getEnumConstants()) {
+        for (R right: rightsType.getEnumConstants()) {
             if (isAllowed(userId, userGroups, right)) {
                 set = set.add(right);
             }
