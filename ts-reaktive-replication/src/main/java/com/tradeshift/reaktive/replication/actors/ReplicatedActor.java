@@ -19,9 +19,9 @@ import scala.runtime.BoxedUnit;
  * 
  * Such an actor will only accept writes in one region, and forward emitted events to other regions where they should be present.
  * 
- * Implementations must define a public, no-arguments constructor that passes in the runtime Class types of C and E. 
+ * Implementations must define a public, no-arguments constructor that passes in the runtime Class types of C and E.
  * 
- * The first event emitted by the first command sent to this actor MUST store the local datacenter name, and 
+ * The first event emitted by the first command sent to this actor MUST store the local datacenter name, and
  * EventClassifier must return that datacenter name (as first element, if multiple) when given the event.
  */
 public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends AbstractStatefulPersistentActor<C,E,S> {
@@ -34,7 +34,7 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
      * This field will be null before the first command is received.
      * 
      * Future extensions may implement protocols to allow a different data center to become master (by not having any master
-     * for a short amount of time, and eventually having the designated new master to discover that by eventing).  
+     * for a short amount of time, and eventually having the designated new master to discover that by eventing).
      */
     private Boolean slave;
 
@@ -65,7 +65,7 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
     @Override
     public PartialFunction<Object, BoxedUnit> receiveCommand() {
         return ReceiveBuilder
-            .match(commandType, c -> slave != null && slave && !isReadOnly(c), c -> 
+            .match(commandType, c -> slave != null && slave && !isReadOnly(c), c ->
                 sender().tell(new Failure(new IllegalStateException("Actor is in slave mode and does not accept " + c)), self())
             )
             .match(commandType, c -> slave == null && isReadOnly(c), c -> {
@@ -100,7 +100,6 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
             .orElse(super.receiveCommand());
     }
     
-    @SuppressWarnings("unchecked")
     private void receiveEnvelope(Query.EventEnvelope envelope) {
         if (envelope.getSequenceNr() > lastSequenceNr() + 1) {
             // TODO: park this in a cassandra table and piece it together later.
@@ -115,8 +114,7 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
         } else {
             log.debug("Saving event nr {}, I'm at {}", envelope.getSequenceNr(), lastSequenceNr());
             E event = SerializationExtension.get(context().system()).deserialize(envelope.getEvent().toByteArray(), eventType).get();
-            persist(tagged(event), e -> {
-                havePersisted((E) e.payload());
+            persistEvent(event, e -> {
                 sender().tell(envelope.getOffset(), self());
                 unstashAll();
             });
@@ -133,7 +131,7 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
     
     /**
      * Returns whether the given command is read-only, i.e. will never emit events.
-     *  
+     * 
      * Only read-only commands are valid to send to a GlobalActor in {@link #slave} mode.
      * 
      * The first command sent to an actor that is to be a master, must NOT be read-only.
