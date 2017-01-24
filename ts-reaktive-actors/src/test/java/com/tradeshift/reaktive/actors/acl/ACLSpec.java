@@ -64,25 +64,25 @@ public class ACLSpec {
             it("should grant a right returned by getGranted()", () -> {
                 ACL<Right, Change> updated = acl
                     .apply(new Change(some(userId), some(Right.WRITE), none()));
-                assertThat(updated.isAllowed(Right.WRITE, userId)).isTrue();
-                assertThat(updated.isAllowed(Right.READ, userId)).isFalse();
-                assertThat(updated.isAllowed(Right.ADMIN, userId)).isFalse();
-                assertThat(updated.isAllowed(Right.WRITE, UUID.randomUUID())).isFalse();
+                assertThat(updated.isGranted(Right.WRITE, userId)).isTrue();
+                assertThat(updated.isGranted(Right.READ, userId)).isFalse();
+                assertThat(updated.isGranted(Right.ADMIN, userId)).isFalse();
+                assertThat(updated.isGranted(Right.WRITE, UUID.randomUUID())).isFalse();
             });
             
             it("should not treat ADMIN in any special way", () -> {
                 ACL<Right, Change> updated = acl
                     .apply(new Change(some(userId), some(Right.ADMIN), none()));
-                assertThat(updated.isAllowed(Right.WRITE, userId)).isFalse();
-                assertThat(updated.isAllowed(Right.READ, userId)).isFalse();
-                assertThat(updated.isAllowed(Right.ADMIN, userId)).isTrue();
+                assertThat(updated.isGranted(Right.WRITE, userId)).isFalse();
+                assertThat(updated.isGranted(Right.READ, userId)).isFalse();
+                assertThat(updated.isGranted(Right.ADMIN, userId)).isTrue();
             });
             
             it("should revoke a right returned by getRevoked()", () -> {
                 ACL<Right, Change> updated = acl
                     .apply(new Change(some(userId), some(Right.WRITE), none()))
                     .apply(new Change(some(userId), none(), some(Right.WRITE)));
-                assertThat(updated.isAllowed(Right.WRITE, userId)).isFalse();
+                assertThat(updated.isGranted(Right.WRITE, userId)).isFalse();
             });
             
             it("should be equal to another ACL having seen the same changes", () -> {
@@ -97,8 +97,8 @@ public class ACLSpec {
                 ACL<Right, Change> updated = acl
                     .apply(new Change(some(userId), some(Right.WRITE), none()))            // grant write
                     .apply(new Change(some(userId), some(Right.READ), some(Right.WRITE))); // grant read, revoke write
-                assertThat(updated.isAllowed(Right.WRITE, userId)).isFalse();
-                assertThat(updated.isAllowed(Right.READ, userId)).isTrue();
+                assertThat(updated.isGranted(Right.WRITE, userId)).isFalse();
+                assertThat(updated.isGranted(Right.READ, userId)).isTrue();
             });
             
             it("should return the same instance when granting a right already present", () -> {
@@ -107,6 +107,22 @@ public class ACLSpec {
                 assertThat(updated
                     .apply(new Change(some(userId), some(Right.WRITE), none()))
                 ).isSameAs(updated);
+            });
+            
+            it("should keep track of the last/only user granted a particular right", () -> {
+                UUID otherUserId = UUID.fromString("2204f471-afb4-411b-bcbc-f76c2cbb69ea");
+                
+                assertThat(acl.isOnlyGrantedTo(userId, Right.WRITE)).isFalse();
+                ACL<Right, Change> updated;
+                
+                updated = acl.apply(new Change(some(userId), some(Right.WRITE), none()));
+                assertThat(updated.isOnlyGrantedTo(userId, Right.WRITE)).isTrue();
+                
+                updated = updated.apply(new Change(some(otherUserId), some(Right.WRITE), none()));
+                assertThat(updated.isOnlyGrantedTo(userId, Right.WRITE)).isFalse();
+                
+                updated = updated.apply(new Change(some(userId), none(), some(Right.WRITE)));
+                assertThat(updated.isOnlyGrantedTo(otherUserId, Right.WRITE)).isTrue();
             });
         });
     }

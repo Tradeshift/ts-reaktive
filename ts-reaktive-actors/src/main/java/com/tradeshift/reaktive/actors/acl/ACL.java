@@ -64,8 +64,15 @@ public class ACL<R,C> {
      * Returns whether the given target UUID is registered as having the given right (directly).
      * This function doesn't take any special "admin" rights into account.
      */
-    public boolean isAllowed(R right, UUID targetId) {
+    public boolean isGranted(R right, UUID targetId) {
         return entries.get(right).filter(rights -> rights.contains(targetId)).isDefined();
+    }
+    
+    /**
+     * Returns whether the given targetId is the only (i.e. last) target that is granted that right (directly).
+     */
+    public boolean isOnlyGrantedTo(UUID targetId, R right) {
+        return entries.get(right).contains(HashSet.of(targetId));
     }
 
     @SuppressWarnings("rawtypes")

@@ -1,13 +1,10 @@
 package com.tradeshift.reaktive.actors;
 
-import static akka.pattern.PatternsCS.pipe;
-
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigObject;
@@ -17,16 +14,19 @@ import akka.actor.ReceiveTimeout;
 import akka.cluster.sharding.ShardRegion;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
+import akka.japi.Procedure;
 import akka.japi.pf.PFBuilder;
 import akka.japi.pf.ReceiveBuilder;
 import akka.persistence.AbstractPersistentActor;
 import akka.persistence.SnapshotOffer;
 import akka.persistence.journal.Tagged;
 import javaslang.collection.Seq;
+import javaslang.collection.Vector;
 import javaslang.control.Option;
 import scala.PartialFunction;
 import scala.concurrent.duration.Duration;
 import scala.runtime.BoxedUnit;
+import static akka.pattern.PatternsCS.pipe;
 
 /**
  * Base class for persistent actor that manages some state, receives commands of a defined type, and emits events of a defined type.
@@ -41,6 +41,8 @@ import scala.runtime.BoxedUnit;
  *       super(MyCommand.class, MyEvent.class);
  *   }
  * </pre></code>
+ * 
+ * Implementations should not use the persistAsync* variants, as they would allow internal actor state to diverge.
  * 
  * @param <C> Type of commands that this actor expects to receive.
  * @param <E> Type of events that this actor emits.
@@ -88,7 +90,7 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     @Override
     public PartialFunction<Object, BoxedUnit> receiveRecover() {
         return ReceiveBuilder
-            .match(eventType, evt -> { havePersisted(evt); })
+            .match(eventType, evt -> { updateState(evt); })
             .match(SnapshotOffer.class, snapshot -> {
                 // Snapshots support is not implemented yet.
             })
@@ -161,7 +163,6 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     /**
      * Executes the given command using the given handler, emitting any events, and responding to sender().
      */
-    @SuppressWarnings("unchecked")
     protected void handleCommand(C cmd, AbstractCommandHandler<C, E, S> handler) {
         Option<Object> error = handler.getValidationError(lastSequenceNr());
         if (error.isDefined()) {
@@ -180,8 +181,7 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
                     validateFirstEvent(events.head());
                 }
                 AtomicInteger need = new AtomicInteger(events.size());
-                persistAll(events.map(this::tagged), evt -> {
-                    havePersisted((E) evt.payload());
+                persistAllEvents(events, evt -> {
                     if (need.decrementAndGet() == 0) {
                         sender().tell(handler.getReply(events, lastSequenceNr()), self());
                     }
@@ -199,45 +199,93 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     protected void validateFirstEvent(E head) { }
 
     /**
-     * Wraps the given event in a Tagged object, instructing the journal to add a tag to it.
-     * 
-     * You should generally not have to deal with this method yourself, unless you're extending the framework.
+     * Saves an event and updates actor state after the event was successfully saved.
      */
-    protected Tagged tagged(E event) {
+    public void persistEvent(E event) {
+        persistEvent(event, e -> {});
+    }
+    
+    /**
+     * Saves an event, updates actor state after the event was successfully saved, and then invokes the callback.
+     */
+    public void persistEvent(E event, Procedure<E> callback) {
+        persist(event, callback);
+    }
+    
+    /**
+     * Saves an event, updates actor state after the event was successfully saved, and then invokes the callback.
+     * @deprecated Use the type-safe persistEvent() variant instead.
+     */
+    @Override
+    @Deprecated
+    public <A> void persist(A event, Procedure<A> callback) {
+        @SuppressWarnings("unchecked")
+        E e = (E) event;
+        super.persist(tagged(e), persisted -> {
+            updateState(e);
+            callback.apply(event);
+        });
+    }
+    
+    /**
+     * Saves multiple events, updates actor state after each event is successfully saved.
+     */
+    public void persistAllEvents(Iterable<E> events) {
+        persistAllEvents(events, e -> {});
+    }
+    
+    /**
+     * Saves multiple events, updates actor state and invoking the callback after each event is successfully saved.
+     */
+    public void persistAllEvents(Iterable<E> events, Procedure<E> callback) {
+        persistAll(events, callback);
+    }
+    
+    /**
+     * Saves multiple events, updates actor state and invoking the callback after each event is successfully saved.
+     * @deprecated Use the type-safe persistEvent() variant instead.
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    @Deprecated
+    public <A> void persistAll(Iterable<A> events, Procedure<A> callback) {
+        super.persistAll(tagged((Iterable<E>) events), persisted -> {
+            updateState((E) persisted.payload());
+            callback.apply((A) persisted.payload());
+        });
+    }
+    
+    /**
+     * Wraps the given event in a Tagged object, instructing the journal to add a tag to it.
+     */
+    private Tagged tagged(E event) {
         Set<String> set = new HashSet<>();
         set.add(tagName);
         return new Tagged(event, set);
     }
-
+    
+    /**
+     * Wraps the given event in a Tagged object, instructing the journal to add a tag to it.
+     */
+    private Iterable<Tagged> tagged(Iterable<E> event) {
+        return Vector.ofAll(event).map(this::tagged);
+    }
+    
     /**
      * Updates the actor's internal state to match [evt] having been persisted.
-     * 
-     * You should generally not have to deal with this method yourself, unless you're extending the framework.
      */
-    protected void havePersisted(E evt) {
+    private void updateState(E evt) {
         state = state.apply(evt);
+        havePersisted(evt);
     }
     
     /**
-     * Persists the given event wrapping it using {@link #tagged(Object)}, and updates this actor's state by
-     * calling {@link #havePersisted(Object)} when the event is persisted.
-     */
-    protected void persistAndUpdate(E evt) {
-        persistAndUpdate(evt, e -> {});
-    }
-    
-    /**
-     * Persists the given event wrapping it using {@link #tagged(Object)}, and updates this actor's state by
-     * calling {@link #havePersisted(Object)} when the event is persisted.
+     * Subclasses can implement this to run custom code whenever an event was found to have been persisted
+     * (both directly after having been emitted and stored, or during recovery).
      * 
-     * @param callback Callback that will be invoked after the event is successfully persisted.
+     *  The default implementation of this method does nothing.
      */
-    protected void persistAndUpdate(E evt, Consumer<E> callback) {
-        persist(tagged(evt), e -> {
-            havePersisted(evt);
-            callback.accept(evt);
-        });
-    }
+    protected void havePersisted(E evt) { }
     
     /**
      * Signals the parent actor (which is expected to be a ShardRegion) to passivate this actor, as a result

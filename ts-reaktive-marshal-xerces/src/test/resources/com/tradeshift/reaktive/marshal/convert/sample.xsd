@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            xmlns="http://ts-reaktive/test"
+            version="1.0"
+            elementFormDefault="qualified" 
+            targetNamespace="http://ts-reaktive/test">
+            
+  <xsd:simpleType name="UUID">
+    <xsd:restriction base="xsd:string">
+      <xsd:pattern value="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+
+  <xsd:complexType name="Address">
+    <xsd:sequence>
+      <xsd:element name="Street" type="xsd:string" minOccurs="0"/>
+      <xsd:element name="City" type="xsd:string" minOccurs="0"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="Name" >
+    <xsd:simpleContent>
+      <xsd:extension base="xsd:string">
+        <xsd:attribute name="language" type="xsd:string" use="optional"/>
+      </xsd:extension>
+    </xsd:simpleContent>
+  </xsd:complexType>
+
+  <xsd:complexType name="Pet">
+    <xsd:sequence>
+      <xsd:element name="Name" type="Name"/>    
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:complexType name="Favourite">
+    <xsd:simpleContent>
+      <xsd:extension base="xsd:string"/>
+    </xsd:simpleContent>
+  </xsd:complexType>
+
+  <xsd:complexType name="Person">
+    <xsd:sequence>
+      <xsd:element name="PersonId" type="UUID"/>
+      <xsd:element name="Name" type="Name"/>
+      <xsd:element name="Address" type="Address" minOccurs="0" maxOccurs="1"/>
+      <xsd:element name="Pet" type="Pet" minOccurs="0" maxOccurs="unbounded"/>
+      <xsd:element name="Favourite" type="Favourite" minOccurs="0"/>
+      <xsd:element name="Parent" type="Person"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <xsd:element name="Person" type="Person"/>  
+</xsd:schema>

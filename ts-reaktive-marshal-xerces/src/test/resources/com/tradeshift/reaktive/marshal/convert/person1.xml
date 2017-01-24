@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Person xmlns="http://ts-reaktive/test"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xsi:schemaLocation="http://ts-reaktive/test sample.xsd">
+  <PersonId>8fb40607-240a-4eb4-b847-db47c9c41751</PersonId>
+  <Name language="en:US">John Smith</Name>
+  <Address>
+    <Street>Main st. 5</Street>
+    <City>Bigtown</City>
+  </Address>
+  <Pet>
+    <Name>Alice</Name>
+  </Pet>
+  <Pet>
+    <Name>Bob</Name>
+  </Pet>
+</Person>
