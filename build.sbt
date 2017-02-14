@@ -5,7 +5,7 @@ import sbtprotobuf.{ProtobufPlugin=>PB}
 lazy val projectSettings = PB.protobufSettings ++ Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  version := "0.0.24",
+  version := "0.0.25-SNAPSHOT",
   scalaVersion := "2.11.8",
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
@@ -72,6 +72,8 @@ lazy val `ts-reaktive-akka` = project.settings(commonSettings: _*)
 lazy val `ts-reaktive-marshal` = project.settings(projectSettings: _*).dependsOn(`ts-reaktive-java`)
 
 lazy val `ts-reaktive-marshal-akka` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-marshal`, `ts-reaktive-akka`, `ts-reaktive-testkit` % "test", `ts-reaktive-testkit-assertj` % "test")
+
+lazy val `ts-reaktive-csv` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-marshal`, `ts-reaktive-akka`, `ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test", `ts-reaktive-testkit-assertj` % "test")
 
 lazy val `ts-reaktive-marshal-xerces` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test", `ts-reaktive-testkit-assertj` % "test")
 
