@@ -48,13 +48,13 @@ public class CassandraSession {
         return toJava(delegate.executeWrite(stmt)).thenApply(unit -> Done.getInstance());
     }
 
-    public <T> CompletionStage<Source<T, NotUsed>> select(Statement stmt, Function<Row,T> rowMapper) {
-        return getUnderlying().thenApply(session -> 
-            ResultSetActorPublisher.source(session.executeAsync(stmt), rowMapper).mapMaterializedValue(actorRef -> NotUsed.getInstance()));
+    public CompletionStage<Source<Row, NotUsed>> select(Statement stmt) {
+        return getUnderlying().thenApply(session ->
+            ResultSetActorPublisher.source(session.executeAsync(stmt), row -> row).mapMaterializedValue(actorRef -> NotUsed.getInstance()));
     }
     
-    public <T> CompletionStage<Option<T>> selectOne(Statement stmt, Function<Row,T> rowMapper) {
-        return select(stmt, rowMapper).thenCompose(src -> src.runWith(Sink.headOption(), materializer)).thenApply(Option::ofOptional);
+    public CompletionStage<Option<Row>> selectOne(Statement stmt) {
+        return select(stmt).thenCompose(src -> src.runWith(Sink.headOption(), materializer)).thenApply(Option::ofOptional);
     }
     
     public void close() {
