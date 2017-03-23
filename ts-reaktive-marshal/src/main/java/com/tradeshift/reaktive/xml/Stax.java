@@ -45,12 +45,17 @@ import io.vavr.control.Try;
 
 /**
  * Interface to and from stax to the XML marshalling framework.
+ * 
+ * This class is mostly for testing, as you'll be using akka streams for real marshalling work,
+ * why else wouldn't you bother with streaming data binding? :-)
  */
 public class Stax {
     public static final Logger log = LoggerFactory.getLogger(Stax.class);
     
-    private static final XMLInputFactory inFactory = XMLInputFactory.newFactory();
-    private static final XMLOutputFactory outFactory = XMLOutputFactory.newFactory();
+    // We want the JDK built-in STAX, even though Aalto may be on the classpath. That's because the built-in one does
+    // give location information by default, and there's no generic way to configure that.
+    private static final XMLInputFactory inFactory = instantiate("com.sun.xml.internal.stream.XMLInputFactoryImpl");
+    private static final XMLOutputFactory outFactory = instantiate("com.sun.xml.internal.stream.XMLOutputFactoryImpl");
 
     public <T> String writeAllAsString(Stream<T> stream, Writer<XMLEvent, T> writer) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -203,5 +208,14 @@ public class Stax {
                 throw new IllegalArgumentException(e);
             }
         };
+    }
+    
+    @SuppressWarnings("unchecked")
+    private static <T> T instantiate(String className) {
+        try {
+            return (T) Class.forName(className).newInstance();
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

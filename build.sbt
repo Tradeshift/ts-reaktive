@@ -226,6 +226,14 @@ lazy val `ts-reaktive-cassandra` = project
   .dependsOn(`ts-reaktive-java`, `ts-reaktive-akka`, `ts-reaktive-testkit-assertj` % "test")
   .enablePlugins(GitVersioning)
 
+lazy val `ts-reaktive-marshal-scala` = project
+  .settings(projectSettings: _*)
+  .dependsOn(
+    `ts-reaktive-marshal`,
+    `ts-reaktive-marshal-akka`,
+    `ts-reaktive-testkit` % "test",
+    `ts-reaktive-marshal-akka` % "test")
+
 lazy val `ts-reaktive-actors` = project
   .enablePlugins(ProtobufPlugin)
   .enablePlugins(GitVersioning)
@@ -287,6 +295,7 @@ lazy val root = (project in file(".")).settings(publish := { }, publishLocal := 
   `ts-reaktive-ssl`,
   `ts-reaktive-marshal`,
   `ts-reaktive-marshal-akka`,
+  `ts-reaktive-marshal-scala`,
   `ts-reaktive-marshal-xerces`,
   `ts-reaktive-testkit`,
   `ts-reaktive-testkit-assertj`,
