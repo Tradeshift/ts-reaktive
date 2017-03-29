@@ -10,7 +10,6 @@ import com.tradeshift.reaktive.replication.ReplicationId;
 import akka.actor.Status.Failure;
 import akka.japi.pf.ReceiveBuilder;
 import akka.serialization.SerializationExtension;
-import javaslang.collection.Seq;
 import scala.PartialFunction;
 import scala.runtime.BoxedUnit;
 
@@ -52,10 +51,7 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
         
         return ReceiveBuilder
             .match(eventType, e -> slave == null, e -> {
-                Seq<String> dataCenterNames = classifier().getDataCenterNames(e);
-                if (!dataCenterNames.isEmpty()) {
-                    slave = dataCenterNames.head().equals(replication.getLocalDataCenterName());
-                }
+                slave = !includesLocalDataCenter(e);
                 invokeSuper.apply(e);
             })
             .build()
@@ -123,10 +119,16 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
     
     @Override
     protected void validateFirstEvent(E e) {
-        Seq<String> names = classifier().getDataCenterNames(e);
-        if (names.isEmpty() || !names.head().equals(replication.getLocalDataCenterName())) {
-            throw new IllegalStateException("First-emitted event of a ReplicatedActor must yield local data center name when given to EventClassifier");
+        if (!includesLocalDataCenter(e)) {
+            throw new IllegalStateException("First-emitted event of a ReplicatedActor must yield local data center name (" +
+                replication.getLocalDataCenterName() + ") when given to EventClassifier, but instead got: " +
+                classifier().getDataCenterNames(e).mkString(", "));
         }
+    }
+    
+    /** Returns whether the given event, according to the classifier, exposes this actor's data to the local data center */
+    private boolean includesLocalDataCenter(E e) {
+        return classifier().getDataCenterNames(e).headOption().contains(replication.getLocalDataCenterName());
     }
     
     /**
