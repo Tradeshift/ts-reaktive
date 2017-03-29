@@ -17,21 +17,24 @@ import java.util.concurrent.TimeUnit;
 import org.forgerock.cuppa.junit.CuppaRunner;
 import org.junit.runner.RunWith;
 
+import com.tradeshift.reaktive.akka.UUIDs;
 import com.tradeshift.reaktive.testkit.SharedActorSystemSpec;
 import com.typesafe.config.ConfigFactory;
 
 import akka.Done;
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import akka.persistence.query.EventEnvelope;
-import akka.persistence.query.javadsl.EventsByTagQuery;
+import akka.persistence.query.EventEnvelope2;
+import akka.persistence.query.NoOffset;
+import akka.persistence.query.TimeBasedUUID;
+import akka.persistence.query.javadsl.EventsByTagQuery2;
 import akka.stream.javadsl.Source;
 import akka.testkit.JavaTestKit;
 import javaslang.collection.Vector;
 
 @RunWith(CuppaRunner.class)
 public class S3BackupSpec extends SharedActorSystemSpec {
-    private final EventsByTagQuery query = mock(EventsByTagQuery.class);
+    private final EventsByTagQuery2 query = mock(EventsByTagQuery2.class);
     private final S3 s3 = mock(S3.class);
     
     public S3BackupSpec() {
@@ -53,7 +56,7 @@ public class S3BackupSpec extends SharedActorSystemSpec {
             });
             
             it("stops itself if the query stream ends", () -> {
-                when(query.eventsByTag("tag", 0)).thenReturn(Source.empty());
+                when(query.eventsByTag("tag", NoOffset.getInstance())).thenReturn(Source.empty());
                 
                 ActorRef actor = actor();
                 
@@ -63,7 +66,7 @@ public class S3BackupSpec extends SharedActorSystemSpec {
             });
             
             it("stops itself if the query stream fails", () -> {
-                when(query.eventsByTag("tag", 0)).thenReturn(Source.failed(new RuntimeException("simulated failure")));
+                when(query.eventsByTag("tag", NoOffset.getInstance())).thenReturn(Source.failed(new RuntimeException("simulated failure")));
                 
                 ActorRef actor = actor();
                 
@@ -73,11 +76,11 @@ public class S3BackupSpec extends SharedActorSystemSpec {
             });
             
             it("uploads a chunk after the specified chunk interval elapses", () -> {
-                EventEnvelope envelope1 = EventEnvelope.apply(0, "persistenceId", 0, "hello, world");
+                EventEnvelope2 envelope1 = EventEnvelope2.apply(new TimeBasedUUID(UUIDs.startOf(1l)), "persistenceId", 0, "hello, world");
                 
-                CompletableFuture<EventEnvelope> event1 = new CompletableFuture<>();
-                CompletableFuture<EventEnvelope> event2 = new CompletableFuture<>();
-                when(query.eventsByTag("tag", 0)).thenReturn(Source.fromCompletionStage(event1).concat(Source.fromCompletionStage(event2)));
+                CompletableFuture<EventEnvelope2> event1 = new CompletableFuture<>();
+                CompletableFuture<EventEnvelope2> event2 = new CompletableFuture<>();
+                when(query.eventsByTag("tag", NoOffset.getInstance())).thenReturn(Source.fromCompletionStage(event1).concat(Source.fromCompletionStage(event2)));
                 when(s3.store("tag", Vector.of(envelope1))).thenReturn(completedFuture(Done.getInstance()));
                 
                 actor();
@@ -88,13 +91,13 @@ public class S3BackupSpec extends SharedActorSystemSpec {
             });
             
             it("uploads a chunk after the specified number of events, even if the interval hasn't elapsed yet", () -> {
-                EventEnvelope envelope1 = EventEnvelope.apply(0, "persistenceId", 0, "hello, world");
-                EventEnvelope envelope2 = EventEnvelope.apply(1, "persistenceId", 1, "hello, world");
+                EventEnvelope2 envelope1 = EventEnvelope2.apply(new TimeBasedUUID(UUIDs.startOf(1l)), "persistenceId", 0, "hello, world");
+                EventEnvelope2 envelope2 = EventEnvelope2.apply(new TimeBasedUUID(UUIDs.startOf(2l)), "persistenceId", 1, "hello, world");
                 
-                CompletableFuture<EventEnvelope> event1 = new CompletableFuture<>();
-                CompletableFuture<EventEnvelope> event2 = new CompletableFuture<>();
-                CompletableFuture<EventEnvelope> event3 = new CompletableFuture<>();
-                when(query.eventsByTag("tag", 0)).thenReturn(Source.fromCompletionStage(event1).concat(Source.fromCompletionStage(event2)).concat(Source.fromCompletionStage(event3)));
+                CompletableFuture<EventEnvelope2> event1 = new CompletableFuture<>();
+                CompletableFuture<EventEnvelope2> event2 = new CompletableFuture<>();
+                CompletableFuture<EventEnvelope2> event3 = new CompletableFuture<>();
+                when(query.eventsByTag("tag", NoOffset.getInstance())).thenReturn(Source.fromCompletionStage(event1).concat(Source.fromCompletionStage(event2)).concat(Source.fromCompletionStage(event3)));
                 when(s3.store("tag", Vector.of(envelope1, envelope2))).thenReturn(completedFuture(Done.getInstance()));
                 
                 actor();

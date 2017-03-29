@@ -12,20 +12,22 @@ import static org.mockito.Mockito.when;
 import org.forgerock.cuppa.junit.CuppaRunner;
 import org.junit.runner.RunWith;
 
+import com.tradeshift.reaktive.akka.UUIDs;
 import com.tradeshift.reaktive.protobuf.EventEnvelopeSerializer;
 import com.tradeshift.reaktive.protobuf.Query;
 import com.tradeshift.reaktive.testkit.HttpIntegrationSpec;
 
 import akka.http.javadsl.model.StatusCodes;
-import akka.persistence.query.EventEnvelope;
-import akka.persistence.query.javadsl.EventsByTagQuery;
+import akka.persistence.query.EventEnvelope2;
+import akka.persistence.query.TimeBasedUUID;
+import akka.persistence.query.javadsl.EventsByTagQuery2;
 import akka.stream.StreamTcpException;
 import akka.stream.javadsl.Source;
 
 @RunWith(CuppaRunner.class)
 public class EventRouteIntegrationSpec extends HttpIntegrationSpec {
     
-    private EventRoute testEventRoute(EventsByTagQuery journal) {
+    private EventRoute testEventRoute(EventsByTagQuery2 journal) {
         EventEnvelopeSerializer serializer = mock(EventEnvelopeSerializer.class);
         when(serializer.toProtobuf(any())).thenReturn(Query.EventEnvelope.newBuilder().build());
         return new EventRoute(materializer, journal, serializer, "testEvent");
@@ -34,7 +36,7 @@ public class EventRouteIntegrationSpec extends HttpIntegrationSpec {
 {
     describe("GET /events", () -> {
         when("the underlying source encounters an error before the first element", () -> {
-            EventRoute eventRoute = testEventRoute((tag, idx) -> 
+            EventRoute eventRoute = testEventRoute((tag, idx) ->
                 Source.failed(new RuntimeException("simulated failure on first element"))
             );
             
@@ -47,8 +49,8 @@ public class EventRouteIntegrationSpec extends HttpIntegrationSpec {
         
         when("the underlying source completes with error after events have been sent out", () -> {
             EventRoute eventRoute = testEventRoute((tag, idx) -> {
-                return Source.single(
-                    EventEnvelope.apply(0, "doc_bc779420-beac-4636-b747-ea0a587d4f8b", 1, "hello")
+                return Source.repeat(
+                    EventEnvelope2.apply(new TimeBasedUUID(UUIDs.startOf(1)), "doc_bc779420-beac-4636-b747-ea0a587d4f8b", 1, "hello")
                 ).concat(
                     Source.failed(new RuntimeException("simulated failure mid-stream"))
                 );
@@ -62,5 +64,5 @@ public class EventRouteIntegrationSpec extends HttpIntegrationSpec {
             });
         });
         
-    });    
+    });
 }}

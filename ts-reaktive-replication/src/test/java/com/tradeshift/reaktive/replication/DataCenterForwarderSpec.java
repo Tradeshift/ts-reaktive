@@ -11,6 +11,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.any;
 
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -18,13 +19,17 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.tradeshift.reaktive.akka.UUIDs;
 import com.tradeshift.reaktive.replication.TestData.TestEvent;
 
 import akka.Done;
 import akka.actor.Props;
 import akka.persistence.query.EventEnvelope;
+import akka.persistence.query.EventEnvelope2;
+import akka.persistence.query.NoOffset;
+import akka.persistence.query.TimeBasedUUID;
 import akka.persistence.query.javadsl.CurrentEventsByPersistenceIdQuery;
-import akka.persistence.query.javadsl.EventsByTagQuery;
+import akka.persistence.query.javadsl.EventsByTagQuery2;
 import akka.stream.javadsl.Flow;
 import akka.stream.javadsl.Source;
 import javaslang.collection.HashMap;
@@ -48,13 +53,17 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
         }
 
         @Override
-        public Flow<EventEnvelope, Long, ?> uploadFlow() {
-            return Flow.<EventEnvelope>create()
+        public Flow<EventEnvelope2, Long, ?> uploadFlow() {
+            return Flow.<EventEnvelope2>create()
                 .map(event -> {
-                    events.add(event);
-                    return event.offset();
+                    events.add(envelope2to1(event));
+                    return UUIDs.unixTimestamp(TimeBasedUUID.class.cast(event.offset()).value());
                 });
         }
+    }
+    
+    private static EventEnvelope envelope2to1(EventEnvelope2 e) {
+        return new EventEnvelope(UUIDs.unixTimestamp(TimeBasedUUID.class.cast(e.offset()).value()), e.persistenceId(), e.sequenceNr(), e.event());
     }
     
     private TestEvent event(String msg) {
@@ -101,12 +110,13 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
             EventEnvelope event4 = EventEnvelope.apply(4, "doc1", 4, event("hello"));
             CompletableFuture<EventEnvelope> realTimeEvent = new CompletableFuture<>(); // this will be completed with event4 later on in the test
             
-            EventsByTagQuery qTag = mock(EventsByTagQuery.class);
+            EventsByTagQuery2 qTag = mock(EventsByTagQuery2.class);
             // FIXME this test is racey. Sometimes event4 doesn't get seen. If it persists, rewrite this source to be queue or actor
             // driven, and make sure it's only read once.
-            when(qTag.eventsByTag("TestEvent", 0)).thenReturn(
+            when(qTag.eventsByTag("TestEvent", NoOffset.getInstance())).thenReturn(
                 Source.from(Arrays.asList(event1, event2, event3))
                 .concat(Source.fromCompletionStage(realTimeEvent))
+                .map(DataCenterForwarder::envelope1to2)
                 .concat(Source.maybe()) // never complete this stream
             );
             
@@ -147,16 +157,16 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
             doAnswer(i -> completedFuture(false)).when(visibilityRepo).isVisibleTo(remote1, "doc1");
             doAnswer(i -> completedFuture(100000l)).when(visibilityRepo).getLastEventOffset(remote1, "TestEvent");
             
-            CompletableFuture<EventEnvelope> realTimeEvent = new CompletableFuture<>(); // this will be completed with event3 later on in the test
+            CompletableFuture<EventEnvelope2> realTimeEvent = new CompletableFuture<>(); // this will be completed with event3 later on in the test
             
-            EventsByTagQuery qTag = mock(EventsByTagQuery.class);
-            when(qTag.eventsByTag(eq("TestEvent"), anyLong())).thenReturn(Source.fromCompletionStage(realTimeEvent));
+            EventsByTagQuery2 qTag = mock(EventsByTagQuery2.class);
+            when(qTag.eventsByTag(eq("TestEvent"), any())).thenReturn(Source.fromCompletionStage(realTimeEvent));
             CurrentEventsByPersistenceIdQuery qPid = mock(CurrentEventsByPersistenceIdQuery.class);
             
             system.actorOf(Props.create(DataCenterForwarder.class, () -> new DataCenterForwarder<>(materializer, remote1, visibilityRepo, TestEvent.class, qTag, qPid)));
             
             eventuallyDo(() -> {
-                verify(qTag).eventsByTag("TestEvent", 100000l - config.getDuration("ts-reaktive.replication.allowed-clock-drift").toMillis());
+                verify(qTag).eventsByTag("TestEvent", new TimeBasedUUID(UUIDs.startOf(100000l - config.getDuration("ts-reaktive.replication.allowed-clock-drift").toMillis())));
             });
         });
         
@@ -186,8 +196,8 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
             EventEnvelope event1 = EventEnvelope.apply(1, "doc1", 1, event("dc:remote1"));
             EventEnvelope event2 = EventEnvelope.apply(2, "doc1", 2, event("dc:local")); // replicate to "local", hence "local" is a RO slave and not master.
             
-            EventsByTagQuery qTag = mock(EventsByTagQuery.class);
-            when(qTag.eventsByTag("TestEvent", 0)).thenReturn(Source.from(Arrays.asList(event1, event2)));
+            EventsByTagQuery2 qTag = mock(EventsByTagQuery2.class);
+            when(qTag.eventsByTag("TestEvent", NoOffset.getInstance())).thenReturn(Source.from(Arrays.asList(event1, event2)).map(DataCenterForwarder::envelope1to2));
             
             CurrentEventsByPersistenceIdQuery qPid = mock(CurrentEventsByPersistenceIdQuery.class);
             when(qPid.currentEventsByPersistenceId("doc1", 0, Long.MAX_VALUE)).thenReturn(Source.from(Arrays.asList(event1, event2)));

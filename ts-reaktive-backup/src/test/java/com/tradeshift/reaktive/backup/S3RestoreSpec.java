@@ -74,7 +74,7 @@ public class S3RestoreSpec extends SharedActorSystemSpec {
         return Query.EventEnvelope.newBuilder()
             .setPersistenceId("pid")
             .setSequenceNr(seqnr)
-            .setOffset(offset)
+            .setTimestamp(offset)
             .build();
     }
 }

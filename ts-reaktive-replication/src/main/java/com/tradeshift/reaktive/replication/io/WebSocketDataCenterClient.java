@@ -16,7 +16,7 @@ import akka.http.javadsl.model.ws.BinaryMessage;
 import akka.http.javadsl.model.ws.Message;
 import akka.http.javadsl.model.ws.WebSocketRequest;
 import akka.http.javadsl.settings.ClientConnectionSettings;
-import akka.persistence.query.EventEnvelope;
+import akka.persistence.query.EventEnvelope2;
 import akka.stream.javadsl.Flow;
 import akka.util.ByteString;
 
@@ -26,7 +26,7 @@ import akka.util.ByteString;
 public class WebSocketDataCenterClient implements DataCenter {
     private static final Logger log = LoggerFactory.getLogger(WebSocketDataCenterClient.class);
     
-    private final ActorSystem system; 
+    private final ActorSystem system;
     private final String uri;
     private final ConnectionContext connectionContext;
     private final String name;
@@ -52,10 +52,10 @@ public class WebSocketDataCenterClient implements DataCenter {
     }
     
     @Override
-    public Flow<EventEnvelope,Long,?> uploadFlow() {
+    public Flow<EventEnvelope2,Long,?> uploadFlow() {
         ClientConnectionSettings settings = ClientConnectionSettings.create(system.settings().config());
         
-        return Flow.<EventEnvelope>create()
+        return Flow.<EventEnvelope2>create()
             .map(e -> (Message) BinaryMessage.create(serialize(e)))
             .via(Http.get(system).webSocketClientFlow(WebSocketRequest.create(uri), connectionContext, Optional.empty(), settings, system.log()))
             .map(msg -> {
@@ -70,7 +70,7 @@ public class WebSocketDataCenterClient implements DataCenter {
             .filter(l -> l > 0);
     }
 
-    protected ByteString serialize(EventEnvelope e) {
+    protected ByteString serialize(EventEnvelope2 e) {
         return ByteString.fromArray(serializer.toProtobuf(e).toByteArray());
     }
 }

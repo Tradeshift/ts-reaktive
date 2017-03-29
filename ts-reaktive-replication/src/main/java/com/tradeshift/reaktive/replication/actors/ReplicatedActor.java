@@ -108,14 +108,14 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
         } else if (envelope.getSequenceNr() <= lastSequenceNr()) {
             log.warning("Received duplicate event {} while already at {}. Assuming idempotent.", envelope.getSequenceNr(), lastSequenceNr());
             // TODO actually check that the event is idempotent with what we already have in the journal
-            sender().tell(envelope.getOffset(), self());
+            sender().tell(envelope.getTimestamp(), self());
         } else if (!envelope.getPersistenceId().equals(persistenceId())) {
             throw new IllegalStateException("Received event envelope for a different actor: " + envelope.getPersistenceId());
         } else {
             log.debug("Saving event nr {}, I'm at {}", envelope.getSequenceNr(), lastSequenceNr());
             E event = SerializationExtension.get(context().system()).deserialize(envelope.getEvent().toByteArray(), eventType).get();
             persistEvent(event, e -> {
-                sender().tell(envelope.getOffset(), self());
+                sender().tell(envelope.getTimestamp(), self());
                 unstashAll();
             });
         }
