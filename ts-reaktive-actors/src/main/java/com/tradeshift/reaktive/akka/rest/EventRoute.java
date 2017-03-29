@@ -33,9 +33,9 @@ import javaslang.collection.HashMap;
  */
 public class EventRoute {
     private static final MediaType.Binary mediaType =
-        MediaTypes.customBinary("application", "protobuf", true, 
-            HashMap.of("delimited", "true").put("messageType", "Query.EventEnvelope").toJavaMap(), 
-            true); 
+        MediaTypes.customBinary("application", "protobuf", true,
+            HashMap.of("delimited", "true").put("messageType", "Query.EventEnvelope").toJavaMap(),
+            true);
 
     private final EventsByTagQuery journal;
     private final String tagName;

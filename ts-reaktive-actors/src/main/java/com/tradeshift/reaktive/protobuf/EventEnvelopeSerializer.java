@@ -8,7 +8,7 @@ import akka.serialization.Serialization;
 import akka.serialization.SerializationExtension;
 
 /**
- * Serializes and deserializes instances of {@link akka.persistence.query.EventEnvelope}, 
+ * Serializes and deserializes instances of {@link akka.persistence.query.EventEnvelope},
  * into the protobuf {@link EventEnvelope}. In order to do this, it has to be provided with a known
  * type of the events it deserializes.
  */
