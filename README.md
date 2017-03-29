@@ -10,7 +10,7 @@ The repository consists of the following modules:
   - [ts-reaktive-actors](ts-reaktive-actors) contains the base Java classes with which a reactive application can be built
   - [ts-reaktive-akka](ts-reaktive-akka) contains Akka additions that haven't been merged in to akka main yet
   - [ts-reaktive-cassandra](ts-reaktive-cassandra) contains classes that help using Cassandra in an async way
-  - [ts-reaktive-java](ts-reaktive-cassandra) contains various utility classes for Java 8
+  - [ts-reaktive-java](ts-reaktive-java) contains various utility classes for Java 8
   - [ts-reaktive-kamon-akka](ts-reaktive-kamon-akka)  provides dead letter monitoring for an actor system. Just have it on your classpath to enable.
   - [ts-reaktive-kamon-akka-http](ts-reaktive-kamon-akka-http) provides http server monitoring for akka streams http.  Just have it on your classpath to enable.
   - [ts-reaktive-kamon-akka-cluster](ts-reaktive-kamon-akka-cluster) provides cluster membership monitoring for akka clustering. Just have it on your classpath to enable.
