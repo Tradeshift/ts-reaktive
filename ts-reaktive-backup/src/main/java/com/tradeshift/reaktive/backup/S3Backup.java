@@ -20,7 +20,8 @@ import akka.cluster.singleton.ClusterSingletonManagerSettings;
 import akka.japi.pf.ReceiveBuilder;
 import akka.pattern.Backoff;
 import akka.pattern.BackoffSupervisor;
-import akka.persistence.query.javadsl.EventsByTagQuery;
+import akka.persistence.query.NoOffset;
+import akka.persistence.query.javadsl.EventsByTagQuery2;
 import akka.stream.Materializer;
 import akka.stream.javadsl.Sink;
 import javaslang.collection.Vector;
@@ -44,7 +45,7 @@ public class S3Backup extends AbstractActor {
      * @param tag Tag to pass to the above query
      * @param s3 Service interface to communicate with S3
      */
-    public static void start(ActorSystem system, EventsByTagQuery query, String tag, S3 s3) {
+    public static void start(ActorSystem system, EventsByTagQuery2 query, String tag, S3 s3) {
         system.actorOf(ClusterSingletonManager.props(
             BackoffSupervisor.props(
                 Backoff.onFailure(
@@ -61,13 +62,13 @@ public class S3Backup extends AbstractActor {
     private static final Logger log = LoggerFactory.getLogger(S3Backup.class);
     
     private final Materializer materializer = SharedActorMaterializer.get(context().system());
-    private final EventsByTagQuery query;
+    private final EventsByTagQuery2 query;
     private final String tag;
     private final S3 s3;
     private final int eventChunkSize;
     private final FiniteDuration eventChunkDuration;
     
-    public S3Backup(EventsByTagQuery query, String tag, S3 s3) {
+    public S3Backup(EventsByTagQuery2 query, String tag, S3 s3) {
         this.query = query;
         this.tag = tag;
         this.s3 = s3;
@@ -87,7 +88,7 @@ public class S3Backup extends AbstractActor {
 
     private PartialFunction<Object, BoxedUnit> startBackup(long offset) {
         query
-            .eventsByTag(tag, 0)
+            .eventsByTag(tag, NoOffset.getInstance())
             // create backups of max [N] elements, or at least every [T] on activity
             // FIXME write a stage that, instead of buffering each chunk into memory, creates sub-streams instead.
             .groupedWithin(eventChunkSize, eventChunkDuration)

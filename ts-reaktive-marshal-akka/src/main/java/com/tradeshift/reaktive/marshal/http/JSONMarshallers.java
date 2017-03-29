@@ -92,7 +92,7 @@ public class JSONMarshallers {
         Unmarshaller<HttpEntity, Source<T, NotUsed>> streamUnmarshaller = sourceFromJSON(protocol, mediaTypes);
         
         return AsyncUnmarshallers.<HttpEntity, T>withMaterializer((ctx, mat, entity) -> {
-            return streamUnmarshaller.unmarshall(entity, ctx, mat).thenCompose(src -> src.runWith(Sink.head(), mat));
+            return streamUnmarshaller.unmarshal(entity, ctx, mat).thenCompose(src -> src.runWith(Sink.head(), mat));
         });
     }
     

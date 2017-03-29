@@ -40,7 +40,7 @@ public class ReplicatedActorSpec extends SharedActorSystemSpec {
         
         when("receiving a read-only command as first message", () -> {
             beforeEach(() -> {
-                actor.tell(cmd().setRead(TestCommand.Read.newBuilder()).build(), sender.ref());                
+                actor.tell(cmd().setRead(TestCommand.Read.newBuilder()).build(), sender.ref());
             });
             
             it("should fail the message, since it doesn't know yet whether it's a master or slave", () -> {
@@ -80,25 +80,25 @@ public class ReplicatedActorSpec extends SharedActorSystemSpec {
                     .setEvent(
                         ByteString.copyFrom(TestEvent.newBuilder().setMsg("dc:remote").build().toByteArray())
                     )
-                    .setOffset(1000l)
+                    .setTimestamp(1000l)
                     .setPersistenceId(actor.path().name())
                     .setSequenceNr(1l)
                 .build(), sender.ref());
-                sender.expectMsg(1000l);                    
+                sender.expectMsg(1000l);
             });
             
             it("should fail write commands, since they should only go to the master", () -> {
                 actor.tell(cmd().setWrite(TestCommand.Write.newBuilder().setMsg("world")).build(), sender.ref());
-                sender.expectMsgClass(Failure.class);                
+                sender.expectMsgClass(Failure.class);
             });
             
             it("should ignore an EventEnvelope with the same or earlier sequence number", () -> {
                 actor.tell(Query.EventEnvelope.newBuilder()
-                    .setOffset(1000l)
+                    .setTimestamp(1000l)
                     .setPersistenceId(actor.path().name())
                     .setSequenceNr(1l)
                 .build(), sender.ref());
-                sender.expectMsg(1000l);                
+                sender.expectMsg(1000l);
             });
             
             it("should eventually accept read-only commands, since a slave can answer read-only requests", () -> {
@@ -121,7 +121,7 @@ public class ReplicatedActorSpec extends SharedActorSystemSpec {
                     .setEvent(
                         ByteString.copyFrom(TestEvent.newBuilder().setMsg("third").build().toByteArray())
                     )
-                    .setOffset(3000l)
+                    .setTimestamp(3000l)
                     .setPersistenceId(actor.path().name())
                     .setSequenceNr(3l)
                 .build(), sender.ref());
@@ -130,7 +130,7 @@ public class ReplicatedActorSpec extends SharedActorSystemSpec {
                     .setEvent(
                         ByteString.copyFrom(TestEvent.newBuilder().setMsg("second").build().toByteArray())
                     )
-                    .setOffset(2000l)
+                    .setTimestamp(2000l)
                     .setPersistenceId(actor.path().name())
                     .setSequenceNr(2l)
                 .build(), sender.ref());

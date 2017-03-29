@@ -36,6 +36,7 @@ import com.bluelabs.s3stream.CompleteMultipartUploadResult;
 import com.bluelabs.s3stream.HttpRequests;
 import com.bluelabs.s3stream.S3Location;
 import com.bluelabs.s3stream.S3Stream;
+import com.datastax.driver.core.utils.UUIDs;
 import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.StringMarshallable;
 import com.tradeshift.reaktive.marshal.stream.AaltoReader;
@@ -58,7 +59,8 @@ import akka.http.javadsl.model.Uri;
 import akka.http.javadsl.model.headers.Host;
 import akka.http.javadsl.unmarshalling.Unmarshaller;
 import akka.japi.Pair;
-import akka.persistence.query.EventEnvelope;
+import akka.persistence.query.EventEnvelope2;
+import akka.persistence.query.TimeBasedUUID;
 import akka.stream.Materializer;
 import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
@@ -133,8 +135,8 @@ public class S3 {
      * Stores the given buffered events into S3, under a key that includes the tag and the offset of the first event.
      * @param tag Persistence tag that the events were for
      */
-    public CompletionStage<Done> store(String tag, Seq<EventEnvelope> events) {
-        String key = tag + SEPARATOR + FMT.format(Instant.ofEpochMilli(events.get(0).offset()));
+    public CompletionStage<Done> store(String tag, Seq<EventEnvelope2> events) {
+        String key = tag + SEPARATOR + FMT.format(Instant.ofEpochMilli(UUIDs.unixTimestamp(TimeBasedUUID.class.cast(events.get(0).offset()).value())));
         return Source.from(events)
               .map(e -> {
                   ByteStringBuilder b = new ByteStringBuilder();
@@ -223,7 +225,7 @@ public class S3 {
             return CompletableFuture.completedFuture(Option.none());
         } else if (rs.status().isFailure()) {
             return
-                Unmarshaller.entityToString().unmarshall(rs.entity(), system.dispatcher(), materializer)
+                Unmarshaller.entityToString().unmarshal(rs.entity(), system.dispatcher(), materializer)
                 .thenApply(msg -> {throw new IllegalStateException ("S3 request failed: " + msg);});
         } else {
             return CompletableFuture.completedFuture(Option.some(rs.entity().getDataBytes().mapMaterializedValue(o -> NotUsed.getInstance())));

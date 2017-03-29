@@ -10,6 +10,7 @@ import static com.tradeshift.reaktive.akka.AkkaStreams.awaitOne;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 
+import com.tradeshift.reaktive.akka.UUIDs;
 import com.tradeshift.reaktive.protobuf.EventEnvelopeSerializer;
 
 import akka.http.javadsl.model.HttpEntities;
@@ -18,7 +19,11 @@ import akka.http.javadsl.model.MediaType;
 import akka.http.javadsl.model.MediaTypes;
 import akka.http.javadsl.server.Route;
 import akka.persistence.query.EventEnvelope;
-import akka.persistence.query.javadsl.EventsByTagQuery;
+import akka.persistence.query.EventEnvelope2;
+import akka.persistence.query.NoOffset;
+import akka.persistence.query.Offset;
+import akka.persistence.query.TimeBasedUUID;
+import akka.persistence.query.javadsl.EventsByTagQuery2;
 import akka.stream.Materializer;
 import akka.stream.javadsl.Source;
 import akka.util.ByteString;
@@ -37,7 +42,7 @@ public class EventRoute {
             HashMap.of("delimited", "true").put("messageType", "Query.EventEnvelope").toJavaMap(),
             true);
 
-    private final EventsByTagQuery journal;
+    private final EventsByTagQuery2 journal;
     private final String tagName;
     private final Materializer materializer;
     private final EventEnvelopeSerializer serializer;
@@ -47,7 +52,7 @@ public class EventRoute {
      * @param journal The cassandra journal to read from
      * @param tagName The tag name of the events that this route should query
      */
-    public EventRoute(Materializer materializer, EventsByTagQuery journal, EventEnvelopeSerializer serializer, String tagName) {
+    public EventRoute(Materializer materializer, EventsByTagQuery2 journal, EventEnvelopeSerializer serializer, String tagName) {
         this.materializer = materializer;
         this.journal = journal;
         this.tagName = tagName;
@@ -100,15 +105,19 @@ public class EventRoute {
 
     public Source<ByteString,Object> getEvents(Optional<String> since) {
         return journal
-            .eventsByTag(tagName, since.map(EventRoute::toUTCTimestamp).orElseGet(() -> 0l))
+            .eventsByTag(tagName, timeBasedUUIDFrom(since.map(EventRoute::toUTCTimestamp).orElseGet(() -> 0l)))
             .map(this::serialize)
             .mapMaterializedValue(unit -> null);
+    }
+
+    private Offset timeBasedUUIDFrom(long timestamp) {
+        return (timestamp == 0) ? NoOffset.getInstance() : new TimeBasedUUID(UUIDs.startOf(timestamp));
     }
 
     /**
      * Serializes the given akka event envelope into actual bytes that will become an HTTP chunk in the response.
      */
-    protected ByteString serialize(EventEnvelope envelope) {
+    protected ByteString serialize(EventEnvelope2 envelope) {
         return ByteString.fromArray(serializer.toProtobuf(envelope).toByteArray());
     }
 }

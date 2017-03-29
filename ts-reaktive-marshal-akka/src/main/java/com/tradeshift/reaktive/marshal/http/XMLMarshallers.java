@@ -110,7 +110,7 @@ public class XMLMarshallers {
     
     private static <T> Unmarshaller<HttpEntity, T> head(Unmarshaller<HttpEntity, Source<T, NotUsed>> streamUnmarshaller) {
         return AsyncUnmarshallers.<HttpEntity, T>withMaterializer((ctx, mat, entity) -> {
-            return streamUnmarshaller.unmarshall(entity, ctx, mat).thenCompose(src -> src.runWith(Sink.head(), mat));
+            return streamUnmarshaller.unmarshal(entity, ctx, mat).thenCompose(src -> src.runWith(Sink.head(), mat));
         });
     }
 }
