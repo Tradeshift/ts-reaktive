@@ -82,7 +82,7 @@ public class AbstractStatefulPersistentActorSpec extends SharedActorSystemSpec {
             return applyCommandAsyncBuilder()
                 .match(String.class, c -> c.startsWith("a:"), c -> CompletableFuture.supplyAsync(() -> {
                     try {
-                        Thread.sleep(300);
+                        Thread.sleep(2000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -90,7 +90,7 @@ public class AbstractStatefulPersistentActorSpec extends SharedActorSystemSpec {
                 }))
                 .match(String.class, c -> c.startsWith("b:"), c -> CompletableFuture.supplyAsync(() -> {
                     try {
-                        Thread.sleep(300);
+                        Thread.sleep(2000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -127,13 +127,13 @@ public class AbstractStatefulPersistentActorSpec extends SharedActorSystemSpec {
                 probe.send(actor, "1:sync");
                 probe.expectMsgEquals(Done.getInstance());
                 
-                // Each async reply will take 300ms, because of the Thread.sleep above.
+                // Each async reply will take 2000ms, because of the Thread.sleep above.
                 probe.send(actor, "a:test1");
                 probe.send(actor, "b:test2");
                 
-                // After 300ms, but before 600ms since they operate concurrently, we should get 2 replies.
-                probe.expectMsgEquals(Duration.create(400, TimeUnit.MILLISECONDS), Done.getInstance());
-                probe.expectMsgEquals(Duration.create(50, TimeUnit.MILLISECONDS), Done.getInstance());
+                // After 2000ms, but before 4000ms since they operate concurrently, we should get 2 replies.
+                probe.expectMsgEquals(Duration.create(3000, TimeUnit.MILLISECONDS), Done.getInstance());
+                probe.expectMsgEquals(Duration.create(500, TimeUnit.MILLISECONDS), Done.getInstance());
             });
         });
     }

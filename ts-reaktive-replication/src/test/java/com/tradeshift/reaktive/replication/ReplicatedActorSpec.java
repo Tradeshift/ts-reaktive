@@ -74,6 +74,42 @@ public class ReplicatedActorSpec extends SharedActorSystemSpec {
             });
         });
         
+        when("recovering into a datacenter with the same name as its first already emitted event", () -> {
+            beforeEach(() -> {
+                actor.tell(cmd().setWrite(TestCommand.Write.newBuilder().setMsg("dc:local")).build(), sender.ref());
+                sender.expectMsgClass(Done.class);
+                sender.watch(actor);
+                system.stop(actor);
+                sender.expectTerminated(actor, Duration.create(1, TimeUnit.SECONDS));
+            });
+            
+            it("should become a master, since it's running in its original data center", () -> {
+                // restart the actor
+                actor = system.actorOf(Props.create(TestActor.class, () -> new TestActor()), actor.path().name());
+                // should accept writes
+                actor.tell(cmd().setWrite(TestCommand.Write.newBuilder().setMsg("hello")).build(), sender.ref());
+                sender.expectMsgClass(Done.class);
+            });
+        });
+        
+        when("recovering into a datacenter with a different name as its first already emitted event", () -> {
+            beforeEach(() -> {
+                // FakeRemoteTestActor will inject a simulated event into the journal that'll indicate it was from a remote datacenter
+                ActorRef fake = system.actorOf(Props.create(FakeRemoteTestActor.class, () -> new FakeRemoteTestActor("dc:other")), "remoteTest");
+                sender.watch(fake);
+                sender.expectTerminated(fake, Duration.create(1, TimeUnit.SECONDS));
+            });
+            
+            it("should become a slave, since it's running in a different data center than where it originated", () -> {
+                // restart the actor
+                actor = system.actorOf(Props.create(TestActor.class, () -> new TestActor()), "remoteTest");
+                // should not accept writes
+                actor.tell(cmd().setWrite(TestCommand.Write.newBuilder().setMsg("hello")).build(), sender.ref());
+                Failure f = sender.expectMsgClass(Failure.class);
+                assertThat(f.cause()).hasMessageContaining("Actor is in slave mode and does not accept");
+            });
+        });
+        
         when("receiving an EventEnvelope that originated remotely as first message", () -> {
             beforeEach(() -> {
                 actor.tell(Query.EventEnvelope.newBuilder()
