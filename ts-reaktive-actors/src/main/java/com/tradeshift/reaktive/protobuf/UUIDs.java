@@ -7,7 +7,6 @@ import javaslang.collection.SortedSet;
 import javaslang.collection.TreeSet;
 
 public class UUIDs {
-    public static final String UUID_EX = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}";
 
     public static Types.UUID toProtobuf(UUID javaUUID) {
         return Types.UUID.newBuilder()
