@@ -28,9 +28,15 @@ public class IterableProtocol {
             public Writer<E,Iterable<T>> writer() {
                 Writer<E,T> parentWriter = inner.writer();
                 
-                return Writer.of(iterable -> Vector.ofAll(iterable)
-                    .map(parentWriter::applyAndReset)
-                    .flatMap(Function.identity()));
+                return Writer.of(iterable -> {
+                    Vector<T> items = Vector.ofAll(iterable);
+                    if (items.isEmpty()) {
+                        return parentWriter.reset();
+                    } else {
+                        return items.map(parentWriter::applyAndReset)
+                            .flatMap(Function.identity());
+                    }
+                });
             }
             
             @Override
