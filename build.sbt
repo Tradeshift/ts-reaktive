@@ -28,11 +28,12 @@ lazy val projectSettings = PB.protobufSettings ++ Seq(
   )
 )
 
+lazy val akkaVersion = "2.4.18"
+
 lazy val commonSettings = projectSettings ++ Seq(
   libraryDependencies ++= {
-    val akkaVersion = "2.4.17"
-    val akkaHttpVersion = "10.0.4"
-    val kamonVersion = "0.6.2"
+    val akkaHttpVersion = "10.0.7"
+    val kamonVersion = "0.6.6"
 
     Seq(
       "com.google.guava" % "guava" % "18.0",
@@ -49,13 +50,13 @@ lazy val commonSettings = projectSettings ++ Seq(
       "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.24",
       "com.readytalk" % "metrics3-statsd" % "4.1.0", // to log cassandra (codahale / dropwizard) metrics into statsd
       "io.kamon" %% "kamon-core" % kamonVersion,
-      "io.kamon" %% "kamon-akka" % kamonVersion,
+      "io.kamon" %% "kamon-akka-2.4" % kamonVersion,
       "io.kamon" %% "kamon-statsd" % kamonVersion,
       "io.kamon" %% "kamon-datadog" % kamonVersion,
       "io.kamon" %% "kamon-log-reporter" % kamonVersion,
       "io.kamon" %% "kamon-system-metrics" % kamonVersion,
       "org.aspectj" % "aspectjweaver" % "1.8.8",
-      "io.kamon" %% "kamon-autoweave" % kamonVersion,
+      "io.kamon" %% "kamon-autoweave" % "0.6.5", // missing for 0.6.6
       "org.slf4j" % "slf4j-log4j12" % "1.7.12"
     )
   }  
@@ -63,7 +64,7 @@ lazy val commonSettings = projectSettings ++ Seq(
 
 lazy val `ts-reaktive-java` = project.settings(projectSettings: _*)
 
-lazy val `ts-reaktive-testkit` = project.settings(commonSettings: _*)
+lazy val `ts-reaktive-testkit` = project.settings(commonSettings :+ (libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % akkaVersion) : _*)
 
 lazy val `ts-reaktive-testkit-assertj` = project.settings(commonSettings: _*)
 
@@ -91,8 +92,6 @@ lazy val `ts-reaktive-kamon-log4j` = project.settings(commonSettings: _*)
 
 lazy val `ts-reaktive-kamon-akka` = project.settings(commonSettings: _*)
 
-lazy val `ts-reaktive-kamon-akka-http` = project.settings(commonSettings: _*)
-
 lazy val `ts-reaktive-kamon-akka-cluster` = project.settings(commonSettings: _*)
 
 lazy val root = (project in file(".")).settings(publish := { }, publishLocal := { }).aggregate(
@@ -110,7 +109,6 @@ lazy val root = (project in file(".")).settings(publish := { }, publishLocal := 
   `ts-reaktive-testkit-assertj`,
   `ts-reaktive-kamon-log4j`,
   `ts-reaktive-kamon-akka`,
-  `ts-reaktive-kamon-akka-http`,
   `ts-reaktive-kamon-akka-cluster`)
 
 // Don't publish the root artifact; only publish sub-projects
