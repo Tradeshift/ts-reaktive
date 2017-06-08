@@ -12,7 +12,6 @@ The repository consists of the following modules:
   - [ts-reaktive-cassandra](ts-reaktive-cassandra) contains classes that help using Cassandra in an async way
   - [ts-reaktive-java](ts-reaktive-java) contains various utility classes for Java 8
   - [ts-reaktive-kamon-akka](ts-reaktive-kamon-akka)  provides dead letter monitoring for an actor system. Just have it on your classpath to enable.
-  - [ts-reaktive-kamon-akka-http](ts-reaktive-kamon-akka-http) provides http server monitoring for akka streams http.  Just have it on your classpath to enable.
   - [ts-reaktive-kamon-akka-cluster](ts-reaktive-kamon-akka-cluster) provides cluster membership monitoring for akka clustering. Just have it on your classpath to enable.
   - [ts-reaktive-kamon-log4j](ts-reaktive-kamon-log4j) provides log4j error and warning monitoring. Just have it on your classpath to enable.
   - [ts-reaktive-marshal](ts-reaktive-marshal) provides a non-blocking marshalling DSL for XML and JSON
@@ -43,7 +42,6 @@ If you use SBT, you can use this library by adding the following:
         "com.tradeshift" % "ts-reaktive-testkit" % version % "test",
         "com.tradeshift" % "ts-reaktive-testkit-assertj" % version % "test",
         "com.tradeshift" %% "ts-reaktive-kamon-akka" % version,
-        "com.tradeshift" %% "ts-reaktive-kamon-akka-http" % version,
         "com.tradeshift" %% "ts-reaktive-kamon-akka-cluster" % version,
         "com.tradeshift" %% "ts-reaktive-kamon-log4j" % version
       )
