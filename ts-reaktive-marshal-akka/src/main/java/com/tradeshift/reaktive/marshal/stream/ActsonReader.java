@@ -24,7 +24,7 @@ import javaslang.control.Option;
 
 /**
  * Wraps the Actson JSON parser as an akka flow of ByteString to JSONEvent
- * 
+ *
  * @see https://www.michel-kraemer.com/actson-reactive-json-parser/
  */
 public class ActsonReader extends GraphStage<FlowShape<ByteString,JSONEvent>> {
@@ -33,7 +33,7 @@ public class ActsonReader extends GraphStage<FlowShape<ByteString,JSONEvent>> {
     private final FlowShape<ByteString, JSONEvent> shape = FlowShape.of(in, out);
 
     public static final ActsonReader instance = new ActsonReader();
-    
+
     @Override
     public FlowShape<ByteString, JSONEvent> shape() {
         return shape;
@@ -56,7 +56,7 @@ public class ActsonReader extends GraphStage<FlowShape<ByteString,JSONEvent>> {
                         }
                     }
                 });
-                
+
                 setHandler(in, new AbstractInHandler() {
                     @Override
                     public void onPush() throws Exception {
@@ -78,7 +78,7 @@ public class ActsonReader extends GraphStage<FlowShape<ByteString,JSONEvent>> {
                             emitMultiple(out, events.iterator());
                         }
                     }
-                    
+
                     public void onUpstreamFinish() throws Exception {
                         parser.getFeeder().done();
                         List<JSONEvent> events = new ArrayList<>();
@@ -88,7 +88,7 @@ public class ActsonReader extends GraphStage<FlowShape<ByteString,JSONEvent>> {
                     }
                 });
             }
-            
+
             private void parseInto(List<JSONEvent> events) {
                 Option<JSONEvent> evt = next();
                 while (evt.isDefined()) {
@@ -96,7 +96,7 @@ public class ActsonReader extends GraphStage<FlowShape<ByteString,JSONEvent>> {
                     evt = next();
                 }
             };
-            
+
             private Option<JSONEvent> next() {
                 switch(parser.nextEvent()) {
                 case JsonEvent.END_ARRAY: return some(JSONEvent.END_ARRAY);
@@ -109,7 +109,7 @@ public class ActsonReader extends GraphStage<FlowShape<ByteString,JSONEvent>> {
                 case JsonEvent.START_OBJECT: return some(JSONEvent.START_OBJECT);
                 case JsonEvent.VALUE_DOUBLE: return some(new JSONEvent.NumericValue(String.valueOf(parser.getCurrentDouble())));
                 case JsonEvent.VALUE_FALSE: return some(JSONEvent.FALSE);
-                case JsonEvent.VALUE_INT: return some(new JSONEvent.NumericValue(String.valueOf(parser.getCurrentInt())));
+                case JsonEvent.VALUE_INT: return some(new JSONEvent.NumericValue(parser.getCurrentString()));
                 case JsonEvent.VALUE_NULL: return some(JSONEvent.NULL);
                 case JsonEvent.VALUE_STRING: return some(new JSONEvent.StringValue(parser.getCurrentString()));
                 case JsonEvent.VALUE_TRUE: return some(JSONEvent.TRUE);
