@@ -15,6 +15,22 @@ import org.junit.runner.RunWith;
 @RunWith(CuppaRunner.class)
 public class SSLFactorySpec {{
     describe("SSLFactory.createKeystore", () -> {
+        it("should read a keyfile and multi-ca certificate chain with rsa private key correctly", () -> {
+            
+            char[] password = "foo".toCharArray();
+            String privatekey = getResource("ca-rsa.key");
+            String certificateChain = getResource("ca.crt") + "\n" + getResource("intermediate1.crt");
+            KeyStore store = SSLFactory.createKeystore(password, privatekey, certificateChain);
+            
+            assertThat(store).isNotNull();
+            Certificate ca = store.getCertificate("CN=localhost,O=Internet Widgits Pty Ltd,ST=Some-State,C=AU");
+            assertThat(ca.getType()).isEqualTo("X.509");
+            Certificate intermediate = store.getCertificate("O=Internet Widgits Pty Ltd,ST=Some-State,C=AU");
+            assertThat(intermediate.getType()).isEqualTo("X.509");
+            Key key = store.getKey("key", password);
+            assertThat(key.getFormat()).isEqualTo("PKCS#8");
+        });
+
         it("should read a keyfile and multi-ca certificate chain correctly", () -> {
             
             char[] password = "foo".toCharArray();
