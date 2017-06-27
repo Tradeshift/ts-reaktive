@@ -10,6 +10,7 @@ import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
@@ -21,6 +22,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
@@ -46,6 +48,27 @@ public class SSLFactory {
     }
     
     /**
+     * Reads a base64-format PEM key and returns a Java PrivateKey for it.
+     * @param privateKey PEM-encoded private key
+     */
+    public static PrivateKey readPrivateKey(String privateKey) {
+        try (StringReader keyReader = new StringReader(privateKey);
+             PEMParser pemReader = new PEMParser(keyReader)) {
+            
+            JcaPEMKeyConverter converter = new JcaPEMKeyConverter();
+            Object keyPair = pemReader.readObject();
+            if (keyPair instanceof PrivateKeyInfo) {
+                return converter.getPrivateKey((PrivateKeyInfo) keyPair);
+            } else {
+                return converter.getPrivateKey(((PEMKeyPair) keyPair).getPrivateKeyInfo());
+            }
+        } catch (IOException x) {
+            // Shouldn't occur, since we're only reading from strings
+            throw new RuntimeException(x);            
+        }
+    }
+    
+    /**
      * Creates an in-memory KeyStore by reading a certificate chain and private/public keypair from two base64-format PEM strings.
      * 
      * @param password Password to encrypt the keystore with
@@ -54,7 +77,7 @@ public class SSLFactory {
      */
     public static KeyStore createKeystore(char[] password, String privatekey, String certificateChain) throws KeyStoreException, CertificateException, NoSuchAlgorithmException {
         KeyStore ks = KeyStore.getInstance("JKS");
-        KeyPair keyPair = readKeyPair(privatekey);
+        PrivateKey privateKey = readPrivateKey(privatekey);
 
         try (InputStream caStream = new ByteArrayInputStream(certificateChain.getBytes())) {
             
@@ -72,7 +95,7 @@ public class SSLFactory {
                 
             }
 
-            ks.setKeyEntry("key", keyPair.getPrivate(), password, chain);
+            ks.setKeyEntry("key", privateKey, password, chain);
         } catch (IOException e) {
             // Shouldn't occur, since we're only reading from strings
             throw new RuntimeException(e);
