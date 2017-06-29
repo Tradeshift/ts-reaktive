@@ -5,7 +5,7 @@ import sbtprotobuf.{ProtobufPlugin=>PB}
 lazy val projectSettings = PB.protobufSettings ++ Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  version := "0.0.25-SNAPSHOT",
+  version := "0.0.26",
   scalaVersion := "2.11.8",
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
@@ -92,6 +92,8 @@ lazy val `ts-reaktive-kamon-log4j` = project.settings(commonSettings: _*)
 
 lazy val `ts-reaktive-kamon-akka` = project.settings(commonSettings: _*)
 
+lazy val `ts-reaktive-kamon-akka-client` = project.settings(commonSettings: _*)
+
 lazy val `ts-reaktive-kamon-akka-cluster` = project.settings(commonSettings: _*)
 
 lazy val root = (project in file(".")).settings(publish := { }, publishLocal := { }).aggregate(
@@ -109,6 +111,7 @@ lazy val root = (project in file(".")).settings(publish := { }, publishLocal := 
   `ts-reaktive-testkit-assertj`,
   `ts-reaktive-kamon-log4j`,
   `ts-reaktive-kamon-akka`,
+  `ts-reaktive-kamon-akka-client`,
   `ts-reaktive-kamon-akka-cluster`)
 
 // Don't publish the root artifact; only publish sub-projects
