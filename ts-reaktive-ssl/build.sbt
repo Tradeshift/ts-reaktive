@@ -25,7 +25,7 @@ libraryDependencies ++= {
     "com.novocode" % "junit-interface" % "0.11" % "test",
     "org.forgerock.cuppa" % "cuppa" % "1.1.0" % "test",
     "org.forgerock.cuppa" % "cuppa-junit" % "1.1.0" % "test",
-    "org.apache.cassandra" % "cassandra-all" % "3.0.3" % "test" exclude("ch.qos.logback", "logback-classic"),
+    "org.apache.cassandra" % "cassandra-all" % "3.9" % "test" exclude("ch.qos.logback", "logback-classic"),
     "com.github.tomakehurst" % "wiremock" % "1.58" % "test"
   )
 }
