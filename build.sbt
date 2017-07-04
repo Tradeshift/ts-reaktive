@@ -47,7 +47,7 @@ lazy val commonSettings = projectSettings ++ Seq(
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-jackson" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test",
-      "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.24",
+      "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.29",
       "com.readytalk" % "metrics3-statsd" % "4.1.0", // to log cassandra (codahale / dropwizard) metrics into statsd
       "io.kamon" %% "kamon-core" % kamonVersion,
       "io.kamon" %% "kamon-akka-2.4" % kamonVersion,

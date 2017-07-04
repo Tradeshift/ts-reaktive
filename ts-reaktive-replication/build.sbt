@@ -20,7 +20,7 @@ PB.includePaths in PB.protobufConfig += file("ts-reaktive-actors/src/main/protob
 libraryDependencies ++= {
   Seq(
     "com.readytalk" % "metrics3-statsd" % "4.1.0", // to log cassandra (codahale / dropwizard) metrics into statsd
-    "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.4",  
+    "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.4",
     "com.google.protobuf" % "protobuf-java" % "2.6.1",
     "junit" % "junit" % "4.11" % "test",
     "org.assertj" % "assertj-core" % "3.2.0" % "test",
@@ -30,7 +30,7 @@ libraryDependencies ++= {
     "com.novocode" % "junit-interface" % "0.11" % "test",
     "org.forgerock.cuppa" % "cuppa" % "1.1.0" % "test",
     "org.forgerock.cuppa" % "cuppa-junit" % "1.1.0" % "test",
-    "org.apache.cassandra" % "cassandra-all" % "3.0.3" % "test" exclude("ch.qos.logback", "logback-classic"),
+    "org.apache.cassandra" % "cassandra-all" % "3.9" % "test" exclude("ch.qos.logback", "logback-classic"),
     "com.github.tomakehurst" % "wiremock" % "1.58" % "test"
   )
 }

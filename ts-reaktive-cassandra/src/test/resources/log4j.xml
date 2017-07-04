@@ -12,7 +12,6 @@
   <logger name="org.apache.cassandra"><level value="WARN" /></logger>
   <logger name="com.datastax.driver"><level value="WARN" /></logger>
   <logger name="io.netty"><level value="WARN" /></logger>
-  <logger name="com.tradeshift.documentcore.kamon"><level value="WARN" /></logger>
   <logger name="Sigar"><level value="WARN"/></logger>
   <logger name="org.apache.http"><level value="WARN"/></logger>
   <logger name="org.mortbay"><level value="WARN"/></logger>
