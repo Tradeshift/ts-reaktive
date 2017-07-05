@@ -51,7 +51,7 @@ class PoolConductorMonitoring {
     }
   }
   
-  @Pointcut("execution(akka.http.impl.engine.client.PoolConductor$SlotSelector$$anon$1.postStop(..)) && this(logic)")
+  @Pointcut("execution(* akka.http.impl.engine.client.PoolConductor$SlotSelector$$anon$1.postStop(..)) && this(logic)")
   def postStopGraphStageLogic(logic: AnyRef): Unit = {}
   
   @After("postStopGraphStageLogic(logic)")
