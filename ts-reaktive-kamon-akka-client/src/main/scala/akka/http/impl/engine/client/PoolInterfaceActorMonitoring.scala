@@ -29,7 +29,7 @@ class PoolInterfaceActorMonitoring {
     Kamon.metrics.gauge("http-client.pool.queue.capacity", tags) { () => buffer.capacity.toLong }
   }
   
-  @Pointcut("execution(* akka.http.impl.engine.client.PoolInterfaceActor.afterStop(..)) && this(actor)")
+  @Pointcut("execution(* akka.http.impl.engine.client.PoolInterfaceActor.postStop(..)) && this(actor)")
   def stop(actor: PoolInterfaceActor): Unit = {}
   
   @After("stop(actor)")
