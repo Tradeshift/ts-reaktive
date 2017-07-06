@@ -4,10 +4,12 @@ import org.aspectj.lang.annotation.After
 import org.aspectj.lang.annotation.Aspect
 import org.aspectj.lang.annotation.Pointcut
 
+import scala.concurrent.duration._
 import akka.http.impl.engine.client.PoolInterfaceActor.PoolRequest
 import akka.http.impl.settings.HostConnectionPoolSetup
 import akka.stream.impl.Buffer
 import kamon.Kamon
+import kamon.metric.SingleInstrumentEntityRecorder
 
 @Aspect
 class PoolInterfaceActorMonitoring {
@@ -25,7 +27,7 @@ class PoolInterfaceActorMonitoring {
     val hcps = hcpsField.get(actor).asInstanceOf[HostConnectionPoolSetup]
     
     val tags = Map("target_host" -> hcps.host, "target_port" -> hcps.port.toString)
-    Kamon.metrics.gauge("http-client.pool.queue.used", tags) { () => buffer.used.toLong }
+    Kamon.metrics.registerGauge("http-client.pool.queue.used", { () => buffer.used.toLong }, tags = tags, refreshInterval = Some(1.second)) 
     Kamon.metrics.gauge("http-client.pool.queue.capacity", tags) { () => buffer.capacity.toLong }
   }
   
@@ -35,10 +37,16 @@ class PoolInterfaceActorMonitoring {
   @After("stop(actor)")
   def afterStop(actor: PoolInterfaceActor): Unit = {
     hcpsField.setAccessible(true)
-    val hcps = hcpsField.get(actor).asInstanceOf[HostConnectionPoolSetup]
-
+    val hcps = hcpsField.get(actor).asInstanceOf[HostConnectionPoolSetup] 
     val tags = Map("target_host" -> hcps.host, "target_port" -> hcps.port.toString)
-    Kamon.metrics.removeGauge("http-client.pool.queue.used", tags)
-    Kamon.metrics.removeGauge("http-client.pool.queue.capacity", tags)
+    
+    for (suffix <- Seq("used", "capacity")) {
+      val name = s"http-client.pool.queue.${suffix}"
+      for (i <- Kamon.metrics.find(name, SingleInstrumentEntityRecorder.Gauge, tags)) {
+        Kamon.metrics.removeGauge(name, tags)
+        // Workaround for https://github.com/kamon-io/Kamon/issues/476
+        i.cleanup
+      }      
+    }
   }
 }
