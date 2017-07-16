@@ -27,15 +27,6 @@ import javax.xml.stream.events.XMLEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bluelabs.akkaaws.AWSCredentials$;
-import com.bluelabs.akkaaws.BasicCredentials;
-import com.bluelabs.akkaaws.CredentialScope;
-import com.bluelabs.akkaaws.Signer;
-import com.bluelabs.akkaaws.SigningKey;
-import com.bluelabs.s3stream.CompleteMultipartUploadResult;
-import com.bluelabs.s3stream.HttpRequests;
-import com.bluelabs.s3stream.S3Location;
-import com.bluelabs.s3stream.S3Stream;
 import com.datastax.driver.core.utils.UUIDs;
 import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.StringMarshallable;
@@ -53,21 +44,32 @@ import akka.http.javadsl.Http;
 import akka.http.javadsl.model.HttpMethods;
 import akka.http.javadsl.model.HttpRequest;
 import akka.http.javadsl.model.HttpResponse;
-import akka.http.javadsl.model.Query;
 import akka.http.javadsl.model.StatusCodes;
-import akka.http.javadsl.model.Uri;
 import akka.http.javadsl.model.headers.Host;
 import akka.http.javadsl.unmarshalling.Unmarshaller;
+import akka.http.scaladsl.model.ContentTypes;
+import akka.http.scaladsl.model.Uri;
 import akka.japi.Pair;
 import akka.persistence.query.EventEnvelope2;
 import akka.persistence.query.TimeBasedUUID;
 import akka.stream.Materializer;
+import akka.stream.alpakka.s3.BufferType;
+import akka.stream.alpakka.s3.DiskBufferType;
+import akka.stream.alpakka.s3.MemoryBufferType;
+import akka.stream.alpakka.s3.S3Settings;
+import akka.stream.alpakka.s3.auth.BasicCredentials;
+import akka.stream.alpakka.s3.auth.CredentialScope;
+import akka.stream.alpakka.s3.auth.Signer;
+import akka.stream.alpakka.s3.auth.SigningKey;
+import akka.stream.alpakka.s3.impl.CompleteMultipartUploadResult;
+import akka.stream.alpakka.s3.impl.S3Headers;
+import akka.stream.alpakka.s3.impl.S3Location;
+import akka.stream.alpakka.s3.impl.S3Stream;
 import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
 import akka.util.ByteString;
 import akka.util.ByteStringBuilder;
 import javaslang.collection.Seq;
-import javaslang.collection.Vector;
 import javaslang.control.Option;
 import scala.concurrent.Future;
 
@@ -117,6 +119,7 @@ public class S3 {
     private final Http http;
     private final ActorSystem system;
     private final EventEnvelopeSerializer serializer;
+    private final S3Settings settings;
 
     public S3(ActorSystem system, Config config, Materializer materializer, Http http, EventEnvelopeSerializer serializer) {
         this.system = system;
@@ -127,8 +130,18 @@ public class S3 {
         bucket = s3Config.getString("bucket");
         String prefix = s3Config.getString("bucket-key-prefix");
         bucketKeyPrefix = prefix.endsWith("/") ? prefix : prefix + "/";
-        creds = AWSCredentials$.MODULE$.apply(s3Config.getString("key"), s3Config.getString("secret"));
+        creds = akka.stream.alpakka.s3.auth.AWSCredentials$.MODULE$.apply(
+                s3Config.getString("key"), s3Config.getString("secret"));
         region = s3Config.getString("region");
+        Config refConfig = config.getConfig("reference");
+        BufferType bufferType;
+        if(refConfig.getString("akka.stream.alpakka.s3.buffer").equals("disk")) {
+            bufferType = DiskBufferType.getInstance();            
+        } else {
+            bufferType = MemoryBufferType.getInstance();
+        }
+        boolean pathStyleAccess = refConfig.getBoolean("akka.stream.alpakka.s3.path-style-access");
+        settings = new S3Settings(bufferType, bucket, scala.Option.empty(), creds, bucket, pathStyleAccess);
     }
     
     /**
@@ -186,7 +199,8 @@ public class S3 {
         S3Location s3Location = toLocation(key);
         log.debug("Uploading to {}", s3Location);
         return s3stream()
-            .multipartUpload(s3Location, 5242880, 1)
+            .multipartUpload(s3Location, ContentTypes.application$divoctet$minusstream(),
+                    S3Headers.empty(), 5242880, 1)
             .asJava()
             .mapMaterializedValue(f -> toJava(f));
     }
@@ -196,7 +210,7 @@ public class S3 {
     }
     
     private S3Stream s3stream() {
-        return new S3Stream(creds, region, system, materializer);
+        return new S3Stream(settings, system, materializer);
     }
     
     private CompletionStage<Option<Source<ByteString,NotUsed>>> download(String key) {
@@ -208,8 +222,8 @@ public class S3 {
             (akka.http.scaladsl.model.HttpRequest)
             HttpRequest.create()
             .withMethod(HttpMethods.GET)
-            .withUri(new JavaUri(HttpRequests.requestUri(s3Location)))
-            .addHeader(Host.create(HttpRequests.requestHost(s3Location).address()))
+            .withUri(new JavaUri(requestUri(s3Location)))
+            .addHeader(requestHost(s3Location))
         , signingKey, Signer.signedRequest$default$3(), materializer);
         
         return toJava(request)
@@ -289,20 +303,18 @@ public class S3 {
         log.debug("Listing {}", s3Location);
         SigningKey signingKey = SigningKey.apply(creds, CredentialScope.apply(LocalDate.now(), region, "s3"), SigningKey.apply$default$3());
         
+        StringBuilder queryParams = new StringBuilder();
+        // TODO max return size configurable, default to 1000 is fine
+        queryParams.append("list-type=2&prefix=").append(bucketKeyPrefix).append(keyPrefix);
+        continuationToken.map(s -> queryParams.append("&continuation-token").append(s));
+
         Future<akka.http.scaladsl.model.HttpRequest> request = Signer.signedRequest(
             (akka.http.scaladsl.model.HttpRequest)
             HttpRequest.create()
             .withMethod(HttpMethods.GET)
-            .withUri(Uri.create("http://" + HttpRequests.requestHost(s3Location).address() + "/").query(Query.create(
-                Vector.of(
-                    Pair.create("list-type", "2"),
-                    // TODO max return size configurable, default to 1000 is fine
-                    Pair.create("prefix", bucketKeyPrefix + keyPrefix)
-                ).appendAll(continuationToken.map(s ->
-                    Pair.create("continuation-token", s)
-                ))
-            )))
-            .addHeader(Host.create(HttpRequests.requestHost(s3Location).address()))
+            .withUri(new JavaUri(Uri.apply("http://" + requestHost(s3Location).name() + "/")
+                    .withQuery(Uri.Query$.MODULE$.apply(queryParams.toString()))))
+            .addHeader(requestHost(s3Location))
         , signingKey, Signer.signedRequest$default$3(), materializer);
         
         return Source.fromCompletionStage(toJava(request)
@@ -325,6 +337,14 @@ public class S3 {
             
     }
 
+    private Host requestHost(S3Location s3Location) {
+        return Host.create(String.format("%s.s3.amazonaws.com", s3Location.bucket()));
+    }
+
+    private Uri requestUri(S3Location s3Location) {
+        return Uri.apply("/" + s3Location.key()).withHost(requestHost(s3Location).name()).withScheme("https");
+    }
+    
     /**
      * Reads the stream of events written to S3 using {@link #store(String, List)} before.
      */

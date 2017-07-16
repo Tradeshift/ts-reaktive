@@ -19,7 +19,7 @@ PB.includePaths in PB.protobufConfig += file("ts-reaktive-actors/src/main/protob
 // library dependencies. (organization name) % (project name) % (version) % (scope)
 libraryDependencies ++= {
   Seq(
-    "com.bluelabs" %% "s3-stream" % "0.0.3",
+    "com.lightbend.akka" %% "akka-stream-alpakka-s3" % "0.10",
     "junit" % "junit" % "4.11" % "test",
     "org.assertj" % "assertj-core" % "3.2.0" % "test",
     "org.mockito" % "mockito-core" % "1.10.19" % "test",
