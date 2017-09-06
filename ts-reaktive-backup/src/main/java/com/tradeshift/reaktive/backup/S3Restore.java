@@ -106,7 +106,7 @@ public class S3Restore extends AbstractPersistentActor {
         .list(tag)
         // skip over entries until the one BEFORE entry where startTime >= offset (since the one before may have been only partially restored)
         .via(dropUntilNext(l -> S3.getStartInstant(l).toEpochMilli() >= offset, true))
-        .flatMapConcat(entry -> s3.loadEvents(entry.getKey().substring(entry.getKey().lastIndexOf("/") + 1)))
+        .flatMapConcat(entry -> s3.loadEvents(entry.key().substring(entry.key().lastIndexOf("/") + 1)))
         .mapAsync(maxInFlight, e -> {
             log.debug("Replaying {}:{}", e.getPersistenceId(), e.getSequenceNr());
             return ask(shardRegion, e, timeout);

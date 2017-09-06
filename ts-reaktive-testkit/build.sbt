@@ -20,6 +20,6 @@ libraryDependencies ++= {
     "com.novocode" % "junit-interface" % "0.11" % "test",
     "org.forgerock.cuppa" % "cuppa" % "1.1.0" % "test",
     "org.forgerock.cuppa" % "cuppa-junit" % "1.1.0" % "test",
-    "com.github.dnvriend" %% "akka-persistence-inmemory" % "1.3.5"
+    "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.4.18.1"
   )
 }

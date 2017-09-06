@@ -81,6 +81,7 @@ public class ReplicatedActorSpec extends SharedActorSystemSpec {
                 sender.watch(actor);
                 system.stop(actor);
                 sender.expectTerminated(actor, Duration.create(1, TimeUnit.SECONDS));
+                Thread.sleep(300); // allow actor system to make the name available again.
             });
             
             it("should become a master, since it's running in its original data center", () -> {
