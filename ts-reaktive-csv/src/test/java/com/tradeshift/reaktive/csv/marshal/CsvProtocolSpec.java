@@ -142,7 +142,9 @@ public class CsvProtocolSpec extends SharedActorSystemSpec {
         return output;
     }
 
-    private <T> String render(Protocol<CsvEvent, T> proto, @SuppressWarnings("unchecked") T... elements)
+    @SafeVarargs
+    @SuppressWarnings( "varargs" ) // Eclipse thinks it's unneeded, but javac will emit a warning otherwise.
+    private final <T> String render(Protocol<CsvEvent, T> proto, T... elements)
         throws InterruptedException, ExecutionException, TimeoutException {
         return Source.from(Arrays.asList(elements))
             .via(ProtocolWriter.of(proto))

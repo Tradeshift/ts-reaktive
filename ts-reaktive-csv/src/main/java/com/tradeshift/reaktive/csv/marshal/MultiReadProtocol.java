@@ -45,7 +45,7 @@ public class MultiReadProtocol<T> implements ReadProtocol<CsvEvent, T> {
         @SuppressWarnings("unchecked")
         Seq<Reader<CsvEvent, Object>> readers = protocols.map(c -> (Reader<CsvEvent,Object>) c.reader());
         @SuppressWarnings("unchecked")
-        Try<Object>[] values = new Try[protocols.size()];
+        Try<Object>[] values = (Try<Object>[]) new Try<?>[protocols.size()];
         
         return new Reader<CsvEvent, T>() {
             {
