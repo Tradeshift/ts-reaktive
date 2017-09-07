@@ -18,6 +18,7 @@ import com.typesafe.config.ConfigFactory;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
+import akka.stream.alpakka.s3.javadsl.ListBucketResultContents;
 import akka.stream.javadsl.Source;
 import akka.testkit.JavaTestKit;
 import javaslang.collection.Vector;
@@ -40,8 +41,8 @@ public class S3RestoreSpec extends SharedActorSystemSpec {
             beforeEach(() -> {
                 reset(s3);
                 when(s3.list("MyEvent")).thenReturn(Source.from(Vector.of(
-                    new S3Entry("prefix/MyEvent-from-2016_11_09_13_29_28_030", Instant.now(), 100),
-                    new S3Entry("prefix/MyEvent-from-2016_11_09_13_31_11_259", Instant.now(), 100))));
+            		ListBucketResultContents.apply("", "prefix/MyEvent-from-2016_11_09_13_29_28_030", "", 100, Instant.now(), ""),
+            		ListBucketResultContents.apply("", "prefix/MyEvent-from-2016_11_09_13_31_11_259", "", 100, Instant.now(), ""))));
                 when(s3.loadEvents("MyEvent-from-2016_11_09_13_29_28_030")).thenReturn(Source.from(Vector.of(eventEnvelope(1478698168030l, 0), eventEnvelope(1478698168031l, 1))));
                 when(s3.loadEvents("MyEvent-from-2016_11_09_13_31_11_259")).thenReturn(Source.from(Vector.of(eventEnvelope(1478698271259l, 2), eventEnvelope(1478698271260l, 3))));
             });

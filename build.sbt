@@ -1,42 +1,52 @@
-scalaVersion := "2.11.8"
 
-import sbtprotobuf.{ProtobufPlugin=>PB}
+val akkaVersion = "2.4.18"
+val akkaHttpVersion = "10.0.7"
+val akkaInMemory = "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.4.18.1"
+val kamonVersion = "0.6.6"
+val assertJ = "org.assertj" % "assertj-core" % "3.2.0"
 
-lazy val projectSettings = PB.protobufSettings ++ Seq(
+lazy val projectSettings = Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  version := "0.0.28",
-  scalaVersion := "2.11.8",
+  version := "0.0.29-SNAPSHOT",
+  crossScalaVersions := Seq("2.11.11", "2.12.3"),
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
   javacOptions in (Compile, Keys.compile) ++= Seq("-target", "1.8", "-Xlint", "-Xlint:-processing", "-Xlint:-serial", "-Werror"),
   javacOptions in doc ++= Seq("-Xdoclint:none"),
   EclipseKeys.executionEnvironment := Some(EclipseExecutionEnvironment.JavaSE18),
   EclipseKeys.withSource := true,
+  fork := true,
   resolvers ++= Seq(
     Resolver.bintrayRepo("readytalk", "maven"),
     Resolver.jcenterRepo),
   dependencyOverrides += "com.google.protobuf" % "protobuf-java" % "2.6.1",
-  unmanagedResourceDirectories in Compile <+= (sourceDirectory in PB.protobufConfig),
-  PB.runProtoc in PB.protobufConfig := { args =>
+  protobufRunProtoc in ProtobufConfig := { args =>
     com.github.os72.protocjar.Protoc.runProtoc("-v261" +: args.toArray)
   },
   libraryDependencies ++= Seq(
     "io.javaslang" % "javaslang" % "2.0.5",
     "org.slf4j" % "slf4j-api" % "1.7.12",
-    "org.slf4j" % "slf4j-log4j12" % "1.7.12" % "test"
+    "org.slf4j" % "slf4j-log4j12" % "1.7.12" % "test",
+    "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test",
+    "junit" % "junit" % "4.11" % "test",
+    assertJ % "test",
+    "org.mockito" % "mockito-core" % "1.10.19" % "test",
+    "info.solidsoft.mockito" % "mockito-java8" % "0.3.0" % "test",
+    akkaInMemory % "test",
+    "com.novocode" % "junit-interface" % "0.11" % "test",
+    "org.forgerock.cuppa" % "cuppa" % "1.3.1" % "test",
+    "org.forgerock.cuppa" % "cuppa-junit" % "1.3.1" % "test",
+    "org.apache.cassandra" % "cassandra-all" % "3.9" % "test" exclude("ch.qos.logback", "logback-classic"),
+    "com.github.tomakehurst" % "wiremock" % "1.58" % "test",
+    "org.xmlunit" % "xmlunit-core" % "2.5.0" % "test",
+    "org.xmlunit" % "xmlunit-matchers" % "2.5.0" % "test"
   )
 )
 
-lazy val akkaVersion = "2.4.18"
-
 lazy val commonSettings = projectSettings ++ Seq(
   libraryDependencies ++= {
-    val akkaHttpVersion = "10.0.7"
-    val kamonVersion = "0.6.6"
-
     Seq(
-      "com.google.guava" % "guava" % "18.0",
       "com.typesafe" % "config" % "1.3.0",
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
@@ -46,55 +56,159 @@ lazy val commonSettings = projectSettings ++ Seq(
       "com.typesafe.akka" %% "akka-persistence-query-experimental" % akkaVersion,
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-jackson" % akkaHttpVersion,
-      "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test",
       "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.29",
-      "com.readytalk" % "metrics3-statsd" % "4.1.0", // to log cassandra (codahale / dropwizard) metrics into statsd
-      "io.kamon" %% "kamon-core" % kamonVersion,
-      "io.kamon" %% "kamon-akka-2.4" % kamonVersion,
-      "io.kamon" %% "kamon-statsd" % kamonVersion,
-      "io.kamon" %% "kamon-datadog" % kamonVersion,
-      "io.kamon" %% "kamon-log-reporter" % kamonVersion,
-      "io.kamon" %% "kamon-system-metrics" % kamonVersion,
-      "org.aspectj" % "aspectjweaver" % "1.8.8",
-      "io.kamon" %% "kamon-autoweave" % "0.6.5", // missing for 0.6.6
       "org.slf4j" % "slf4j-log4j12" % "1.7.12"
     )
   }  
 )
 
-lazy val `ts-reaktive-java` = project.settings(projectSettings: _*)
+lazy val kamonSettings = Seq(
+  libraryDependencies ++= {
+    Seq(
+      "io.kamon" %% "kamon-core" % kamonVersion,
+      "io.kamon" %% "kamon-statsd" % kamonVersion,
+      "io.kamon" %% "kamon-datadog" % kamonVersion,
+      "io.kamon" %% "kamon-system-metrics" % kamonVersion,
+      "org.aspectj" % "aspectjweaver" % "1.8.8",
+      "io.kamon" %% "kamon-autoweave" % "0.6.5", // missing for 0.6.6
+      "com.readytalk" % "metrics3-statsd" % "4.1.0" // to log cassandra (codahale / dropwizard) metrics into statsd
+    )
+  }
+)
 
-lazy val `ts-reaktive-testkit` = project.settings(commonSettings :+ (libraryDependencies += "com.typesafe.akka" %% "akka-testkit" % akkaVersion) : _*)
+lazy val javaSettings = Seq(
+  // Do not append Scala versions to the generated artifacts
+  crossPaths := false,
 
-lazy val `ts-reaktive-testkit-assertj` = project.settings(commonSettings: _*)
+  // This forbids including Scala related libraries into the dependency
+  autoScalaLibrary := false,
 
-lazy val `ts-reaktive-akka` = project.settings(commonSettings: _*)
+  // Make this a Java-only project in Eclipse
+  EclipseKeys.projectFlavor := EclipseProjectFlavor.Java
+)
 
-lazy val `ts-reaktive-marshal` = project.settings(projectSettings: _*).dependsOn(`ts-reaktive-java`)
+lazy val `ts-reaktive-java` = project
+  .settings(projectSettings: _*)
+  .settings(javaSettings: _*)
+  .settings(
+    // This project includes Java -> Scala bridge classes, so we do want the scala library.
+    autoScalaLibrary := true
+  )
 
-lazy val `ts-reaktive-marshal-akka` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-marshal`, `ts-reaktive-akka`, `ts-reaktive-testkit` % "test", `ts-reaktive-testkit-assertj` % "test")
+lazy val `ts-reaktive-testkit` = project
+  .settings(commonSettings: _*)
+  .settings(javaSettings: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" %% "akka-testkit" % akkaVersion,
+      akkaInMemory
+    )
+  )
 
-lazy val `ts-reaktive-csv` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-marshal`, `ts-reaktive-akka`, `ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test", `ts-reaktive-testkit-assertj` % "test")
+lazy val `ts-reaktive-testkit-assertj` = project
+  .settings(commonSettings: _*)
+  .settings(javaSettings: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      assertJ
+    )
+  )  
 
-lazy val `ts-reaktive-marshal-xerces` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test", `ts-reaktive-testkit-assertj` % "test")
+lazy val `ts-reaktive-akka` = project
+  .settings(commonSettings: _*)
 
-lazy val `ts-reaktive-cassandra` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-akka`, `ts-reaktive-testkit-assertj` % "test")
+lazy val `ts-reaktive-marshal` = project
+  .settings(projectSettings: _*)
+  .settings(javaSettings: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "com.fasterxml.jackson.core" % "jackson-core" % "2.7.4",
+    )
+  )
+  .dependsOn(`ts-reaktive-java`)
 
-lazy val `ts-reaktive-actors` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-java`, `ts-reaktive-testkit` % "test")
+lazy val `ts-reaktive-marshal-akka` = project
+  .settings(commonSettings: _*)
+  .dependsOn(`ts-reaktive-marshal`, `ts-reaktive-akka`, `ts-reaktive-testkit` % "test", `ts-reaktive-testkit-assertj` % "test")
+  .settings(
+    libraryDependencies ++= Seq(
+      "com.fasterxml" % "aalto-xml" % "1.0.0",
+      "de.undercouch" % "actson" % "1.1.0"
+    )
+  )
 
-lazy val `ts-reaktive-replication` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-actors`, `ts-reaktive-cassandra`, `ts-reaktive-testkit` % "test")
+lazy val `ts-reaktive-csv` = project
+  .settings(commonSettings: _*)
+  .settings(javaSettings: _*)
+  .dependsOn(`ts-reaktive-marshal`, `ts-reaktive-akka`, `ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test", `ts-reaktive-testkit-assertj` % "test")
 
-lazy val `ts-reaktive-backup` = project.settings(commonSettings: _*).dependsOn(`ts-reaktive-replication`, `ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test")
+lazy val `ts-reaktive-marshal-xerces` = project
+  .settings(commonSettings: _*)
+  .settings(javaSettings: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "xerces" % "xercesImpl" % "2.11.0"     
+    )
+  )
+  .dependsOn(`ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test", `ts-reaktive-testkit-assertj` % "test")
 
-lazy val `ts-reaktive-ssl` = project.settings(commonSettings: _*)
+lazy val `ts-reaktive-cassandra` = project
+  .settings(commonSettings: _*)
+  .settings(javaSettings: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "com.readytalk" % "metrics3-statsd" % "4.1.0" // to log cassandra (codahale / dropwizard) metrics into statsd
+    )
+  )
+  .dependsOn(`ts-reaktive-akka`, `ts-reaktive-testkit-assertj` % "test")
 
-lazy val `ts-reaktive-kamon-log4j` = project.settings(commonSettings: _*)
+lazy val `ts-reaktive-actors` = project
+  .enablePlugins(ProtobufPlugin)
+  .settings(commonSettings: _*)
+  .settings(javaSettings: _*)
+  .dependsOn(`ts-reaktive-java`, `ts-reaktive-testkit` % "test")
 
-lazy val `ts-reaktive-kamon-akka` = project.settings(commonSettings: _*)
+lazy val `ts-reaktive-replication` = project
+  .enablePlugins(ProtobufPlugin)
+  .settings(commonSettings: _*)
+  .settings(javaSettings: _*)
+  .dependsOn(`ts-reaktive-actors`, `ts-reaktive-actors` % ProtobufConfig.name, `ts-reaktive-cassandra`, `ts-reaktive-testkit` % "test")
 
-lazy val `ts-reaktive-kamon-akka-client` = project.settings(commonSettings: _*)
+lazy val `ts-reaktive-backup` = project
+  .enablePlugins(ProtobufPlugin)
+  .settings(commonSettings: _*)
+  .settings(javaSettings: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "com.lightbend.akka" %% "akka-stream-alpakka-s3" % "0.11"
+    )
+  )
+  .dependsOn(`ts-reaktive-replication`, `ts-reaktive-actors` % ProtobufConfig.name, `ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test")
 
-lazy val `ts-reaktive-kamon-akka-cluster` = project.settings(commonSettings: _*)
+lazy val `ts-reaktive-ssl` = project
+  .settings(commonSettings: _*)
+  .settings(javaSettings: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.bouncycastle" % "bcpkix-jdk15on" % "1.54", // for PEMReader, in order to read PEM encoded RSA keys
+    )
+  )
+
+lazy val `ts-reaktive-kamon-log4j` = project
+  .settings(commonSettings: _*)
+  .settings(kamonSettings: _*)
+
+lazy val `ts-reaktive-kamon-akka` = project
+  .settings(commonSettings: _*)
+  .settings(kamonSettings: _*)
+
+lazy val `ts-reaktive-kamon-akka-client` = project
+  .settings(commonSettings: _*)
+  .settings(kamonSettings: _*)
+
+lazy val `ts-reaktive-kamon-akka-cluster` = project
+  .settings(commonSettings: _*)
+  .settings(kamonSettings: _*)
 
 lazy val root = (project in file(".")).settings(publish := { }, publishLocal := { }).aggregate(
   `ts-reaktive-akka`,

@@ -1,78 +1,38 @@
 package com.tradeshift.reaktive.backup;
 
-import static com.tradeshift.reaktive.marshal.Protocol.option;
-import static com.tradeshift.reaktive.marshal.Protocol.vector;
-import static com.tradeshift.reaktive.xml.XMLProtocol.body;
-import static com.tradeshift.reaktive.xml.XMLProtocol.ns;
-import static com.tradeshift.reaktive.xml.XMLProtocol.qname;
-import static com.tradeshift.reaktive.xml.XMLProtocol.tag;
-import static javaslang.control.Option.none;
-import static javaslang.control.Option.some;
-import static scala.compat.java8.FutureConverters.toJava;
-
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-
-import javax.xml.stream.events.Namespace;
-import javax.xml.stream.events.XMLEvent;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.bluelabs.akkaaws.AWSCredentials$;
-import com.bluelabs.akkaaws.BasicCredentials;
-import com.bluelabs.akkaaws.CredentialScope;
-import com.bluelabs.akkaaws.Signer;
-import com.bluelabs.akkaaws.SigningKey;
-import com.bluelabs.s3stream.CompleteMultipartUploadResult;
-import com.bluelabs.s3stream.HttpRequests;
-import com.bluelabs.s3stream.S3Location;
-import com.bluelabs.s3stream.S3Stream;
 import com.datastax.driver.core.utils.UUIDs;
-import com.tradeshift.reaktive.marshal.ReadProtocol;
-import com.tradeshift.reaktive.marshal.StringMarshallable;
-import com.tradeshift.reaktive.marshal.stream.AaltoReader;
-import com.tradeshift.reaktive.marshal.stream.ProtocolReader;
 import com.tradeshift.reaktive.protobuf.DelimitedProtobufFraming;
 import com.tradeshift.reaktive.protobuf.EventEnvelopeSerializer;
-import com.typesafe.config.Config;
 
 import akka.Done;
 import akka.NotUsed;
 import akka.actor.ActorSystem;
-import akka.http.impl.model.JavaUri;
-import akka.http.javadsl.Http;
-import akka.http.javadsl.model.HttpMethods;
-import akka.http.javadsl.model.HttpRequest;
-import akka.http.javadsl.model.HttpResponse;
-import akka.http.javadsl.model.Query;
-import akka.http.javadsl.model.StatusCodes;
-import akka.http.javadsl.model.Uri;
-import akka.http.javadsl.model.headers.Host;
-import akka.http.javadsl.unmarshalling.Unmarshaller;
-import akka.japi.Pair;
+import akka.japi.pf.PFBuilder;
 import akka.persistence.query.EventEnvelope2;
 import akka.persistence.query.TimeBasedUUID;
 import akka.stream.Materializer;
+import akka.stream.alpakka.s3.javadsl.ListBucketResultContents;
+import akka.stream.alpakka.s3.javadsl.MultipartUploadResult;
+import akka.stream.alpakka.s3.javadsl.S3Client;
 import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
 import akka.util.ByteString;
 import akka.util.ByteStringBuilder;
 import javaslang.collection.Seq;
-import javaslang.collection.Vector;
-import javaslang.control.Option;
-import scala.concurrent.Future;
 
 /**
- * Small wrapper atop https://github.com/bluelabsio/s3-stream
+ * Small wrapper atop Alpakka's S3 support
  */
 public class S3 {
     /**
@@ -111,24 +71,16 @@ public class S3 {
     
     private final String bucket;
     private final String bucketKeyPrefix;
-    private final BasicCredentials creds;
-    private final String region;
     private final Materializer materializer;
-    private final Http http;
-    private final ActorSystem system;
     private final EventEnvelopeSerializer serializer;
+	private final S3Client client;
 
-    public S3(ActorSystem system, Config config, Materializer materializer, Http http, EventEnvelopeSerializer serializer) {
-        this.system = system;
+    public S3(ActorSystem system, Materializer materializer, EventEnvelopeSerializer serializer, String bucket, String prefix) {
         this.materializer = materializer;
-        this.http = http;
         this.serializer = serializer;
-        Config s3Config = config.getConfig("s3");
-        bucket = s3Config.getString("bucket");
-        String prefix = s3Config.getString("bucket-key-prefix");
-        bucketKeyPrefix = prefix.endsWith("/") ? prefix : prefix + "/";
-        creds = AWSCredentials$.MODULE$.apply(s3Config.getString("key"), s3Config.getString("secret"));
-        region = s3Config.getString("region");
+        this.bucket = bucket;
+        this.bucketKeyPrefix = prefix.endsWith("/") ? prefix : prefix + "/";
+        this.client = S3Client.create(system, materializer);
     }
     
     /**
@@ -153,24 +105,24 @@ public class S3 {
     /**
      * Returns the instant of the first event saved under the given entry, by parsing its key name.
      */
-    public static Instant getStartInstant(S3Entry entry) {
-        int i = entry.getKey().lastIndexOf(SEPARATOR);
-        if (i == -1) throw new IllegalArgumentException("Expected " + entry.getKey() + " to contain " + SEPARATOR);
-        return FMT.parse(entry.getKey().substring(i + SEPARATOR.length()), Instant::from);
+    public static Instant getStartInstant(ListBucketResultContents entry) {
+        int i = entry.key().lastIndexOf(SEPARATOR);
+        if (i == -1) throw new IllegalArgumentException("Expected " + entry.key() + " to contain " + SEPARATOR);
+        return FMT.parse(entry.key().substring(i + SEPARATOR.length()), Instant::from);
     }
     
     /**
      * Loads the last known written offset from S3, or returns 0 if not found
      */
     public CompletionStage<Long> loadOffset() {
-        return download("_lastOffset").thenCompose(opt -> {
-            if (opt.isEmpty()) {
-                return CompletableFuture.completedFuture(0l);
-            } else {
-                return opt.get().runFold(ByteString.empty(), ByteString::concat, materializer)
-                                .thenApply(bs -> Long.parseLong(bs.utf8String()));
-            }
-        });
+        return download("_lastOffset")
+    		.reduce((bs1, bs2) -> bs1.concat(bs2))
+    		.map(bs -> Long.parseLong(bs.utf8String()))
+    		.recoverWith(new PFBuilder<Throwable, Source<Long,NotUsed>>()
+    			.matchAny(x -> Source.single(0L)) // not found -> start at 0
+				.build()
+			)
+    		.runWith(Sink.head(), materializer);
     }
     
     /**
@@ -182,156 +134,28 @@ public class S3 {
                      .thenApply(result -> Done.getInstance());
     }
     
-    private Sink<ByteString, CompletionStage<CompleteMultipartUploadResult>> upload(String key) {
-        S3Location s3Location = toLocation(key);
-        log.debug("Uploading to {}", s3Location);
-        return s3stream()
-            .multipartUpload(s3Location, 5242880, 1)
-            .asJava()
-            .mapMaterializedValue(f -> toJava(f));
+    private Sink<ByteString, CompletionStage<MultipartUploadResult>> upload(String key) {
+    	return client.multipartUpload(bucket, bucketKeyPrefix + key);
     }
 
-    private S3Location toLocation(String key) {
-        return S3Location.apply(bucket, bucketKeyPrefix + key);
+    
+    private Source<ByteString, NotUsed> download(String key) {
+    	return client.download(bucket, bucketKeyPrefix + key);
+    }
+
+    public Source<ListBucketResultContents, NotUsed> list(String keyPrefix) {
+    	return client.listBucket(bucket, scala.Option.apply(bucketKeyPrefix + keyPrefix));
     }
     
-    private S3Stream s3stream() {
-        return new S3Stream(creds, region, system, materializer);
-    }
-    
-    private CompletionStage<Option<Source<ByteString,NotUsed>>> download(String key) {
-        S3Location s3Location = toLocation(key);
-        log.debug("Downloading from {}", s3Location);
-        SigningKey signingKey = SigningKey.apply(creds, CredentialScope.apply(LocalDate.now(), region, "s3"), SigningKey.apply$default$3());
-        
-        Future<akka.http.scaladsl.model.HttpRequest> request = Signer.signedRequest(
-            (akka.http.scaladsl.model.HttpRequest)
-            HttpRequest.create()
-            .withMethod(HttpMethods.GET)
-            .withUri(new JavaUri(HttpRequests.requestUri(s3Location)))
-            .addHeader(Host.create(HttpRequests.requestHost(s3Location).address()))
-        , signingKey, Signer.signedRequest$default$3(), materializer);
-        
-        return toJava(request)
-            .thenCompose(rq -> http.singleRequest(rq, materializer))
-            .thenCompose(rs -> {
-                return getOptionBody(rs);
-        });
-    }
-
-    private CompletionStage<Option<Source<ByteString, NotUsed>>> getOptionBody(HttpResponse rs) {
-        log.debug("Got a response: {}", rs);
-        if (rs.status().equals(StatusCodes.NOT_FOUND)) {
-            return CompletableFuture.completedFuture(Option.none());
-        } else if (rs.status().isFailure()) {
-            return
-                Unmarshaller.entityToString().unmarshal(rs.entity(), system.dispatcher(), materializer)
-                .thenApply(msg -> {throw new IllegalStateException ("S3 request failed: " + msg);});
-        } else {
-            return CompletableFuture.completedFuture(Option.some(rs.entity().getDataBytes().mapMaterializedValue(o -> NotUsed.getInstance())));
-        }
-    }
-
-    static class S3ListResponse {
-        private final Option<String> nextContinuationToken;
-        private final Seq<S3Entry> entries;
-        
-        public S3ListResponse(Option<String> nextContinuationToken, Seq<S3Entry> entries) {
-            this.nextContinuationToken = nextContinuationToken;
-            this.entries = entries;
-        }
-        
-        public Seq<S3Entry> getEntries() {
-            return entries;
-        }
-        
-        public Option<String> getNextContinuationToken() {
-            return nextContinuationToken;
-        }
-
-        private static final Namespace NS = ns("http://s3.amazonaws.com/doc/2006-03-01/");
-        static final ReadProtocol<XMLEvent,S3ListResponse> proto =
-            tag(qname(NS, "ListBucketResult"),
-                option(
-                    tag(qname(NS, "ContinuationToken"), body)
-                ),
-                vector(
-                    tag(qname(NS, "Contents"),
-                        tag(qname(NS, "Key"), body),
-                        tag(qname(NS, "LastModified"), body.as(StringMarshallable.INSTANT)),
-                        tag(qname(NS, "Size"), body.as(StringMarshallable.LONG)),
-                        S3Entry::new
-                    )
-                ),
-                S3ListResponse::new
-            );
-    }
-        
-    public Source<S3Entry, NotUsed> list(String keyPrefix) {
-        return Source.<String,Seq<S3Entry>>unfoldAsync("", continuationToken -> {
-            if (continuationToken.equals("done")) {
-                return CompletableFuture.completedFuture(Optional.empty());
-            } else {
-                return list(keyPrefix, continuationToken.isEmpty() ? none() : some(continuationToken))
-                    .thenApply(response -> {
-                        if (response.nextContinuationToken.isDefined()) {
-                            return Optional.of(Pair.create(response.nextContinuationToken.get(), response.entries));
-                        } else {
-                            return Optional.of(Pair.create("done", response.entries));
-                        }
-                    });
-            }
-        }).flatMapConcat(seq -> Source.from(seq));
-    }
-    
-    private CompletionStage<S3ListResponse> list(String keyPrefix, Option<String> continuationToken) {
-        S3Location s3Location = toLocation(keyPrefix);
-        log.debug("Listing {}", s3Location);
-        SigningKey signingKey = SigningKey.apply(creds, CredentialScope.apply(LocalDate.now(), region, "s3"), SigningKey.apply$default$3());
-        
-        Future<akka.http.scaladsl.model.HttpRequest> request = Signer.signedRequest(
-            (akka.http.scaladsl.model.HttpRequest)
-            HttpRequest.create()
-            .withMethod(HttpMethods.GET)
-            .withUri(Uri.create("http://" + HttpRequests.requestHost(s3Location).address() + "/").query(Query.create(
-                Vector.of(
-                    Pair.create("list-type", "2"),
-                    // TODO max return size configurable, default to 1000 is fine
-                    Pair.create("prefix", bucketKeyPrefix + keyPrefix)
-                ).appendAll(continuationToken.map(s ->
-                    Pair.create("continuation-token", s)
-                ))
-            )))
-            .addHeader(Host.create(HttpRequests.requestHost(s3Location).address()))
-        , signingKey, Signer.signedRequest$default$3(), materializer);
-        
-        return Source.fromCompletionStage(toJava(request)
-            .thenCompose(rq -> http.singleRequest(rq, materializer))
-            .thenCompose(this::getOptionBody))
-            .flatMapConcat(opt -> {
-                if (opt.isDefined()) {
-                    log.debug("Parsing S3 bucket list starting.");
-                    return opt.get();
-                } else {
-                    log.warn("Huh, empty body for S3 list?");
-                    return Source.<ByteString>empty();
-                }
-            })
-            .log("list-" + keyPrefix, bs -> bs.utf8String())
-            .via(AaltoReader.instance)
-            .via(ProtocolReader.of(S3ListResponse.proto))
-            .runWith(Sink.head(), materializer);
-            
-            
-    }
-
     /**
      * Reads the stream of events written to S3 using {@link #store(String, List)} before.
      */
     public Source<com.tradeshift.reaktive.protobuf.Query.EventEnvelope, NotUsed> loadEvents(String key) {
-        return Source.fromCompletionStage(
-            download(key).thenApply(opt -> opt.getOrElse(Source.empty()))
-        ).flatMapConcat(src -> src)
+        return download(key)
+		.recoverWith(new PFBuilder<Throwable, Source<ByteString,NotUsed>>()
+			.matchAny(x -> Source.empty()) // not found -> no data
+			.build()
+		)
         .via(DelimitedProtobufFraming.instance)
         .map(bs -> com.tradeshift.reaktive.protobuf.Query.EventEnvelope.parseFrom(bs.iterator().asInputStream()));
     }
