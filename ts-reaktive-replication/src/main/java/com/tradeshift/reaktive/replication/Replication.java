@@ -26,7 +26,7 @@ import akka.http.javadsl.Http;
 import akka.http.javadsl.ServerBinding;
 import akka.persistence.query.PersistenceQuery;
 import akka.persistence.query.javadsl.CurrentEventsByPersistenceIdQuery;
-import akka.persistence.query.javadsl.EventsByTagQuery2;
+import akka.persistence.query.javadsl.EventsByTagQuery;
 import akka.persistence.query.javadsl.ReadJournal;
 import akka.stream.ActorMaterializer;
 import javaslang.collection.Seq;
@@ -114,7 +114,7 @@ public class Replication implements Extension {
             ReadJournal journal = PersistenceQuery.get(system).getReadJournalFor(ReadJournal.class, config.getString("read-journal-plugin-id"));
             
             DataCenterForwarder.startAll(system, materializer, dataCenterRepository, visibilityRepo, eventType,
-                (EventsByTagQuery2)journal, (CurrentEventsByPersistenceIdQuery) journal);
+                (EventsByTagQuery)journal, (CurrentEventsByPersistenceIdQuery) journal);
             
             WebSocketDataCenterServer server = new WebSocketDataCenterServer(config.getConfig("server"), shardRegion);
             final int port = tagConfig.getInt("local-datacenter.port");

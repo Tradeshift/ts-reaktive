@@ -4,7 +4,6 @@ import static akka.pattern.PatternsCS.ask;
 import static com.tradeshift.reaktive.protobuf.UUIDs.toProtobuf;
 import static com.tradeshift.reaktive.testkit.Await.eventuallyDo;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.forgerock.cuppa.Cuppa.after;
 import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
 
@@ -173,10 +172,6 @@ public class ReplicationIntegrationSpec {
                 assertThat(dc2.read(ids.get(1))).isEqualTo("moar");
             });
         });
-        
-        after(() -> {
-            CassandraLauncher.stop();
-        });        
     });
     
 }}

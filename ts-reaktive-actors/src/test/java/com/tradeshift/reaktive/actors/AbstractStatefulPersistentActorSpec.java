@@ -17,7 +17,7 @@ import akka.Done;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.japi.pf.PFBuilder;
-import akka.testkit.JavaTestKit;
+import akka.testkit.javadsl.TestKit;
 import javaslang.collection.Seq;
 import javaslang.collection.Vector;
 import scala.PartialFunction;
@@ -122,7 +122,7 @@ public class AbstractStatefulPersistentActorSpec extends SharedActorSystemSpec {
         describe("AbstractStatefulPersistentActor.applyCommandAsync", () -> {
             it("should process several async commands concurrently, until their handlers are resolved", () -> {
                 ActorRef actor = system.actorOf(Props.create(MyActor.class));
-                JavaTestKit probe = new JavaTestKit(system);
+                TestKit probe = new TestKit(system);
                 // Send a synchronous message first, to ensure persistence has initialized successfully and doesn't affect timing.
                 probe.send(actor, "1:sync");
                 probe.expectMsgEquals(Done.getInstance());

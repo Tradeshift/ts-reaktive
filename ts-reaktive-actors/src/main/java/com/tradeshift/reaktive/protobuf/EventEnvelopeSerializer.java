@@ -3,7 +3,8 @@ package com.tradeshift.reaktive.protobuf;
 import com.google.protobuf.ByteString;
 
 import akka.actor.ActorSystem;
-import akka.persistence.query.EventEnvelope2;
+import akka.persistence.query.EventEnvelope;
+import akka.persistence.query.Sequence;
 import akka.persistence.query.TimeBasedUUID;
 import akka.serialization.Serialization;
 import akka.serialization.SerializationExtension;
@@ -23,7 +24,7 @@ public class EventEnvelopeSerializer {
         this.ext = SerializationExtension.get(system);
     }
 
-    public Query.EventEnvelope toProtobuf(EventEnvelope2 e) {
+    public Query.EventEnvelope toProtobuf(EventEnvelope e) {
         ByteString event;
         if (e.event() instanceof ByteString) {
             event = (ByteString) e.event();
@@ -33,9 +34,13 @@ public class EventEnvelopeSerializer {
             event = ByteString.copyFrom(ext.serialize(e.event()).get());
         }
         
+        long timestamp = (e.offset() instanceof Sequence) 
+			? Sequence.class.cast(e.offset()).value()
+			: com.tradeshift.reaktive.akka.UUIDs.unixTimestamp(TimeBasedUUID.class.cast(e.offset()).value());
+			
         return Query.EventEnvelope.newBuilder()
             .setPersistenceId(e.persistenceId())
-            .setTimestamp(com.tradeshift.reaktive.akka.UUIDs.unixTimestamp(TimeBasedUUID.class.cast(e.offset()).value()))
+            .setTimestamp(timestamp)
             .setSequenceNr(e.sequenceNr())
             .setEvent(event)
             .build();

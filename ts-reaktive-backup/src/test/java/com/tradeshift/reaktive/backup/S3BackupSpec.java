@@ -24,17 +24,17 @@ import com.typesafe.config.ConfigFactory;
 import akka.Done;
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import akka.persistence.query.EventEnvelope2;
+import akka.persistence.query.EventEnvelope;
 import akka.persistence.query.NoOffset;
 import akka.persistence.query.TimeBasedUUID;
-import akka.persistence.query.javadsl.EventsByTagQuery2;
+import akka.persistence.query.javadsl.EventsByTagQuery;
 import akka.stream.javadsl.Source;
-import akka.testkit.JavaTestKit;
+import akka.testkit.javadsl.TestKit;
 import javaslang.collection.Vector;
 
 @RunWith(CuppaRunner.class)
 public class S3BackupSpec extends SharedActorSystemSpec {
-    private final EventsByTagQuery2 query = mock(EventsByTagQuery2.class);
+    private final EventsByTagQuery query = mock(EventsByTagQuery.class);
     private final S3 s3 = mock(S3.class);
     
     public S3BackupSpec() {
@@ -60,7 +60,7 @@ public class S3BackupSpec extends SharedActorSystemSpec {
                 
                 ActorRef actor = actor();
                 
-                JavaTestKit probe = new JavaTestKit(system);
+                TestKit probe = new TestKit(system);
                 probe.watch(actor);
                 probe.expectTerminated(actor);
             });
@@ -70,16 +70,16 @@ public class S3BackupSpec extends SharedActorSystemSpec {
                 
                 ActorRef actor = actor();
                 
-                JavaTestKit probe = new JavaTestKit(system);
+                TestKit probe = new TestKit(system);
                 probe.watch(actor);
                 probe.expectTerminated(actor);
             });
             
             it("uploads a chunk after the specified chunk interval elapses", () -> {
-                EventEnvelope2 envelope1 = EventEnvelope2.apply(new TimeBasedUUID(UUIDs.startOf(1l)), "persistenceId", 0, "hello, world");
+                EventEnvelope envelope1 = EventEnvelope.apply(new TimeBasedUUID(UUIDs.startOf(1l)), "persistenceId", 0, "hello, world");
                 
-                CompletableFuture<EventEnvelope2> event1 = new CompletableFuture<>();
-                CompletableFuture<EventEnvelope2> event2 = new CompletableFuture<>();
+                CompletableFuture<EventEnvelope> event1 = new CompletableFuture<>();
+                CompletableFuture<EventEnvelope> event2 = new CompletableFuture<>();
                 when(query.eventsByTag("tag", NoOffset.getInstance())).thenReturn(Source.fromCompletionStage(event1).concat(Source.fromCompletionStage(event2)));
                 when(s3.store("tag", Vector.of(envelope1))).thenReturn(completedFuture(Done.getInstance()));
                 
@@ -91,12 +91,12 @@ public class S3BackupSpec extends SharedActorSystemSpec {
             });
             
             it("uploads a chunk after the specified number of events, even if the interval hasn't elapsed yet", () -> {
-                EventEnvelope2 envelope1 = EventEnvelope2.apply(new TimeBasedUUID(UUIDs.startOf(1l)), "persistenceId", 0, "hello, world");
-                EventEnvelope2 envelope2 = EventEnvelope2.apply(new TimeBasedUUID(UUIDs.startOf(2l)), "persistenceId", 1, "hello, world");
+                EventEnvelope envelope1 = EventEnvelope.apply(new TimeBasedUUID(UUIDs.startOf(1l)), "persistenceId", 0, "hello, world");
+                EventEnvelope envelope2 = EventEnvelope.apply(new TimeBasedUUID(UUIDs.startOf(2l)), "persistenceId", 1, "hello, world");
                 
-                CompletableFuture<EventEnvelope2> event1 = new CompletableFuture<>();
-                CompletableFuture<EventEnvelope2> event2 = new CompletableFuture<>();
-                CompletableFuture<EventEnvelope2> event3 = new CompletableFuture<>();
+                CompletableFuture<EventEnvelope> event1 = new CompletableFuture<>();
+                CompletableFuture<EventEnvelope> event2 = new CompletableFuture<>();
+                CompletableFuture<EventEnvelope> event3 = new CompletableFuture<>();
                 when(query.eventsByTag("tag", NoOffset.getInstance())).thenReturn(Source.fromCompletionStage(event1).concat(Source.fromCompletionStage(event2)).concat(Source.fromCompletionStage(event3)));
                 when(s3.store("tag", Vector.of(envelope1, envelope2))).thenReturn(completedFuture(Done.getInstance()));
                 

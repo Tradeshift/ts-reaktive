@@ -1,7 +1,7 @@
 
-val akkaVersion = "2.4.18"
-val akkaHttpVersion = "10.0.7"
-val akkaInMemory = "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.4.18.1"
+val akkaVersion = "2.5.4"
+val akkaHttpVersion = "10.0.10"
+val akkaInMemory = "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.5.1.1"
 val kamonVersion = "0.6.6"
 val assertJ = "org.assertj" % "assertj-core" % "3.2.0"
 
@@ -15,6 +15,7 @@ lazy val projectSettings = Seq(
   javacOptions in (Compile, Keys.compile) ++= Seq("-target", "1.8", "-Xlint", "-Xlint:-processing", "-Xlint:-serial", "-Werror"),
   javacOptions in doc ++= Seq("-Xdoclint:none"),
   EclipseKeys.executionEnvironment := Some(EclipseExecutionEnvironment.JavaSE18),
+  EclipseKeys.createSrc := EclipseCreateSrc.Default + EclipseCreateSrc.ManagedClasses,
   EclipseKeys.withSource := true,
   fork := true,
   resolvers ++= Seq(
@@ -38,6 +39,7 @@ lazy val projectSettings = Seq(
     "org.forgerock.cuppa" % "cuppa" % "1.3.1" % "test",
     "org.forgerock.cuppa" % "cuppa-junit" % "1.3.1" % "test",
     "org.apache.cassandra" % "cassandra-all" % "3.9" % "test" exclude("ch.qos.logback", "logback-classic"),
+    "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % "0.55" % "test",
     "com.github.tomakehurst" % "wiremock" % "1.58" % "test",
     "org.xmlunit" % "xmlunit-core" % "2.5.0" % "test",
     "org.xmlunit" % "xmlunit-matchers" % "2.5.0" % "test"
@@ -53,10 +55,11 @@ lazy val commonSettings = projectSettings ++ Seq(
       "com.typesafe.akka" %% "akka-persistence" % akkaVersion,
       "com.typesafe.akka" %% "akka-cluster-sharding" % akkaVersion,
       "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-      "com.typesafe.akka" %% "akka-persistence-query-experimental" % akkaVersion,
+      "com.typesafe.akka" %% "akka-persistence-query" % akkaVersion,
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-jackson" % akkaHttpVersion,
-      "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.29",
+      // Don't upgrade to 0.55 until https://github.com/akka/akka-persistence-cassandra/issues/230 is resolved
+      "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.54",
       "org.slf4j" % "slf4j-log4j12" % "1.7.12"
     )
   }  
@@ -77,9 +80,6 @@ lazy val kamonSettings = Seq(
 )
 
 lazy val javaSettings = Seq(
-  // Do not append Scala versions to the generated artifacts
-  crossPaths := false,
-
   // This forbids including Scala related libraries into the dependency
   autoScalaLibrary := false,
 
@@ -166,6 +166,10 @@ lazy val `ts-reaktive-actors` = project
   .enablePlugins(ProtobufPlugin)
   .settings(commonSettings: _*)
   .settings(javaSettings: _*)
+  .settings(
+    // the .proto files of this project are supposed to be included by others, so they're added to the .jar
+    unmanagedResourceDirectories in Compile += (sourceDirectory in ProtobufConfig).value
+  )
   .dependsOn(`ts-reaktive-java`, `ts-reaktive-testkit` % "test")
 
 lazy val `ts-reaktive-replication` = project

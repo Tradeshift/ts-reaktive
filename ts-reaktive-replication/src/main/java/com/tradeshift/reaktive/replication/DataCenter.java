@@ -1,6 +1,6 @@
 package com.tradeshift.reaktive.replication;
 
-import akka.persistence.query.EventEnvelope2;
+import akka.persistence.query.EventEnvelope;
 import akka.stream.javadsl.Flow;
 
 /**
@@ -16,5 +16,5 @@ public interface DataCenter {
      * Returns a flow that can be used to upload events to this data center. Its output will periodically
      * emit the offset of events that have been successfully uploaded.
      */
-    Flow<EventEnvelope2,Long,?> uploadFlow();
+    Flow<EventEnvelope,Long,?> uploadFlow();
 }
