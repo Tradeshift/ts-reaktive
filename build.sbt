@@ -1,4 +1,6 @@
 
+scalaVersion := "2.12.3" // just for the root
+
 val akkaVersion = "2.5.4"
 val akkaHttpVersion = "10.0.10"
 val akkaInMemory = "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.5.1.1"
@@ -8,7 +10,8 @@ val assertJ = "org.assertj" % "assertj-core" % "3.2.0"
 lazy val projectSettings = Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  version := "0.0.29-SNAPSHOT",
+  version := "0.0.29",
+  scalaVersion := "2.12.3",
   crossScalaVersions := Seq("2.11.11", "2.12.3"),
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
@@ -122,7 +125,7 @@ lazy val `ts-reaktive-marshal` = project
   .settings(javaSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.fasterxml.jackson.core" % "jackson-core" % "2.7.4",
+      "com.fasterxml.jackson.core" % "jackson-core" % "2.7.4"
     )
   )
   .dependsOn(`ts-reaktive-java`)
@@ -194,7 +197,7 @@ lazy val `ts-reaktive-ssl` = project
   .settings(javaSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "org.bouncycastle" % "bcpkix-jdk15on" % "1.54", // for PEMReader, in order to read PEM encoded RSA keys
+      "org.bouncycastle" % "bcpkix-jdk15on" % "1.54" // for PEMReader, in order to read PEM encoded RSA keys
     )
   )
 
