@@ -1,12 +1,12 @@
 package com.tradeshift.reaktive.marshal;
 
-import javaslang.Function1;
-import javaslang.Tuple2;
-import javaslang.collection.Map;
+import io.vavr.Function1;
+import io.vavr.Tuple2;
+import io.vavr.collection.Map;
 
 /**
  * Reads and writes an inner read/write protocol of tuples, which may match multiple times, 
- * by mapping it to an immutable {@link javaslang.collection.Map}.
+ * by mapping it to an immutable {@link io.vavr.collection.Map}.
  */
 public class MapProtocol {
     /**

@@ -14,7 +14,7 @@ import akka.actor.ActorSystem;
 import akka.persistence.cassandra.ConfigSessionProvider;
 import akka.persistence.cassandra.session.CassandraSessionSettings;
 import akka.stream.javadsl.Source;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  * Provides asynchronous, non-blocking access to a cassandra session.

@@ -1,7 +1,7 @@
 package com.tradeshift.reaktive.json.jackson;
 
-import static javaslang.control.Option.none;
-import static javaslang.control.Option.some;
+import static io.vavr.control.Option.none;
+import static io.vavr.control.Option.some;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -19,8 +19,8 @@ import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.control.Option;
-import javaslang.control.Try;
+import io.vavr.control.Option;
+import io.vavr.control.Try;
 
 public class Jackson {
     private static final JsonFactory factory = new JsonFactory();

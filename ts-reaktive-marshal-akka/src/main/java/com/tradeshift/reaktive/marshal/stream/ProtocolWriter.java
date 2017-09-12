@@ -1,7 +1,7 @@
 package com.tradeshift.reaktive.marshal.stream;
 
-import static javaslang.control.Option.none;
-import static javaslang.control.Option.some;
+import static io.vavr.control.Option.none;
+import static io.vavr.control.Option.some;
 
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -17,9 +17,9 @@ import akka.stream.stage.AbstractInHandler;
 import akka.stream.stage.AbstractOutHandler;
 import akka.stream.stage.GraphStage;
 import akka.stream.stage.GraphStageLogic;
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
-import javaslang.control.Option;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
+import io.vavr.control.Option;
 
 public class ProtocolWriter {
     /**

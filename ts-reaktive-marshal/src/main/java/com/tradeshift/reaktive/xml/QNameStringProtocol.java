@@ -6,7 +6,7 @@ import javax.xml.stream.events.XMLEvent;
 import com.tradeshift.reaktive.marshal.Protocol;
 import com.tradeshift.reaktive.marshal.TStringProtocol;
 
-import javaslang.Tuple2;
+import io.vavr.Tuple2;
 
 public class QNameStringProtocol extends TStringProtocol<XMLEvent,QName> {
 

@@ -2,12 +2,12 @@ package com.tradeshift.reaktive.actors.acl;
 
 import java.util.UUID;
 
-import javaslang.Function1;
-import javaslang.Tuple;
-import javaslang.collection.HashSet;
-import javaslang.collection.Map;
-import javaslang.collection.Set;
-import javaslang.control.Option;
+import io.vavr.Function1;
+import io.vavr.Tuple;
+import io.vavr.collection.HashSet;
+import io.vavr.collection.Map;
+import io.vavr.collection.Set;
+import io.vavr.control.Option;
 
 /**
  * Immutable class that manages a list of UUID entries that can have certain rights on a resource.

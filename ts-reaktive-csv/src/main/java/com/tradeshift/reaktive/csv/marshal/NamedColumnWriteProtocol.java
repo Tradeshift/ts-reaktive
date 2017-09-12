@@ -4,8 +4,8 @@ import com.tradeshift.reaktive.csv.CsvEvent;
 import com.tradeshift.reaktive.marshal.WriteProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
 
 /**
  * Writes the column name + endValue() + endRecord() on the first line,

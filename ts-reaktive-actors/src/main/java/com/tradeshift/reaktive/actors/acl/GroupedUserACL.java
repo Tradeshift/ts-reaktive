@@ -5,10 +5,10 @@ import java.util.UUID;
 
 import com.tradeshift.reaktive.protobuf.UUIDs;
 
-import javaslang.Function1;
-import javaslang.collection.HashSet;
-import javaslang.collection.Set;
-import javaslang.control.Option;
+import io.vavr.Function1;
+import io.vavr.collection.HashSet;
+import io.vavr.collection.Set;
+import io.vavr.control.Option;
 
 /**
  * Combines an ACL for users and an ACL for groups.

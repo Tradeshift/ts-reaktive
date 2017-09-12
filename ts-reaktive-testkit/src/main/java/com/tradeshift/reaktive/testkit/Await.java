@@ -3,7 +3,7 @@ package com.tradeshift.reaktive.testkit;
 import java.util.concurrent.TimeUnit;
 
 import akka.japi.pf.FI;
-import javaslang.CheckedFunction0;
+import io.vavr.CheckedFunction0;
 
 /**
  * Contains utility methods that repeatedly try to evaluate a function, retrying when an 

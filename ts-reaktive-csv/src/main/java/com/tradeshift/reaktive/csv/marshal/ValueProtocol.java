@@ -6,9 +6,9 @@ import com.tradeshift.reaktive.marshal.Protocol;
 import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
-import javaslang.control.Try;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
+import io.vavr.control.Try;
 
 /**
  * Aggregates CSV text events into a String when reading, and outputs a single String as a single CSV text event when writing.

@@ -21,7 +21,7 @@ import akka.actor.Props;
 import akka.stream.alpakka.s3.javadsl.ListBucketResultContents;
 import akka.stream.javadsl.Source;
 import akka.testkit.javadsl.TestKit;
-import javaslang.collection.Vector;
+import io.vavr.collection.Vector;
 
 @RunWith(CuppaRunner.class)
 public class S3RestoreSpec extends SharedActorSystemSpec {

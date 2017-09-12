@@ -1,6 +1,6 @@
 package com.tradeshift.reaktive.marshal;
 
-import javaslang.Function1;
+import io.vavr.Function1;
 
 /**
  * Protocol for writing possibly multiple instances of T into events E.

@@ -28,8 +28,8 @@ import akka.persistence.query.javadsl.EventsByTagQuery;
 import akka.stream.Materializer;
 import akka.stream.javadsl.Flow;
 import akka.stream.javadsl.Sink;
-import javaslang.Tuple;
-import javaslang.collection.Seq;
+import io.vavr.Tuple;
+import io.vavr.collection.Seq;
 import scala.concurrent.duration.Duration;
 
 /**

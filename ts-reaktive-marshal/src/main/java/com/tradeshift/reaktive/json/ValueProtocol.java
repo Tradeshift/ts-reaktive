@@ -13,9 +13,9 @@ import com.tradeshift.reaktive.marshal.Protocol;
 import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.Function1;
-import javaslang.collection.Vector;
-import javaslang.control.Try;
+import io.vavr.Function1;
+import io.vavr.collection.Vector;
+import io.vavr.control.Try;
 
 public class ValueProtocol<T> implements Protocol<JSONEvent, T> {
     // Only numeric and boolean types are defined here, since they have to marshal to numbers and booleans in JSON.

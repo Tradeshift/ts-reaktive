@@ -5,7 +5,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
-import java.util.List;
 import java.util.concurrent.CompletionStage;
 
 import org.slf4j.Logger;
@@ -29,7 +28,7 @@ import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
 import akka.util.ByteString;
 import akka.util.ByteStringBuilder;
-import javaslang.collection.Seq;
+import io.vavr.collection.Seq;
 
 /**
  * Small wrapper atop Alpakka's S3 support
@@ -148,7 +147,7 @@ public class S3 {
     }
     
     /**
-     * Reads the stream of events written to S3 using {@link #store(String, List)} before.
+     * Reads the stream of events written to S3 using {@link #store(String, Seq)} before.
      */
     public Source<com.tradeshift.reaktive.protobuf.Query.EventEnvelope, NotUsed> loadEvents(String key) {
         return download(key)

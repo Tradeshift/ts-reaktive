@@ -20,7 +20,7 @@ import com.tradeshift.reaktive.testkit.SharedActorSystemSpec;
 
 import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
-import javaslang.control.Try;
+import io.vavr.control.Try;
 
 @SuppressWarnings("unchecked")
 @RunWith(CuppaRunner.class)

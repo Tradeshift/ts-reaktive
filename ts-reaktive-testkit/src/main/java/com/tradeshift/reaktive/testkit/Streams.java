@@ -4,8 +4,8 @@ import java.util.concurrent.CompletionStage;
 
 import akka.stream.javadsl.Sink;
 import akka.util.ByteString;
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
 
 /**
  * Various akka stream operators

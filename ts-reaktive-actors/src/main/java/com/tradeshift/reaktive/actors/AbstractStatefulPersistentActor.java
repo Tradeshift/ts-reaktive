@@ -22,9 +22,9 @@ import akka.japi.pf.ReceiveBuilder;
 import akka.persistence.AbstractPersistentActor;
 import akka.persistence.SnapshotOffer;
 import akka.persistence.journal.Tagged;
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
-import javaslang.control.Option;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
+import io.vavr.control.Option;
 import scala.PartialFunction;
 import scala.concurrent.duration.Duration;
 

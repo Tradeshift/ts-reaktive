@@ -5,7 +5,7 @@ import org.junit.runner.RunWith;
 
 import com.typesafe.config.ConfigFactory;
 
-import javaslang.collection.HashMap;
+import io.vavr.collection.HashMap;
 
 /**
  * Base class for simple actor-level unit tests that can share a basic, non-clustered actor system, with a configured in-memory journal.

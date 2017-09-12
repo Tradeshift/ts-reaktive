@@ -1,8 +1,8 @@
 package com.tradeshift.reaktive.marshal.stream;
 
 import static com.fasterxml.aalto.AsyncXMLStreamReader.EVENT_INCOMPLETE;
-import static javaslang.control.Option.none;
-import static javaslang.control.Option.some;
+import static io.vavr.control.Option.none;
+import static io.vavr.control.Option.some;
 import static javax.xml.stream.XMLStreamConstants.CDATA;
 import static javax.xml.stream.XMLStreamConstants.CHARACTERS;
 import static javax.xml.stream.XMLStreamConstants.COMMENT;
@@ -38,7 +38,7 @@ import akka.stream.stage.AbstractOutHandler;
 import akka.stream.stage.GraphStage;
 import akka.stream.stage.GraphStageLogic;
 import akka.util.ByteString;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  * Wraps the Aalto XML parser as an akka flow of ByteString to XMLEvent.

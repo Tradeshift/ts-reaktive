@@ -16,9 +16,9 @@ import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.ValidationException;
 
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
-import javaslang.control.Try;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
+import io.vavr.control.Try;
 
 /**
  * Generic class to combine several nested FieldProtocols into reading/writing a Java object instance.

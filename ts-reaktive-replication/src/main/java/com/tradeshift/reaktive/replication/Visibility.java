@@ -1,7 +1,7 @@
 package com.tradeshift.reaktive.replication;
 
-import javaslang.collection.HashSet;
-import javaslang.collection.Set;
+import io.vavr.collection.HashSet;
+import io.vavr.collection.Set;
 
 /**
  * The visibility of a particular persistenceId to one or more data centers. If it is visible to a data center,

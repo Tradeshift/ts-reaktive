@@ -1,6 +1,6 @@
 package com.tradeshift.reaktive.json;
 
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 public class DTO2 {
     private final Option<DTO1> d;

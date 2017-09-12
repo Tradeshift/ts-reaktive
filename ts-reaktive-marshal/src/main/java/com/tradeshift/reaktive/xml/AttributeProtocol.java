@@ -12,8 +12,8 @@ import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.StringProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.collection.Vector;
-import javaslang.control.Try;
+import io.vavr.collection.Vector;
+import io.vavr.control.Try;
 
 /**
  * Handles reading and writing a single attribute of a tag.

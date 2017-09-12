@@ -3,8 +3,8 @@ package com.tradeshift.reaktive.protobuf;
 import java.util.Arrays;
 import java.util.UUID;
 
-import javaslang.collection.SortedSet;
-import javaslang.collection.TreeSet;
+import io.vavr.collection.SortedSet;
+import io.vavr.collection.TreeSet;
 
 public class UUIDs {
 

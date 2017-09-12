@@ -1,9 +1,9 @@
 package com.tradeshift.reaktive.replication;
 
-import javaslang.Tuple;
-import javaslang.collection.HashMap;
-import javaslang.collection.Map;
-import javaslang.collection.Vector;
+import io.vavr.Tuple;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Map;
+import io.vavr.collection.Vector;
 
 public abstract class DataCenterRepository {
     private final Map<String, DataCenter> remotes = HashMap.ofEntries(Vector.ofAll(listRemotes()).map(c -> Tuple.of(c.getName(), c)));

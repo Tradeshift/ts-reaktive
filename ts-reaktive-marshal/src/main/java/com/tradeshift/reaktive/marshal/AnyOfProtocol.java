@@ -8,8 +8,8 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javaslang.collection.Seq;
-import javaslang.control.Try;
+import io.vavr.collection.Seq;
+import io.vavr.control.Try;
 
 /**
  * Forwards read events to multiple alternative protocols, emitting whenever any of the alternatives emit. If multiple

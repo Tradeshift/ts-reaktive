@@ -1,7 +1,7 @@
 package com.tradeshift.reaktive.marshal.convert;
 
-import static javaslang.control.Option.none;
-import static javaslang.control.Option.some;
+import static io.vavr.control.Option.none;
+import static io.vavr.control.Option.some;
 
 import java.util.Iterator;
 
@@ -28,11 +28,11 @@ import akka.stream.stage.AbstractInHandler;
 import akka.stream.stage.AbstractOutHandler;
 import akka.stream.stage.GraphStage;
 import akka.stream.stage.GraphStageLogic;
-import javaslang.collection.HashMap;
-import javaslang.collection.List;
-import javaslang.collection.Map;
-import javaslang.collection.Seq;
-import javaslang.control.Option;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.List;
+import io.vavr.collection.Map;
+import io.vavr.collection.Seq;
+import io.vavr.control.Option;
 
 /**
  * Converts XML to JSON, assisted by XSDs, in a similar manner as a JAXB -> Jackson trip would do:

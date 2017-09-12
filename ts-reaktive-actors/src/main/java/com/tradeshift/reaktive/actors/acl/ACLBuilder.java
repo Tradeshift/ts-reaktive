@@ -2,9 +2,9 @@ package com.tradeshift.reaktive.actors.acl;
 
 import java.util.UUID;
 
-import javaslang.Function1;
-import javaslang.collection.HashMap;
-import javaslang.control.Option;
+import io.vavr.Function1;
+import io.vavr.collection.HashMap;
+import io.vavr.control.Option;
 
 /**
  * Helper class containing lambdas or method definitions which {@link ACL} uses when applying changes.

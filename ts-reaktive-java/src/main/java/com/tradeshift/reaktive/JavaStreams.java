@@ -6,7 +6,7 @@ import java.util.function.BiFunction;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  * Various methods dealing with Java 8 streams

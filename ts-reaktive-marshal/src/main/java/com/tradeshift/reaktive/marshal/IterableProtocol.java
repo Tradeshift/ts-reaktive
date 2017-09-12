@@ -4,7 +4,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javaslang.collection.Vector;
+import io.vavr.collection.Vector;
 
 /**
  * Write support for generic Iterable, and read support for mutable collection classes.

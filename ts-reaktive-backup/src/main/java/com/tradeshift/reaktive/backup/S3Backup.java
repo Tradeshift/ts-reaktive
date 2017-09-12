@@ -24,7 +24,7 @@ import akka.persistence.query.NoOffset;
 import akka.persistence.query.javadsl.EventsByTagQuery;
 import akka.stream.Materializer;
 import akka.stream.javadsl.Sink;
-import javaslang.collection.Vector;
+import io.vavr.collection.Vector;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 

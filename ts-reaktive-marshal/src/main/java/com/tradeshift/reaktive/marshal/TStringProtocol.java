@@ -1,8 +1,8 @@
 package com.tradeshift.reaktive.marshal;
 
-import javaslang.Tuple;
-import javaslang.Tuple2;
-import javaslang.control.Try;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.control.Try;
 
 /**
  * Protocol for a tuple of T and String, where the String can be transformed to other types

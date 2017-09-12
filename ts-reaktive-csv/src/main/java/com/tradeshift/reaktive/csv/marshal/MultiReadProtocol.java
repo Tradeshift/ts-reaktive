@@ -14,10 +14,10 @@ import com.tradeshift.reaktive.csv.CsvEvent;
 import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.Reader;
 
-import javaslang.Function1;
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
-import javaslang.control.Try;
+import io.vavr.Function1;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
+import io.vavr.control.Try;
 
 /**
  * Combines several nested protocols that each return separate values into a single value,

@@ -10,9 +10,9 @@ import com.tradeshift.reaktive.csv.CsvEvent;
 import com.tradeshift.reaktive.marshal.WriteProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.Function1;
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
+import io.vavr.Function1;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
 
 /**
  * Groups nested {@see WriteProtocol} protocols to write a combined file.

@@ -2,9 +2,9 @@ package com.tradeshift.reaktive.marshal;
 
 import java.util.NoSuchElementException;
 
-import javaslang.Function1;
-import javaslang.control.Option;
-import javaslang.control.Try;
+import io.vavr.Function1;
+import io.vavr.control.Option;
+import io.vavr.control.Try;
 
 /**
  * Protocol for reading a stream of events E into possibly multiple instances of T

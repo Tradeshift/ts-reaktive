@@ -10,11 +10,11 @@ import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.WriteProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.Tuple;
-import javaslang.Tuple2;
-import javaslang.collection.Vector;
-import javaslang.control.Option;
-import javaslang.control.Try;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.collection.Vector;
+import io.vavr.control.Option;
+import io.vavr.control.Try;
 
 /**
  * Protocol for reading and writing individual JSON fields and their value (through an inner protocol), mapping each field's name

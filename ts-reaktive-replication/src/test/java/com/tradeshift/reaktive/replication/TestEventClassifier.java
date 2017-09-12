@@ -2,8 +2,8 @@ package com.tradeshift.reaktive.replication;
 
 import com.tradeshift.reaktive.replication.TestData.TestEvent;
 
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
 
 public class TestEventClassifier implements EventClassifier<TestEvent>{
     @Override

@@ -17,11 +17,11 @@ import com.tradeshift.reaktive.testkit.SharedActorSystemSpec;
 
 import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
-import javaslang.Tuple2;
-import javaslang.collection.HashMap;
-import javaslang.collection.Map;
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
+import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Map;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
 
 @RunWith(CuppaRunner.class)
 public class CsvParserSpec extends SharedActorSystemSpec {{

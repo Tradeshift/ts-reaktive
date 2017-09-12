@@ -16,8 +16,8 @@ import static com.tradeshift.reaktive.marshal.Protocol.foldLeft;
 import static com.tradeshift.reaktive.marshal.Protocol.hashMap;
 import static com.tradeshift.reaktive.marshal.Protocol.option;
 import static com.tradeshift.reaktive.marshal.Protocol.vector;
-import static javaslang.control.Option.none;
-import static javaslang.control.Option.some;
+import static io.vavr.control.Option.none;
+import static io.vavr.control.Option.some;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.forgerock.cuppa.Cuppa.describe;
@@ -40,14 +40,14 @@ import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.Tuple;
-import javaslang.Tuple2;
-import javaslang.collection.HashMap;
-import javaslang.collection.Map;
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
-import javaslang.control.Option;
-import javaslang.control.Try;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Map;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
+import io.vavr.control.Option;
+import io.vavr.control.Try;
 
 @RunWith(CuppaRunner.class)
 public class JSONProtocolSpec {{

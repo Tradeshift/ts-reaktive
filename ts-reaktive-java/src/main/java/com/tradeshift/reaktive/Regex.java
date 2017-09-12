@@ -5,9 +5,9 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javaslang.Tuple;
-import javaslang.Tuple2;
-import javaslang.control.Option;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.control.Option;
 
 /**
  * A regular expression with compile-time known capture groups 

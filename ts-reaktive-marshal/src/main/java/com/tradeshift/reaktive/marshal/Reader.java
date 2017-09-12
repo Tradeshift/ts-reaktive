@@ -1,7 +1,7 @@
 package com.tradeshift.reaktive.marshal;
 
-import javaslang.Function1;
-import javaslang.control.Try;
+import io.vavr.Function1;
+import io.vavr.control.Try;
 
 public interface Reader<E,T> {
     /**

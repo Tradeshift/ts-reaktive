@@ -19,8 +19,8 @@ import org.junit.runner.RunWith;
 
 import com.tradeshift.reaktive.marshal.Protocol;
 
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
 
 @RunWith(CuppaRunner.class)
 public class JAXBProtocolSpec {

@@ -1,6 +1,6 @@
 package com.tradeshift.reaktive.replication;
 
-import javaslang.collection.Seq;
+import io.vavr.collection.Seq;
 
 /**
  * Determines to which additional data centers a persistenceId should be replicated after a certain event is emitted.

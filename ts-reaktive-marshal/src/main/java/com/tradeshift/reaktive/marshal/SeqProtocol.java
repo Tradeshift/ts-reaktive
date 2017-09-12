@@ -1,6 +1,6 @@
 package com.tradeshift.reaktive.marshal;
 
-import javaslang.collection.Seq; 
+import io.vavr.collection.Seq; 
 
 public class SeqProtocol {
     

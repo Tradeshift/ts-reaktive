@@ -19,7 +19,7 @@ import akka.http.javadsl.server.Route;
 import akka.stream.javadsl.Flow;
 import akka.util.ByteString;
 import akka.util.Timeout;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  * Server that allows a data center to receive incoming web socket connections from a {@link WebSocketDataCenterClient}, in order

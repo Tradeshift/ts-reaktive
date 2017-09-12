@@ -3,9 +3,9 @@ package com.tradeshift.reaktive.marshal;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import javaslang.Function1;
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
+import io.vavr.Function1;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
 
 /**
  * Writes out instances of T into sequences of events E. Implementations of this interface

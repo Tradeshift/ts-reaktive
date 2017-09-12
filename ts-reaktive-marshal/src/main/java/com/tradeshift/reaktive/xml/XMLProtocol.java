@@ -12,13 +12,13 @@ import com.tradeshift.reaktive.marshal.Protocol;
 import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.WriteProtocol;
 
-import javaslang.Function1;
-import javaslang.Function2;
-import javaslang.Function3;
-import javaslang.Tuple;
-import javaslang.Tuple2;
-import javaslang.collection.Vector;
-import javaslang.control.Option;
+import io.vavr.Function1;
+import io.vavr.Function2;
+import io.vavr.Function3;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.collection.Vector;
+import io.vavr.control.Option;
 
 @SuppressWarnings("unchecked")
 public class XMLProtocol {

@@ -1,7 +1,7 @@
 package com.tradeshift.reaktive.xml;
 
-import javaslang.collection.Seq;
-import javaslang.control.Option;
+import io.vavr.collection.Seq;
+import io.vavr.control.Option;
 
 public class DTO1 {
     private final long l;

@@ -5,9 +5,9 @@ import static com.tradeshift.reaktive.marshal.ReadProtocol.none;
 
 import java.util.function.Function;
 
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
-import javaslang.control.Try;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
+import io.vavr.control.Try;
 
 /**
  * Forwards read events to multiple alternative protocols, emitting whenever any of the alternatives emit.

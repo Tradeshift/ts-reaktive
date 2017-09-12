@@ -12,9 +12,9 @@ import akka.Done;
 import akka.actor.Props;
 import akka.actor.Status.Failure;
 import akka.japi.pf.PFBuilder;
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
-import javaslang.control.Option;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
+import io.vavr.control.Option;
 import scala.PartialFunction;
 
 public class TestActor extends ReplicatedActor<TestCommand, TestEvent, TestActorState> {

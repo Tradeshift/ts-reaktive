@@ -1,6 +1,6 @@
 package com.tradeshift.reaktive.marshal;
 
-import javaslang.control.Try;
+import io.vavr.control.Try;
 
 /**
  * A protocol for a String that has been marshalled to and from T using a {@link StringMarshallable}.
