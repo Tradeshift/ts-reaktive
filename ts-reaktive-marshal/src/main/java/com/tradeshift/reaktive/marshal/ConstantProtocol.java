@@ -1,6 +1,6 @@
 package com.tradeshift.reaktive.marshal;
 
-import javaslang.control.Try;
+import io.vavr.control.Try;
 
 /**
  * Protocol that always writes the same value, and on reading emits "Present" when the expected value was indeed read.

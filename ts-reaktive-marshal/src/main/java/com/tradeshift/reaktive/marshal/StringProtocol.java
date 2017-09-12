@@ -2,8 +2,8 @@ package com.tradeshift.reaktive.marshal;
 
 import com.tradeshift.reaktive.Regex;
 
-import javaslang.Function1;
-import javaslang.control.Try;
+import io.vavr.Function1;
+import io.vavr.control.Try;
 
 /**
  * Protocol for String, which can be converted to other types using .as(), or made to conform

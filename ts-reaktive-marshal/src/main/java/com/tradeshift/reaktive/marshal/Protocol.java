@@ -5,15 +5,15 @@ import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import javaslang.Function1;
-import javaslang.Function2;
-import javaslang.Tuple2;
-import javaslang.collection.HashMap;
-import javaslang.collection.Map;
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
-import javaslang.control.Option;
-import javaslang.control.Try;
+import io.vavr.Function1;
+import io.vavr.Function2;
+import io.vavr.Tuple2;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Map;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
+import io.vavr.control.Option;
+import io.vavr.control.Try;
 
 public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
     /**
@@ -77,22 +77,22 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
     // ----------------------- Collections -----------------------------
     
     /**
-     * Reads an inner protocol multiple times. On reading, creates a {@link javaslang.collection.Vector} to represent it.
+     * Reads an inner protocol multiple times. On reading, creates a {@link io.vavr.collection.Vector} to represent it.
      */
     public static <E,T> ReadProtocol<E,Vector<T>> vector(ReadProtocol<E,T> inner) {
         return SeqProtocol.read(inner, Vector.empty());
     }
     
     /**
-     * Reads and writes an inner protocol multiple times. On reading, creates a {@link javaslang.collection.Vector} to hold the values.
-     * On writing, any {@link javaslang.collection.Seq} will do.
+     * Reads and writes an inner protocol multiple times. On reading, creates a {@link io.vavr.collection.Vector} to hold the values.
+     * On writing, any {@link io.vavr.collection.Seq} will do.
      */
     public static <E,T> Protocol<E,Seq<T>> vector(Protocol<E,T> inner) {
         return of(SeqProtocol.read(inner, Vector.empty()), SeqProtocol.write(inner));
     }
 
     /**
-     * Writes an inner protocol multiple times, represented by a {@link javaslang.collection.Seq}.
+     * Writes an inner protocol multiple times, represented by a {@link io.vavr.collection.Seq}.
      */
     public static <E,T> WriteProtocol<E,Seq<T>> seq(WriteProtocol<E,T> inner) {
         return SeqProtocol.write(inner);
@@ -135,15 +135,15 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
     }
     
     /**
-     * Reads and writes an inner protocol of tuples multiple times. On reading, creates a {@link javaslang.collection.HashMap} to hold the result.
-     * On writing, any {@link javaslang.collection.Map} will do.
+     * Reads and writes an inner protocol of tuples multiple times. On reading, creates a {@link io.vavr.collection.HashMap} to hold the result.
+     * On writing, any {@link io.vavr.collection.Map} will do.
      */
     public static <E,K,V> Protocol<E,Map<K,V>> hashMap(Protocol<E,Tuple2<K,V>> inner) {
         return of(ReadProtocol.widen(hashMap((ReadProtocol<E,Tuple2<K,V>>) inner)), map(inner));
     }
     
     /**
-     * Reads an inner protocol of tuples multiple times. On reading, creates a {@link javaslang.collection.HashMap} to hold the result.
+     * Reads an inner protocol of tuples multiple times. On reading, creates a {@link io.vavr.collection.HashMap} to hold the result.
      */
     public static <E,K,V> ReadProtocol<E,HashMap<K,V>> hashMap(ReadProtocol<E,Tuple2<K,V>> inner) {
         return MapProtocol.read(inner, HashMap::of, HashMap.empty());
@@ -157,21 +157,21 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
     }
     
     /**
-     * Reads and writes a nested protocol optionally, representing it by a {@link javaslang.control.Option}.
+     * Reads and writes a nested protocol optionally, representing it by a {@link io.vavr.control.Option}.
      */
     public static <E,T> Protocol<E,Option<T>> option(Protocol<E,T> inner) {
         return of(OptionProtocol.read(inner), OptionProtocol.write(inner));
     }
     
     /**
-     * Reads a nested protocol optionally, representing it by a {@link javaslang.control.Option}.
+     * Reads a nested protocol optionally, representing it by a {@link io.vavr.control.Option}.
      */
     public static <E,T> ReadProtocol<E,Option<T>> option(ReadProtocol<E,T> inner) {
         return OptionProtocol.read(inner);
     }
 
     /**
-     * Writes a nested protocol optionally, representing it by a {@link javaslang.control.Option}.
+     * Writes a nested protocol optionally, representing it by a {@link io.vavr.control.Option}.
      */
     public static <E,T> WriteProtocol<E,Option<T>> option(WriteProtocol<E,T> inner) {
         return OptionProtocol.write(inner);

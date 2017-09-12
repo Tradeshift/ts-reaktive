@@ -9,7 +9,7 @@ import com.tradeshift.reaktive.csv.CsvEvent;
 import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.Reader;
 
-import javaslang.control.Try;
+import io.vavr.control.Try;
 
 /**
  * Reads and writes a named column (the name being set by the first line in the file), delegating to

@@ -1,7 +1,7 @@
 package com.tradeshift.reaktive.actors;
 
-import javaslang.collection.Seq;
-import javaslang.control.Option;
+import io.vavr.collection.Seq;
+import io.vavr.control.Option;
 
 /** Base class for handlers that handle specific commands */
 public abstract class AbstractCommandHandler<C,E,S extends AbstractState<E,?>> {

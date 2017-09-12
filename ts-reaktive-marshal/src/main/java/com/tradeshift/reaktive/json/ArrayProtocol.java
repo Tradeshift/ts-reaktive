@@ -11,9 +11,9 @@ import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.WriteProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
-import javaslang.control.Try;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
+import io.vavr.control.Try;
 
 public class ArrayProtocol<E> {
     private static final Logger log = LoggerFactory.getLogger(ArrayProtocol.class);

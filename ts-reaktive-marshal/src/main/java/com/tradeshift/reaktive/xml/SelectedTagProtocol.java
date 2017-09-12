@@ -8,7 +8,7 @@ import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.control.Try;
+import io.vavr.control.Try;
 
 /**
  * Matches an exact XML tag, and emits the tag itself and any sub-events that make up its body.

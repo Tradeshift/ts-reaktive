@@ -4,9 +4,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javaslang.CheckedFunction0;
-import javaslang.CheckedFunction1;
-import javaslang.CheckedFunction2;
+import io.vavr.CheckedFunction0;
+import io.vavr.CheckedFunction1;
+import io.vavr.CheckedFunction2;
 import scala.runtime.AbstractFunction0;
 import scala.runtime.AbstractFunction1;
 
@@ -23,7 +23,7 @@ public class Lambdas {
      * Removes any thrown exceptions from the signature of the given lambda, while still throwing them.
      * Only safe when you can guarantee that the calling method actually declares the given checked exception.
      */
-    public static <T> javaslang.Function0<T> unchecked(CheckedFunction0<T> f) {
+    public static <T> io.vavr.Function0<T> unchecked(CheckedFunction0<T> f) {
         return () -> { try {
             return f.apply();
         } catch (Throwable x) {
@@ -48,7 +48,7 @@ public class Lambdas {
      * Removes any thrown exceptions from the signature of the given lambda, while still throwing them.
      * Only safe when you can guarantee that the calling method actually declares the given checked exception.
      */
-    public static <A1, T> javaslang.Function1<A1, T> unchecked(CheckedFunction1<A1, T> f) {
+    public static <A1, T> io.vavr.Function1<A1, T> unchecked(CheckedFunction1<A1, T> f) {
         return a1 -> { try {
             return f.apply(a1);
         } catch (Throwable x) {
@@ -61,7 +61,7 @@ public class Lambdas {
      * Removes any thrown exceptions from the signature of the given lambda, while still throwing them.
      * Only safe when you can guarantee that the calling method actually declares the given checked exception.
      */
-    public static <A1, A2, T> javaslang.Function2<A1, A2, T> unchecked(CheckedFunction2<A1, A2, T> f) {
+    public static <A1, A2, T> io.vavr.Function2<A1, A2, T> unchecked(CheckedFunction2<A1, A2, T> f) {
         return (a1, a2) -> { try {
             return f.apply(a1, a2);
         } catch (Throwable x) {

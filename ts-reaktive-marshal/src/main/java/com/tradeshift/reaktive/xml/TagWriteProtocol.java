@@ -16,11 +16,11 @@ import org.slf4j.LoggerFactory;
 import com.tradeshift.reaktive.marshal.WriteProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.Function1;
-import javaslang.Tuple2;
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
-import javaslang.control.Option;
+import io.vavr.Function1;
+import io.vavr.Tuple2;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
+import io.vavr.control.Option;
 
 @SuppressWarnings("unchecked")
 public class TagWriteProtocol<T> implements WriteProtocol<XMLEvent,T> {

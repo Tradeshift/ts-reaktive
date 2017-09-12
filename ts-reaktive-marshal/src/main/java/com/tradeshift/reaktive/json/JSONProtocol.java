@@ -10,12 +10,12 @@ import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.StringProtocol;
 import com.tradeshift.reaktive.marshal.WriteProtocol;
 
-import javaslang.Function1;
-import javaslang.Function2;
-import javaslang.Function3;
-import javaslang.Function4;
-import javaslang.Function5;
-import javaslang.Tuple2;
+import io.vavr.Function1;
+import io.vavr.Function2;
+import io.vavr.Function3;
+import io.vavr.Function4;
+import io.vavr.Function5;
+import io.vavr.Tuple2;
 
 @SuppressWarnings("unchecked")
 public class JSONProtocol<T> {

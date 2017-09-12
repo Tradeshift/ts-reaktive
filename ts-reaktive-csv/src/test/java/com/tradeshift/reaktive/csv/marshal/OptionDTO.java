@@ -1,6 +1,6 @@
 package com.tradeshift.reaktive.csv.marshal;
 
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 public class OptionDTO {
     private final String text;

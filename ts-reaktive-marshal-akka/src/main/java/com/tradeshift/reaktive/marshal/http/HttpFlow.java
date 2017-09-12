@@ -1,7 +1,7 @@
 package com.tradeshift.reaktive.marshal.http;
 
-import static javaslang.control.Option.none;
-import static javaslang.control.Option.some;
+import static io.vavr.control.Option.none;
+import static io.vavr.control.Option.some;
 
 import java.util.Arrays;
 import java.util.concurrent.CompletionException;
@@ -30,7 +30,7 @@ import akka.stream.javadsl.Keep;
 import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
 import akka.util.ByteString;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 public class HttpFlow {
     private static final Logger log = LoggerFactory.getLogger(HttpFlow.class);

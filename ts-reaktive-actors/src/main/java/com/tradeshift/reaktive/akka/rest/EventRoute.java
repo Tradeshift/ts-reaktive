@@ -27,7 +27,7 @@ import akka.persistence.query.javadsl.EventsByTagQuery;
 import akka.stream.Materializer;
 import akka.stream.javadsl.Source;
 import akka.util.ByteString;
-import javaslang.collection.HashMap;
+import io.vavr.collection.HashMap;
 
 /**
  * Exposes the full event stream of an akka persistence journal as an HTTP stream in chunked encoding,

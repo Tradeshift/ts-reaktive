@@ -3,7 +3,7 @@ package com.tradeshift.reaktive.actors.acl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.forgerock.cuppa.Cuppa.beforeEach;
 import static com.tradeshift.reaktive.protobuf.UUIDs.toProtobuf;
-import static javaslang.control.Option.*;
+import static io.vavr.control.Option.*;
 import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
 
@@ -14,7 +14,7 @@ import java.util.UUID;
 import org.forgerock.cuppa.junit.CuppaRunner;
 import org.junit.runner.RunWith;
 
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 @RunWith(CuppaRunner.class)
 public class GroupedUserACLSpec {

@@ -28,9 +28,9 @@ import com.typesafe.config.ConfigFactory;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.persistence.cassandra.testkit.CassandraLauncher;
-import javaslang.Tuple;
-import javaslang.collection.HashMap;
-import javaslang.collection.Map;
+import io.vavr.Tuple;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Map;
 
 @RunWith(CuppaRunner.class)
 public class ReplicationIntegrationSpec {

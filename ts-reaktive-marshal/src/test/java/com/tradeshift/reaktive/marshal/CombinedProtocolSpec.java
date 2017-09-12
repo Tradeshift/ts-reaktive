@@ -14,7 +14,7 @@ import org.junit.runner.RunWith;
 import com.tradeshift.reaktive.json.JSONEvent;
 import com.tradeshift.reaktive.json.jackson.Jackson;
 
-import javaslang.collection.Seq;
+import io.vavr.collection.Seq;
 
 @RunWith(CuppaRunner.class)
 public class CombinedProtocolSpec {{

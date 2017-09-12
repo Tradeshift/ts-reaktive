@@ -10,9 +10,9 @@ import com.tradeshift.reaktive.marshal.Protocol;
 import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.Function1;
-import javaslang.collection.Vector;
-import javaslang.control.Option;
+import io.vavr.Function1;
+import io.vavr.collection.Vector;
+import io.vavr.control.Option;
 
 public class TagProtocol<T> implements Protocol<XMLEvent,T> {
     private final TagReadProtocol<T> read;

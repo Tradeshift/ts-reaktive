@@ -14,7 +14,7 @@ import akka.http.javadsl.ServerBinding;
 import akka.http.javadsl.server.Route;
 import akka.stream.ActorMaterializer;
 import akka.stream.Materializer;
-import javaslang.control.Try.CheckedConsumer;
+import io.vavr.CheckedConsumer;
 
 /**
  * Base class for tests that test the HTTP layer against mocked service classes, but by making actual HTTP requests

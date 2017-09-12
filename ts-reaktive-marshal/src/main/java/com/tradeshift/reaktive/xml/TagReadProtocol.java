@@ -21,10 +21,10 @@ import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.ValidationException;
 
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
-import javaslang.control.Option;
-import javaslang.control.Try;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
+import io.vavr.control.Option;
+import io.vavr.control.Try;
 
 @SuppressWarnings({"unchecked","rawtypes"})
 public class TagReadProtocol<T> implements ReadProtocol<XMLEvent,T> {

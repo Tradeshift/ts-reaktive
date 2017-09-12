@@ -16,8 +16,8 @@ import static com.tradeshift.reaktive.xml.XMLProtocol.attribute;
 import static com.tradeshift.reaktive.xml.XMLProtocol.body;
 import static com.tradeshift.reaktive.xml.XMLProtocol.qname;
 import static com.tradeshift.reaktive.xml.XMLProtocol.tag;
-import static javaslang.control.Option.none;
-import static javaslang.control.Option.some;
+import static io.vavr.control.Option.none;
+import static io.vavr.control.Option.some;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.forgerock.cuppa.Cuppa.describe;
@@ -36,10 +36,10 @@ import org.junit.runner.RunWith;
 import com.tradeshift.reaktive.marshal.Protocol;
 import com.tradeshift.reaktive.marshal.ReadProtocol;
 
-import javaslang.collection.HashMap;
-import javaslang.collection.Map;
-import javaslang.collection.Vector;
-import javaslang.control.Option;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Map;
+import io.vavr.collection.Vector;
+import io.vavr.control.Option;
 
 @RunWith(CuppaRunner.class)
 public class XMLProtocolSpec {{

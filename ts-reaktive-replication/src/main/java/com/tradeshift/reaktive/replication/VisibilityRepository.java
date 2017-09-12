@@ -6,7 +6,7 @@ import java.util.concurrent.CompletionStage;
 import com.datastax.driver.core.PreparedStatement;
 
 import akka.Done;
-import javaslang.collection.HashSet;
+import io.vavr.collection.HashSet;
 
 /**
  * Stores which persistenceIds should be visible in other data centers (in addition to the current one)

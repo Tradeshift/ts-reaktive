@@ -1,7 +1,7 @@
 package com.tradeshift.reaktive.marshal.stream;
 
-import static javaslang.control.Option.none;
-import static javaslang.control.Option.some;
+import static io.vavr.control.Option.none;
+import static io.vavr.control.Option.some;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -20,7 +20,7 @@ import akka.stream.stage.GraphStageLogic;
 import akka.util.ByteString;
 import de.undercouch.actson.JsonEvent;
 import de.undercouch.actson.JsonParser;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  * Wraps the Actson JSON parser as an akka flow of ByteString to JSONEvent

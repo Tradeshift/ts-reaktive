@@ -29,8 +29,8 @@ import akka.persistence.query.javadsl.CurrentEventsByPersistenceIdQuery;
 import akka.persistence.query.javadsl.EventsByTagQuery;
 import akka.persistence.query.javadsl.ReadJournal;
 import akka.stream.ActorMaterializer;
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
 
 public class Replication implements Extension {
     private static final Logger log = LoggerFactory.getLogger(Replication.class);

@@ -18,8 +18,8 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.japi.pf.PFBuilder;
 import akka.testkit.javadsl.TestKit;
-import javaslang.collection.Seq;
-import javaslang.collection.Vector;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Vector;
 import scala.PartialFunction;
 import scala.concurrent.duration.Duration;
 

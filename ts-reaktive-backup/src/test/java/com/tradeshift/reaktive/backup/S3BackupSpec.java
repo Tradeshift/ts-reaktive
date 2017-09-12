@@ -30,7 +30,7 @@ import akka.persistence.query.TimeBasedUUID;
 import akka.persistence.query.javadsl.EventsByTagQuery;
 import akka.stream.javadsl.Source;
 import akka.testkit.javadsl.TestKit;
-import javaslang.collection.Vector;
+import io.vavr.collection.Vector;
 
 @RunWith(CuppaRunner.class)
 public class S3BackupSpec extends SharedActorSystemSpec {

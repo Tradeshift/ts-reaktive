@@ -9,7 +9,7 @@ import com.tradeshift.reaktive.marshal.Protocol;
 import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.control.Try;
+import io.vavr.control.Try;
 
 /**
  * Protocol that emits the body of a tag as actual {@link Characters} events. This has the advantage that the body

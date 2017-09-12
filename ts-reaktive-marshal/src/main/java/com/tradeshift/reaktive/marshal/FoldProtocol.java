@@ -7,9 +7,9 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javaslang.Function2;
-import javaslang.control.Option;
-import javaslang.control.Try;
+import io.vavr.Function2;
+import io.vavr.control.Option;
+import io.vavr.control.Try;
 
 /**
  * Folds over a repeated nested protocol, merging the results into a single element. Only for read protocols.

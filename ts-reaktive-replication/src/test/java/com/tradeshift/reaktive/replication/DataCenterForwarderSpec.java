@@ -32,9 +32,9 @@ import akka.persistence.query.javadsl.CurrentEventsByPersistenceIdQuery;
 import akka.persistence.query.javadsl.EventsByTagQuery;
 import akka.stream.javadsl.Flow;
 import akka.stream.javadsl.Source;
-import javaslang.collection.HashMap;
-import javaslang.collection.HashSet;
-import javaslang.collection.Map;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.HashSet;
+import io.vavr.collection.Map;
 
 public class DataCenterForwarderSpec extends SharedActorSystemSpec {
     private static final CompletableFuture<Done> DONE = completedFuture(Done.getInstance());

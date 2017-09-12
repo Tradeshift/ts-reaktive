@@ -7,8 +7,8 @@ import com.tradeshift.reaktive.marshal.Protocol;
 import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.Function1;
-import javaslang.collection.Vector;
+import io.vavr.Function1;
+import io.vavr.collection.Vector;
 
 /**
  * Generic class to combine several nested FieldProtocols into reading/writing a Java object instance.

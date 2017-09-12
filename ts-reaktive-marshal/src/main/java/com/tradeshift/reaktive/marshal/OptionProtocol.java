@@ -1,6 +1,6 @@
 package com.tradeshift.reaktive.marshal;
 
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 public class OptionProtocol {
     

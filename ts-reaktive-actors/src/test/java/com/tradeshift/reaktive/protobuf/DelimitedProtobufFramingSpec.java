@@ -15,7 +15,7 @@ import com.tradeshift.reaktive.testkit.SharedActorSystemSpec;
 import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
 import akka.util.ByteString;
-import javaslang.collection.Vector;
+import io.vavr.collection.Vector;
 
 @RunWith(CuppaRunner.class)
 public class DelimitedProtobufFramingSpec extends SharedActorSystemSpec {{

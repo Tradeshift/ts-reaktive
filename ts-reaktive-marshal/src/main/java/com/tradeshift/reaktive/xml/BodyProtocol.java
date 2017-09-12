@@ -14,8 +14,8 @@ import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.StringProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.collection.Vector;
-import javaslang.control.Try;
+import io.vavr.collection.Vector;
+import io.vavr.control.Try;
 
 /**
  * Represents the character data body at root level as a String. If during reading, an empty tag or no body is encountered,

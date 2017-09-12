@@ -29,7 +29,7 @@ lazy val projectSettings = Seq(
     com.github.os72.protocjar.Protoc.runProtoc("-v261" +: args.toArray)
   },
   libraryDependencies ++= Seq(
-    "io.javaslang" % "javaslang" % "2.0.5",
+    "io.vavr" % "vavr" % "0.9.0",
     "org.slf4j" % "slf4j-api" % "1.7.12",
     "org.slf4j" % "slf4j-log4j12" % "1.7.12" % "test",
     "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test",

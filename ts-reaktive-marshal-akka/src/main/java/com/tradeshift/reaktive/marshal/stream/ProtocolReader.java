@@ -11,7 +11,7 @@ import akka.stream.stage.AbstractInHandler;
 import akka.stream.stage.AbstractOutHandler;
 import akka.stream.stage.GraphStage;
 import akka.stream.stage.GraphStageLogic;
-import javaslang.control.Try;
+import io.vavr.control.Try;
 
 /**
  * Transforms a stream of events E into a stream T, by applying a {@link ReadProtocol} to each event E.

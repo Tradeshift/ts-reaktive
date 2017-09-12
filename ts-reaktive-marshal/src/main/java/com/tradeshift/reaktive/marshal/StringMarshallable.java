@@ -8,7 +8,7 @@ import java.util.function.Function;
 
 import com.tradeshift.reaktive.json.JSONProtocol;
 
-import javaslang.control.Try;
+import io.vavr.control.Try;
 
 /**
  * Converts arbitrary types to and from String

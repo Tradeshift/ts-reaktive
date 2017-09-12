@@ -16,9 +16,9 @@ import akka.persistence.query.PersistenceQuery;
 import akka.stream.ActorMaterializer;
 import akka.stream.Materializer;
 import akka.testkit.TestProbe;
-import javaslang.collection.HashMap;
-import javaslang.collection.Map;
-import javaslang.collection.Seq;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Map;
+import io.vavr.collection.Seq;
 
 /**
  * Base class for simple actor-level unit tests that can share a basic, non-clustered actor system, with a configured in-memory journal.

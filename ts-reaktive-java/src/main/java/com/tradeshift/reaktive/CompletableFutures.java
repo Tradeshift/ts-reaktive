@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import javaslang.Value;
-import javaslang.collection.Vector;
+import io.vavr.Value;
+import io.vavr.collection.Vector;
 
 /**
  * Various functions relating to CompletableFuture

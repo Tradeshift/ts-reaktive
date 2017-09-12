@@ -12,10 +12,10 @@ import com.tradeshift.reaktive.marshal.Protocol;
 import com.tradeshift.reaktive.marshal.Reader;
 import com.tradeshift.reaktive.marshal.Writer;
 
-import javaslang.Tuple;
-import javaslang.Tuple2;
-import javaslang.collection.Vector;
-import javaslang.control.Try;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.collection.Vector;
+import io.vavr.control.Try;
 
 /**
  * Handles reading and writing a single attribute of a tag, matching any name
