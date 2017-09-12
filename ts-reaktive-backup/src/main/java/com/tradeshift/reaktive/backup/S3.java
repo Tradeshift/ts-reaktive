@@ -19,7 +19,7 @@ import akka.Done;
 import akka.NotUsed;
 import akka.actor.ActorSystem;
 import akka.japi.pf.PFBuilder;
-import akka.persistence.query.EventEnvelope2;
+import akka.persistence.query.EventEnvelope;
 import akka.persistence.query.TimeBasedUUID;
 import akka.stream.Materializer;
 import akka.stream.alpakka.s3.javadsl.ListBucketResultContents;
@@ -87,7 +87,7 @@ public class S3 {
      * Stores the given buffered events into S3, under a key that includes the tag and the offset of the first event.
      * @param tag Persistence tag that the events were for
      */
-    public CompletionStage<Done> store(String tag, Seq<EventEnvelope2> events) {
+    public CompletionStage<Done> store(String tag, Seq<EventEnvelope> events) {
         String key = tag + SEPARATOR + FMT.format(Instant.ofEpochMilli(UUIDs.unixTimestamp(TimeBasedUUID.class.cast(events.get(0).offset()).value())));
         return Source.from(events)
               .map(e -> {

@@ -25,11 +25,11 @@ import com.tradeshift.reaktive.replication.TestData.TestEvent;
 import akka.Done;
 import akka.actor.Props;
 import akka.persistence.query.EventEnvelope;
-import akka.persistence.query.EventEnvelope2;
 import akka.persistence.query.NoOffset;
+import akka.persistence.query.Offset;
 import akka.persistence.query.TimeBasedUUID;
 import akka.persistence.query.javadsl.CurrentEventsByPersistenceIdQuery;
-import akka.persistence.query.javadsl.EventsByTagQuery2;
+import akka.persistence.query.javadsl.EventsByTagQuery;
 import akka.stream.javadsl.Flow;
 import akka.stream.javadsl.Source;
 import javaslang.collection.HashMap;
@@ -53,17 +53,13 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
         }
 
         @Override
-        public Flow<EventEnvelope2, Long, ?> uploadFlow() {
-            return Flow.<EventEnvelope2>create()
+        public Flow<EventEnvelope, Long, ?> uploadFlow() {
+            return Flow.<EventEnvelope>create()
                 .map(event -> {
-                    events.add(envelope2to1(event));
+                    events.add(event);
                     return UUIDs.unixTimestamp(TimeBasedUUID.class.cast(event.offset()).value());
                 });
         }
-    }
-    
-    private static EventEnvelope envelope2to1(EventEnvelope2 e) {
-        return new EventEnvelope(UUIDs.unixTimestamp(TimeBasedUUID.class.cast(e.offset()).value()), e.persistenceId(), e.sequenceNr(), e.event());
     }
     
     private TestEvent event(String msg) {
@@ -104,19 +100,18 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
             doAnswer(i -> {lastOffset1.set(i.getArgumentAt(2, Long.class)); return DONE; }).when(visibilityRepo).setLastEventOffset(eq(remote1), eq("TestEvent"), anyLong());
             doAnswer(i -> {lastOffset2.set(i.getArgumentAt(2, Long.class)); return DONE; }).when(visibilityRepo).setLastEventOffset(eq(remote2), eq("TestEvent"), anyLong());
 
-            EventEnvelope event1 = EventEnvelope.apply(1, "doc1", 1, event("dc:local"));
-            EventEnvelope event2 = EventEnvelope.apply(2, "doc1", 2, event("dc:" + remote1.name));
-            EventEnvelope event3 = EventEnvelope.apply(3, "doc1", 3, event("dc:" + remote2.name));
-            EventEnvelope event4 = EventEnvelope.apply(4, "doc1", 4, event("hello"));
+            EventEnvelope event1 = EventEnvelope.apply(Offset.timeBasedUUID(UUIDs.startOf(1)), "doc1", 1, event("dc:local"));
+            EventEnvelope event2 = EventEnvelope.apply(Offset.timeBasedUUID(UUIDs.startOf(2)), "doc1", 2, event("dc:" + remote1.name));
+            EventEnvelope event3 = EventEnvelope.apply(Offset.timeBasedUUID(UUIDs.startOf(3)), "doc1", 3, event("dc:" + remote2.name));
+            EventEnvelope event4 = EventEnvelope.apply(Offset.timeBasedUUID(UUIDs.startOf(4)), "doc1", 4, event("hello"));
             CompletableFuture<EventEnvelope> realTimeEvent = new CompletableFuture<>(); // this will be completed with event4 later on in the test
             
-            EventsByTagQuery2 qTag = mock(EventsByTagQuery2.class);
+            EventsByTagQuery qTag = mock(EventsByTagQuery.class);
             // FIXME this test is racey. Sometimes event4 doesn't get seen. If it persists, rewrite this source to be queue or actor
             // driven, and make sure it's only read once.
             when(qTag.eventsByTag("TestEvent", NoOffset.getInstance())).thenReturn(
                 Source.from(Arrays.asList(event1, event2, event3))
                 .concat(Source.fromCompletionStage(realTimeEvent))
-                .map(DataCenterForwarder::envelope1to2)
                 .concat(Source.maybe()) // never complete this stream
             );
             
@@ -157,9 +152,9 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
             doAnswer(i -> completedFuture(false)).when(visibilityRepo).isVisibleTo(remote1, "doc1");
             doAnswer(i -> completedFuture(100000l)).when(visibilityRepo).getLastEventOffset(remote1, "TestEvent");
             
-            CompletableFuture<EventEnvelope2> realTimeEvent = new CompletableFuture<>(); // this will be completed with event3 later on in the test
+            CompletableFuture<EventEnvelope> realTimeEvent = new CompletableFuture<>(); // this will be completed with event3 later on in the test
             
-            EventsByTagQuery2 qTag = mock(EventsByTagQuery2.class);
+            EventsByTagQuery qTag = mock(EventsByTagQuery.class);
             when(qTag.eventsByTag(eq("TestEvent"), any())).thenReturn(Source.fromCompletionStage(realTimeEvent));
             CurrentEventsByPersistenceIdQuery qPid = mock(CurrentEventsByPersistenceIdQuery.class);
             
@@ -193,11 +188,11 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
             doAnswer(i -> completedFuture(lastOffset1.get())).when(visibilityRepo).getLastEventOffset(remote1, "TestEvent");
             doAnswer(i -> {lastOffset1.set(i.getArgumentAt(2, Long.class)); return DONE; }).when(visibilityRepo).setLastEventOffset(eq(remote1), eq("TestEvent"), anyLong());
             
-            EventEnvelope event1 = EventEnvelope.apply(1, "doc1", 1, event("dc:remote1"));
-            EventEnvelope event2 = EventEnvelope.apply(2, "doc1", 2, event("dc:local")); // replicate to "local", hence "local" is a RO slave and not master.
+            EventEnvelope event1 = EventEnvelope.apply(Offset.timeBasedUUID(UUIDs.startOf(1)), "doc1", 1, event("dc:remote1"));
+            EventEnvelope event2 = EventEnvelope.apply(Offset.timeBasedUUID(UUIDs.startOf(2)), "doc1", 2, event("dc:local")); // replicate to "local", hence "local" is a RO slave and not master.
             
-            EventsByTagQuery2 qTag = mock(EventsByTagQuery2.class);
-            when(qTag.eventsByTag("TestEvent", NoOffset.getInstance())).thenReturn(Source.from(Arrays.asList(event1, event2)).map(DataCenterForwarder::envelope1to2));
+            EventsByTagQuery qTag = mock(EventsByTagQuery.class);
+            when(qTag.eventsByTag("TestEvent", NoOffset.getInstance())).thenReturn(Source.from(Arrays.asList(event1, event2)));
             
             CurrentEventsByPersistenceIdQuery qPid = mock(CurrentEventsByPersistenceIdQuery.class);
             when(qPid.currentEventsByPersistenceId("doc1", 0, Long.MAX_VALUE)).thenReturn(Source.from(Arrays.asList(event1, event2)));

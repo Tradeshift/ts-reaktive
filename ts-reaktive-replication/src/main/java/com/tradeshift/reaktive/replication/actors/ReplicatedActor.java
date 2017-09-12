@@ -10,8 +10,6 @@ import com.tradeshift.reaktive.replication.ReplicationId;
 import akka.actor.Status.Failure;
 import akka.japi.pf.ReceiveBuilder;
 import akka.serialization.SerializationExtension;
-import scala.PartialFunction;
-import scala.runtime.BoxedUnit;
 
 /**
  * An extension to {@link AbstractStatefulPersistentActor} which allows persistent actors to work across data centers and legal regions.
@@ -46,21 +44,23 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
     }
 
     @Override
-    public PartialFunction<Object, BoxedUnit> receiveRecover() {
-        PartialFunction<Object, BoxedUnit> invokeSuper = super.receiveRecover();
+    public Receive createReceiveRecover() {
+        Receive invokeSuper = super.createReceiveRecover();
         
-        return ReceiveBuilder
+        return ReceiveBuilder.create()
             .match(eventType, e -> slave == null, e -> {
                 slave = !includesLocalDataCenter(e);
-                invokeSuper.apply(e);
+                invokeSuper.onMessage().apply(e);
             })
             .build()
             .orElse(invokeSuper);
     }
     
     @Override
-    public PartialFunction<Object, BoxedUnit> receiveCommand() {
-        return ReceiveBuilder
+    public Receive createReceive() {
+    	Receive superReceive = super.createReceive();
+    	
+        return ReceiveBuilder.create()
             .match(commandType, c -> slave != null && slave && !isReadOnly(c), c ->
                 sender().tell(new Failure(new IllegalStateException("Actor is in slave mode and does not accept " + c)), self())
             )
@@ -70,16 +70,16 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
             })
             .match(commandType, c -> isReadOnly(c), c -> {
                 log.debug("Received read-only command {}", c);
-                super.receiveCommand().apply(c);
+                superReceive.onMessage().apply(c);
             })
             .match(commandType, c -> slave == null, c -> {
                 log.debug("Received write command as first {}", c);
                 slave = false;
-                super.receiveCommand().apply(c);
+                superReceive.onMessage().apply(c);
             })
             .match(commandType, c -> {
                 log.debug("Received write command {}", c);
-                super.receiveCommand().apply(c);
+                superReceive.onMessage().apply(c);
             })
             .match(Query.EventEnvelope.class, e -> slave != null && !slave, e -> {
                 log.error("Actor is not in slave mode, but was sent an EventEnvelope: {} from {} \n"
@@ -93,7 +93,7 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
                 receiveEnvelope(e);
             })
             .build()
-            .orElse(super.receiveCommand());
+            .orElse(superReceive);
     }
     
     private void receiveEnvelope(Query.EventEnvelope envelope) {

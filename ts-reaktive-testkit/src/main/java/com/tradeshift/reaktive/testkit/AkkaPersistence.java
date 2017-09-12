@@ -1,17 +1,16 @@
 package com.tradeshift.reaktive.testkit;
 
+import static com.tradeshift.reaktive.testkit.Await.within;
+
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import static com.tradeshift.reaktive.testkit.Await.*;
 
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.japi.pf.ReceiveBuilder;
 import akka.persistence.AbstractPersistentActor;
 import akka.testkit.TestProbe;
-import scala.PartialFunction;
 import scala.concurrent.duration.FiniteDuration;
-import scala.runtime.BoxedUnit;
 
 public class AkkaPersistence {
     private final ActorSystem system;
@@ -35,8 +34,8 @@ public class AkkaPersistence {
     
     private static class AwaitPersistenceInit extends AbstractPersistentActor {
         @Override
-        public PartialFunction<Object, BoxedUnit> receiveCommand() {
-            return ReceiveBuilder.matchAny(msg -> {
+        public Receive createReceive() {
+            return ReceiveBuilder.create().matchAny(msg -> {
                 persist(msg, m -> {
                     sender().tell(msg, self());
                     context().stop(self());
@@ -45,8 +44,8 @@ public class AkkaPersistence {
         }
 
         @Override
-        public PartialFunction<Object, BoxedUnit> receiveRecover() {
-            return ReceiveBuilder.matchAny(msg -> {}).build();
+        public Receive createReceiveRecover() {
+            return ReceiveBuilder.create().matchAny(msg -> {}).build();
         }
 
         @Override

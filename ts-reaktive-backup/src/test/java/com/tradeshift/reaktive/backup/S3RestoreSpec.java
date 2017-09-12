@@ -20,7 +20,7 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.stream.alpakka.s3.javadsl.ListBucketResultContents;
 import akka.stream.javadsl.Source;
-import akka.testkit.JavaTestKit;
+import akka.testkit.javadsl.TestKit;
 import javaslang.collection.Vector;
 
 @RunWith(CuppaRunner.class)
@@ -30,7 +30,7 @@ public class S3RestoreSpec extends SharedActorSystemSpec {
     }
     
     private final S3 s3 = mock(S3.class);
-    private final JavaTestKit shardRegion = new JavaTestKit(system);
+    private final TestKit shardRegion = new TestKit(system);
     
     private ActorRef actor() {
         return system.actorOf(Props.create(S3Restore.class, () -> new S3Restore(s3, "MyEvent", shardRegion.getRef())));
@@ -59,7 +59,7 @@ public class S3RestoreSpec extends SharedActorSystemSpec {
                 shardRegion.expectMsgEquals(eventEnvelope(1478698271260l,3));
                 shardRegion.reply(1478698271260l);
                 
-                JavaTestKit probe = new JavaTestKit(system);
+                TestKit probe = new TestKit(system);
                 probe.watch(actor);
                 probe.expectTerminated(actor);
                 

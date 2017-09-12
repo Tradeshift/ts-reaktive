@@ -1,5 +1,7 @@
 package com.tradeshift.reaktive.actors;
 
+import static akka.pattern.PatternsCS.pipe;
+
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
@@ -25,8 +27,6 @@ import javaslang.collection.Vector;
 import javaslang.control.Option;
 import scala.PartialFunction;
 import scala.concurrent.duration.Duration;
-import scala.runtime.BoxedUnit;
-import static akka.pattern.PatternsCS.pipe;
 
 /**
  * Base class for persistent actor that manages some state, receives commands of a defined type, and emits events of a defined type.
@@ -49,7 +49,7 @@ import static akka.pattern.PatternsCS.pipe;
  * @param <S> Immutable type that contains all the state the actor maintains.
  */
 public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractState<E,S>> extends AbstractPersistentActor {
-    protected final LoggingAdapter log = Logging.getLogger(getContext().system(), this);
+    protected final LoggingAdapter log = Logging.getLogger(context().system(), this);
     
     private S state = initialState();
 
@@ -67,7 +67,7 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
         this.commandType = commandType;
         this.eventType = eventType;
         this.tagName = getEventTag(context().system().settings().config(), eventType);
-        getContext().setReceiveTimeout(Duration.fromNanos(getPassivateTimeout().toNanos()));
+        context().setReceiveTimeout(Duration.fromNanos(getPassivateTimeout().toNanos()));
     }
 
     protected java.time.Duration getPassivateTimeout() {
@@ -75,8 +75,8 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     }
 
     @Override
-    public PartialFunction<Object, BoxedUnit> receiveCommand() {
-        return ReceiveBuilder
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
             .match(CommandWithHandler.class, m -> {
                 @SuppressWarnings("unchecked") CommandWithHandler msg = m;
                 handleCommand(msg.command, msg.handler);
@@ -88,8 +88,8 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     }
 
     @Override
-    public PartialFunction<Object, BoxedUnit> receiveRecover() {
-        return ReceiveBuilder
+    public Receive createReceiveRecover() {
+        return ReceiveBuilder.create()
             .match(eventType, evt -> { updateState(evt); })
             .match(SnapshotOffer.class, snapshot -> {
                 // Snapshots support is not implemented yet.

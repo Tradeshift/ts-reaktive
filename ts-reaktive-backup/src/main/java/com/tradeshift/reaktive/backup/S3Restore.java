@@ -1,7 +1,7 @@
 package com.tradeshift.reaktive.backup;
 
-import static com.tradeshift.reaktive.backup.DropUntilNext.dropUntilNext;
 import static akka.pattern.PatternsCS.ask;
+import static com.tradeshift.reaktive.backup.DropUntilNext.dropUntilNext;
 
 import java.util.concurrent.TimeUnit;
 
@@ -20,9 +20,7 @@ import akka.persistence.RecoveryCompleted;
 import akka.stream.Materializer;
 import akka.stream.javadsl.Sink;
 import akka.util.Timeout;
-import scala.PartialFunction;
 import scala.concurrent.duration.FiniteDuration;
-import scala.runtime.BoxedUnit;
 
 /**
  * Restores from an S3 bucket that S3Backup has written to.
@@ -64,8 +62,8 @@ public class S3Restore extends AbstractPersistentActor {
     }
     
     @Override
-    public PartialFunction<Object, BoxedUnit> receiveCommand() {
-        return ReceiveBuilder
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
             .matchEquals("init", msg -> sender().tell("ack", self()))
             .match(Long.class, (Long o) -> {
                 log.debug("Persisting {}", o);
@@ -89,8 +87,8 @@ public class S3Restore extends AbstractPersistentActor {
     }
 
     @Override
-    public PartialFunction<Object, BoxedUnit> receiveRecover() {
-        return ReceiveBuilder
+    public Receive createReceiveRecover() {
+        return ReceiveBuilder.create()
             .match(Long.class, o -> offset = o)
             .match(RecoveryCompleted.class, msg -> startRestore())
             .build();

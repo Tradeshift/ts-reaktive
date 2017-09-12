@@ -4,8 +4,6 @@ import com.tradeshift.reaktive.replication.TestData.TestEvent;
 
 import akka.japi.pf.ReceiveBuilder;
 import akka.persistence.AbstractPersistentActor;
-import scala.PartialFunction;
-import scala.runtime.BoxedUnit;
 
 /**
  * Actor which just emits a single event into its journal and then exits. We do this to simulate a remote journal having been replicated to here.
@@ -20,8 +18,8 @@ public class FakeRemoteTestActor extends AbstractPersistentActor {
     }
 
     @Override
-    public PartialFunction<Object, BoxedUnit> receiveCommand() {
-        return ReceiveBuilder
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
             .matchEquals("init", msg -> {
                 persist(TestEvent.newBuilder().setMsg(event).build(), e -> {
                     context().stop(self());
@@ -31,8 +29,8 @@ public class FakeRemoteTestActor extends AbstractPersistentActor {
     }
 
     @Override
-    public PartialFunction<Object, BoxedUnit> receiveRecover() {
-        return ReceiveBuilder
+    public Receive createReceiveRecover() {
+        return ReceiveBuilder.create()
             .matchAny(msg -> {})
             .build();
     }

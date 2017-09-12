@@ -21,11 +21,10 @@ import akka.japi.pf.ReceiveBuilder;
 import akka.pattern.Backoff;
 import akka.pattern.BackoffSupervisor;
 import akka.persistence.query.EventEnvelope;
-import akka.persistence.query.EventEnvelope2;
 import akka.persistence.query.NoOffset;
 import akka.persistence.query.TimeBasedUUID;
 import akka.persistence.query.javadsl.CurrentEventsByPersistenceIdQuery;
-import akka.persistence.query.javadsl.EventsByTagQuery2;
+import akka.persistence.query.javadsl.EventsByTagQuery;
 import akka.stream.Materializer;
 import akka.stream.javadsl.Flow;
 import akka.stream.javadsl.Sink;
@@ -51,7 +50,7 @@ public class DataCenterForwarder<E> extends AbstractActor {
      * @param currentEventsByPersistenceIdQuery Query to find all current events for a specific persistenceId
      */
     public static <E> void startAll(ActorSystem system, Materializer materializer, DataCenterRepository dataRepo, VisibilityRepository visibilityRepo, Class<E> eventType,
-        EventsByTagQuery2 eventsByTagQuery, CurrentEventsByPersistenceIdQuery currentEventsByPersistenceIdQuery) {
+        EventsByTagQuery eventsByTagQuery, CurrentEventsByPersistenceIdQuery currentEventsByPersistenceIdQuery) {
         
         String tag = Replication.get(system).getEventTag(eventType);
         for (DataCenter dataCenter: dataRepo.getRemotes().values()) {
@@ -79,6 +78,7 @@ public class DataCenterForwarder<E> extends AbstractActor {
     private final DataCenter dataCenter;
     private final int parallelism;
     private final String localDataCenterName;
+    private final EventsByTagQuery eventsByTagQuery;
     
     private long updatingVisibilityOffset = 0;
     private int updatingVisibilityOffsetCount = 0;
@@ -97,10 +97,11 @@ public class DataCenterForwarder<E> extends AbstractActor {
      * @param currentEventsByPersistenceIdQuery Query to find all current events for a specific persistenceId
      */
     public DataCenterForwarder(Materializer materializer, DataCenter dataCenter, VisibilityRepository visibilityRepo, Class<E> eventType,
-        EventsByTagQuery2 eventsByTagQuery, CurrentEventsByPersistenceIdQuery currentEventsByPersistenceIdQuery) {
+        EventsByTagQuery eventsByTagQuery, CurrentEventsByPersistenceIdQuery currentEventsByPersistenceIdQuery) {
         
-        final Replication replication = Replication.get(context().system());
+		final Replication replication = Replication.get(context().system());
         
+		this.eventsByTagQuery = eventsByTagQuery;
         this.materializer = materializer;
         this.visibilityRepo = visibilityRepo;
         this.classifier = replication.getEventClassifier(eventType);
@@ -111,8 +112,12 @@ public class DataCenterForwarder<E> extends AbstractActor {
         this.parallelism = context().system().settings().config().getInt("ts-reaktive.replication.parallellism");
 
         pipe(visibilityRepo.getLastEventOffset(dataCenter, tag).thenApply(LastEventOffsetKnown::new), context().dispatcher()).to(self());
-        
-        receive(ReceiveBuilder
+        log.debug("Started");
+    }
+    
+    @Override
+    public Receive createReceive() {
+        return ReceiveBuilder.create()
             .match(LastEventOffsetKnown.class, msg -> {
                 log.debug("Last offset known is {}", msg.offset);
                 lastEventOffset = Math.max(0, msg.offset - context().system().settings().config().getDuration("ts-reaktive.replication.allowed-clock-drift").toMillis());
@@ -151,10 +156,7 @@ public class DataCenterForwarder<E> extends AbstractActor {
                 log.error(msg.cause(), "A future created from this actor has failed");
                 throw (RuntimeException) msg.cause();
             })
-            .build()
-        );
-        
-        log.debug("Started");
+            .build();
     }
     
     private void updateLastEventOffset() {
@@ -182,9 +184,9 @@ public class DataCenterForwarder<E> extends AbstractActor {
         }
     }
     
-    private Sink<EventEnvelope2,NotUsed> filteredDataCenterSink() {
+    private Sink<EventEnvelope,NotUsed> filteredDataCenterSink() {
         log.debug("filteredDataCenterSink()");
-        return Flow.<EventEnvelope2>create()
+        return Flow.<EventEnvelope>create()
             .mapAsync(parallelism, e -> {
                 return visibilityRepo.isVisibleTo(dataCenter, e.persistenceId()).thenApply(v -> {
                     log.debug("Visibility of {}: {}", e, v);
@@ -200,10 +202,10 @@ public class DataCenterForwarder<E> extends AbstractActor {
     
     
     @SuppressWarnings("unchecked")
-    private Sink<EventEnvelope2,NotUsed> updateVisibility() {
+    private Sink<EventEnvelope,NotUsed> updateVisibility() {
         ActorRef self = self(); // not safe to close over self() inside e.g. mapAsync
         
-        return Flow.<EventEnvelope2>create()
+        return Flow.<EventEnvelope>create()
             .mapAsync(parallelism, e -> {
                 log.debug("updateVisibility {}", e);
                 Seq<String> names = classifier.getDataCenterNames((E) e.event());
@@ -233,7 +235,6 @@ public class DataCenterForwarder<E> extends AbstractActor {
                 log.info("{} Replaying persistence ID {} into {}", self(), e.persistenceId(), dataCenter.getName());
                 return currentEventsByPersistenceIdQuery.currentEventsByPersistenceId(e.persistenceId(), 0, Long.MAX_VALUE)
                                 .alsoTo(stopOnError("currentEventsByPersistenceId"))
-                                .map(DataCenterForwarder::envelope1to2)
                                 .via(dataCenter.uploadFlow())
                                 .runWith(Sink.ignore(), materializer)
                                 .thenApply(done -> e);
@@ -242,15 +243,10 @@ public class DataCenterForwarder<E> extends AbstractActor {
             .to(Sink.foreach(event -> self.tell(new VisibilityUpdated(getTimestamp(event)), self)));
     }
     
-    private static long getTimestamp(EventEnvelope2 e) {
+    private static long getTimestamp(EventEnvelope e) {
         return UUIDs.unixTimestamp(TimeBasedUUID.class.cast(e.offset()).value());
     }
 
-    // This will go away with akka 2.5
-    public static EventEnvelope2 envelope1to2(EventEnvelope e) {
-        return new EventEnvelope2(new TimeBasedUUID(UUIDs.startOf(e.offset())), e.persistenceId(), e.sequenceNr(), e.event());
-    }
-    
     private <T> Sink<T,NotUsed> stopOnError(String msg) {
         return Sink.<T>onComplete(done -> {
             if (done.isFailure()) {
