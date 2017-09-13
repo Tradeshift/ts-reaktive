@@ -1,5 +1,8 @@
 package com.tradeshift.reaktive.replication.actors;
 
+import java.io.Serializable;
+import java.util.concurrent.atomic.AtomicReference;
+
 import com.tradeshift.reaktive.actors.AbstractState;
 import com.tradeshift.reaktive.actors.AbstractStatefulPersistentActor;
 import com.tradeshift.reaktive.protobuf.Query;
@@ -9,7 +12,11 @@ import com.tradeshift.reaktive.replication.ReplicationId;
 
 import akka.actor.Status.Failure;
 import akka.japi.pf.ReceiveBuilder;
+import akka.persistence.RecoveryCompleted;
 import akka.serialization.SerializationExtension;
+import io.vavr.control.Option;
+import static io.vavr.control.Option.none;
+import static io.vavr.control.Option.some;
 
 /**
  * An extension to {@link AbstractStatefulPersistentActor} which allows persistent actors to work across data centers and legal regions.
@@ -20,21 +27,19 @@ import akka.serialization.SerializationExtension;
  * 
  * The first event emitted by the first command sent to this actor MUST store the local datacenter name, and
  * EventClassifier must return that datacenter name (as first element, if multiple) when given the event.
+ * 
+ * The persistenceId for a replicated actor MUST NOT be allowed to be client-picked, since the system must guarantee that
+ * IDs generated on one data center aren't also created on others. This can be done by using GUIDs, or simply prefixing the 
+ * data center name to the persistence ID.
+ * 
+ * If you have existing persistent actors with already-emitted events that you are "upgrading" to become replicated actors,
+ * implement the {@link #createMigrationEvent()} method to have them "pin" themselves to the current datacenter. In addition,
+ * you may want to run a persistence query to start/stop all existing persistenceIDs so that they all emit their
+ * migration events.
  */
 public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends AbstractStatefulPersistentActor<C,E,S> {
     private final Replication replication = ReplicationId.INSTANCE.get(context().system());
     
-    /**
-     * Whether this actor is merely a slave, receiving (and persisting) incoming EventEnvelope events being sent
-     * from another data center. Only one data center is the master.
-     * 
-     * This field will be null before the first command is received.
-     * 
-     * Future extensions may implement protocols to allow a different data center to become master (by not having any master
-     * for a short amount of time, and eventually having the designated new master to discover that by eventing).
-     */
-    private Boolean slave;
-
     public ReplicatedActor(Class<C> commandType, Class<E> eventType) {
         super(commandType, eventType);
     }
@@ -46,57 +51,119 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
     @Override
     public Receive createReceiveRecover() {
         Receive invokeSuper = super.createReceiveRecover();
+        AtomicReference<Option<Boolean>> slave = new AtomicReference<>(none());
         
         return ReceiveBuilder.create()
-            .match(eventType, e -> slave == null, e -> {
-                slave = !includesLocalDataCenter(e);
+            .match(eventType, e -> slave.get().isEmpty() && !classifier().getDataCenterNames(e).isEmpty(), e -> {
+                slave.set(some(!includesLocalDataCenter(e)));
                 invokeSuper.onMessage().apply(e);
+            })
+            .match(RecoveryCompleted.class, msg -> {
+                if (slave.get().isEmpty()) {
+                    if (lastSequenceNr() > 0) {
+                        getContext().become(migrateNonReplicatedActor());            			
+                    } else {
+                        getContext().become(justCreated());
+                    }
+                } else {
+                    getContext().become(slave.get().get() ? slave() : master()); 
+                }
+                if (invokeSuper.onMessage().isDefinedAt(msg)) {
+                    invokeSuper.onMessage().apply(msg);
+                }
             })
             .build()
             .orElse(invokeSuper);
     }
     
-    @Override
-    public Receive createReceive() {
-    	Receive superReceive = super.createReceive();
-    	
+    /**
+     * We've detected an existing persistence actor (there are events for this persistenceId), however none of the events
+     * have emitted any data center names. Hence, we conclude that we're migrating an old non-replicated actor,
+     * and use {@link #createMigrationEvent()} to emit an extra event that DOES pin this actor the the current data center.
+     */
+    protected Receive migrateNonReplicatedActor() {
+        self().tell(Migrate.INSTANCE, self()); // we can't use persist() inside receiveRecover(), at least not with the cassandra plugin.
+
         return ReceiveBuilder.create()
-            .match(commandType, c -> slave != null && slave && !isReadOnly(c), c ->
-                sender().tell(new Failure(new IllegalStateException("Actor is in slave mode and does not accept " + c)), self())
-            )
-            .match(commandType, c -> slave == null && isReadOnly(c), c -> {
+            .match(Migrate.class, msg -> {
+                E event = createMigrationEvent();
+                if (!includesLocalDataCenter(event)) {
+                    throw new IllegalStateException(
+                            "createMigrationEvent() returned an event that does NOT include the local data center");
+                }
+                persistEvent(event, e -> {
+                    getContext().become(master());
+                    unstashAll();
+                });
+            })
+            .matchAny(other -> stash())
+            .build();
+    }
+    
+    /**
+     * Implement this method to return an event E that pins the persistent actor to the current data center. 
+     * The event classifier for E _MUST_ return the local data center as the first datacenter for the returned event.
+     * 
+     * This method will always be called just after recovery has completed, so feel free to use your existing 
+     * state information to create the event, if necessary.
+     * 
+     * By default, this method will throw UnsupportedOperationException.
+     */
+    protected E createMigrationEvent() {
+        throw new UnsupportedOperationException("Trying to migrate an existing non-replicated actor, but createMigrationEvent() wasn't implemented.");
+    }
+    
+    /** 
+     * The journal doesn't have any events yet for this persistenceId, which means the actor could either become a slave or a master,
+     * depending on the first command.
+     */
+    protected Receive justCreated() {
+        Receive superReceive = super.createReceive();
+
+        return ReceiveBuilder.create()
+            .match(commandType, c -> isReadOnly(c), c -> {
                 log.debug("not accepting {}", c);
                 sender().tell(new Failure(new UnknownActorException("Actor " + persistenceId() + " does not know yet whether it's slave or not. Try again later. Was handling:" + c)), self());
             })
-            .match(commandType, c -> isReadOnly(c), c -> {
-                log.debug("Received read-only command {}", c);
-                superReceive.onMessage().apply(c);
-            })
-            .match(commandType, c -> slave == null, c -> {
-                log.debug("Received write command as first {}", c);
-                slave = false;
-                superReceive.onMessage().apply(c);
-            })
             .match(commandType, c -> {
-                log.debug("Received write command {}", c);
+                log.debug("Received write command as first, becoming master: {}", c);
+                getContext().become(master());
                 superReceive.onMessage().apply(c);
             })
-            .match(Query.EventEnvelope.class, e -> slave != null && !slave, e -> {
+            .match(Query.EventEnvelope.class, e -> {
+            	log.debug("Received event envelope as first, becoming slave.");
+                getContext().become(slave());
+                receiveEnvelope(e);
+            })
+            .build();
+    }
+    
+    protected Receive master() {
+        return ReceiveBuilder.create()
+            .match(Query.EventEnvelope.class, e -> {
                 log.error("Actor is not in slave mode, but was sent an EventEnvelope: {} from {} \n"
                     + "Possibly the same persistenceId was created on several datacenters independently. That will not end well.\n"
                     + "The incoming event has been ignored. The proper cause of action is to delete either this or the other aggregate.", e, sender());
                 sender().tell(new Failure(new IllegalStateException("Actor is not in slave mode, but was sent an EventEnvelope. "
                     + "Possibly the same persistenceId was created on several datacenters independently. That will not end well.")), self());
             })
-            .match(Query.EventEnvelope.class, e -> {
-                slave = true;
-                receiveEnvelope(e);
-            })
             .build()
-            .orElse(superReceive);
+            .orElse(super.createReceive());    	
     }
     
-    private void receiveEnvelope(Query.EventEnvelope envelope) {
+    protected Receive slave() {
+        return ReceiveBuilder.create()
+            .match(Query.EventEnvelope.class, e -> {
+                receiveEnvelope(e);
+            })
+            .match(commandType, c -> !isReadOnly(c), c ->
+                sender().tell(new Failure(new IllegalStateException("Actor is in slave mode and does not accept non-readOnly command " + c)), self())
+            )
+            .build()
+            .orElse(super.createReceive());
+    }
+    
+    protected void receiveEnvelope(Query.EventEnvelope envelope) {
         if (envelope.getSequenceNr() > lastSequenceNr() + 1) {
             // TODO: park this in a cassandra table and piece it together later.
             log.warning("Received sequence nr {}, but only at {} myself. Stashing and waiting for the rest.", envelope.getSequenceNr(), lastSequenceNr());
@@ -139,4 +206,9 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
      * The first command sent to an actor that is to be a master, must NOT be read-only.
      */
     protected abstract boolean isReadOnly(C command);
+    
+    private static final class Migrate implements Serializable {
+        private static final long serialVersionUID = 1L;
+        private static final Migrate INSTANCE = new Migrate();
+    }
 }
