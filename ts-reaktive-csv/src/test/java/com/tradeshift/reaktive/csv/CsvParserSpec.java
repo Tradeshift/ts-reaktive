@@ -140,56 +140,55 @@ public class CsvParserSpec extends SharedActorSystemSpec {{
             CsvSettings COMMA_SEPARATOR = new CsvSettings('"', "\"\"", ',');
             
             // from https://github.com/ruby/ruby/blob/trunk/test/csv/test_csv_parsing.rb
-            Map<String,Seq<String>> cases = HashMap.of(
+            Map<String,Seq<String>> cases = HashMap.<String,Seq<String>>empty()
                 // Old Ruby 1.8 CSV library tests.
-                "\t", Vector.of("\t"),
-                "foo,\"\"\"\"\"\",baz", Vector.of("foo", "\"\"", "baz"),
-                "foo,\"\"\"bar\"\"\",baz", Vector.of("foo", "\"bar\"", "baz"),
-                "\"\"\"\n\",\"\"\"\n\"", Vector.of("\"\n", "\"\n"),
-                "foo,\"\r\n\",baz", Vector.of("foo", "\r\n", "baz"),
-                "\"\"", Vector.of(""),
-                "foo,\"\"\"\",baz", Vector.of("foo", "\"", "baz"),
-                "foo,\"\r.\n\",baz", Vector.of("foo", "\r.\n", "baz"),
-                "foo,\"\r\",baz", Vector.of("foo", "\r", "baz"),
-                "foo,\"\",baz", Vector.of("foo", "", "baz"),
-                "\",\"", Vector.of(","),
-                "foo", Vector.of("foo"),
-                ",,", Vector.of("", "", ""),
-                ",", Vector.of("", ""),
-                "foo,\"\n\",baz", Vector.of("foo", "\n", "baz"),
-                "foo,,baz", Vector.of("foo", "", "baz"),
-                "\"\"\"\r\",\"\"\"\r\"", Vector.of("\"\r", "\"\r"),
-                "\",\",\",\"", Vector.of(",", ","),
-                "foo,bar,", Vector.of("foo", "bar", ""),
-                ",foo,bar", Vector.of("", "foo", "bar"),
-                "foo,bar", Vector.of("foo", "bar"),
-                ";", Vector.of(";"),
-                "\t,\t", Vector.of("\t", "\t"),
-                "foo,\"\r\n\r\",baz", Vector.of("foo", "\r\n\r", "baz"),
-                "foo,\"\r\n\n\",baz", Vector.of("foo", "\r\n\n", "baz"),
-                "foo,\"foo,bar\",baz", Vector.of("foo", "foo,bar", "baz"),
-                ";,;", Vector.of(";", ";"),
+                .put("\t", Vector.of("\t"))
+                .put("foo,\"\"\"\"\"\",baz", Vector.of("foo", "\"\"", "baz"))
+                .put("foo,\"\"\"bar\"\"\",baz", Vector.of("foo", "\"bar\"", "baz"))
+                .put("\"\"\"\n\",\"\"\"\n\"", Vector.of("\"\n", "\"\n"))
+                .put("foo,\"\r\n\",baz", Vector.of("foo", "\r\n", "baz"))
+                .put("\"\"", Vector.of(""))
+                .put("foo,\"\"\"\",baz", Vector.of("foo", "\"", "baz"))
+                .put("foo,\"\r.\n\",baz", Vector.of("foo", "\r.\n", "baz"))
+                .put("foo,\"\r\",baz", Vector.of("foo", "\r", "baz"))
+                .put("foo,\"\",baz", Vector.of("foo", "", "baz"))
+                .put("\",\"", Vector.of(","))
+                .put("foo", Vector.of("foo"))
+                .put(",,", Vector.of("", "", ""))
+                .put(",", Vector.of("", ""))
+                .put("foo,\"\n\",baz", Vector.of("foo", "\n", "baz"))
+                .put("foo,,baz", Vector.of("foo", "", "baz"))
+                .put("\"\"\"\r\",\"\"\"\r\"", Vector.of("\"\r", "\"\r"))
+                .put("\",\",\",\"", Vector.of(",", ","))
+                .put("foo,bar,", Vector.of("foo", "bar", ""))
+                .put(",foo,bar", Vector.of("", "foo", "bar"))
+                .put("foo,bar", Vector.of("foo", "bar"))
+                .put(";", Vector.of(";"))
+                .put("\t,\t", Vector.of("\t", "\t"))
+                .put("foo,\"\r\n\r\",baz", Vector.of("foo", "\r\n\r", "baz"))
+                .put("foo,\"\r\n\n\",baz", Vector.of("foo", "\r\n\n", "baz"))
+                .put("foo,\"foo,bar\",baz", Vector.of("foo", "foo,bar", "baz"))
+                .put(";,;", Vector.of(";", ";"))
                 
                 // test_area_edge_cases
-                "a,b", Vector.of("a", "b"),
-                "a,\"\"\"b\"\"\"", Vector.of("a", "\"b\""),
-                "a,\"\"\"b\"", Vector.of("a", "\"b"),
-                "a,\"b\"\"\"", Vector.of("a", "b\""),
-                "a,\"\nb\"\"\"", Vector.of("a", "\nb\""),
-                "a,\"\"\"\nb\"", Vector.of("a", "\"\nb"),
-                "a,\"\"\"\nb\n\"\"\"", Vector.of("a", "\"\nb\n\""),
-                "a,,,", Vector.of("a", "", "", ""),
-                "\"\",\"\"", Vector.of("", ""),
-                "\"\"\"\"", Vector.of("\""),
-                "\"\"\"\",\"\"", Vector.of("\"",""),
-                ",\"\"", Vector.of("",""),
-                ",\"\r\"", Vector.of("","\r"),
-                "\"\r\n,\"", Vector.of("\r\n,"),
-                "\"\r\n,\",", Vector.of("\r\n,", ""),
+                .put("a,b", Vector.of("a", "b"))
+                .put("a,\"\"\"b\"\"\"", Vector.of("a", "\"b\""))
+                .put("a,\"\"\"b\"", Vector.of("a", "\"b"))
+                .put("a,\"b\"\"\"", Vector.of("a", "b\""))
+                .put("a,\"\nb\"\"\"", Vector.of("a", "\nb\""))
+                .put("a,\"\"\"\nb\"", Vector.of("a", "\"\nb"))
+                .put("a,\"\"\"\nb\n\"\"\"", Vector.of("a", "\"\nb\n\""))
+                .put("a,,,", Vector.of("a", "", "", ""))
+                .put("\"\",\"\"", Vector.of("", ""))
+                .put("\"\"\"\"", Vector.of("\""))
+                .put("\"\"\"\",\"\"", Vector.of("\"",""))
+                .put(",\"\"", Vector.of("",""))
+                .put(",\"\r\"", Vector.of("","\r"))
+                .put("\"\r\n,\"", Vector.of("\r\n,"))
+                .put("\"\r\n,\",", Vector.of("\r\n,", ""))
                 
                 // test_non_regex_edge_cases
-                "foo,\"foo,bar,baz,foo\",\"foo\"", Vector.of("foo", "foo,bar,baz,foo", "foo")
-              );
+                .put("foo,\"foo,bar,baz,foo\",\"foo\"", Vector.of("foo", "foo,bar,baz,foo", "foo"));
             
             for (Tuple2<String,Seq<String>> c: cases) {
                 Seq<CsvEvent> expected = c._2.flatMap(s ->
