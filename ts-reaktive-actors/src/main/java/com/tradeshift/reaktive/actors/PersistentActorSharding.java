@@ -98,14 +98,14 @@ public class PersistentActorSharding<C> {
      * Returns the entityId (=persistenceId) to which the given command should be routed
      */
     @SuppressWarnings("unchecked")
-    protected String getEntityId(Object command) {
+    public String getEntityId(Object command) {
         return persistenceIdPrefix + "_" + persistenceIdPostfix.apply((C) command);
     }
     
     /**
      * Returns the shard on which the given entityId should be placed
      */
-    protected String getShardId(String entityId) {
+    public String getShardId(String entityId) {
         return String.valueOf(entityId.hashCode() % numberOfShards);
     }
 }

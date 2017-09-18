@@ -17,11 +17,11 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 import scala.PartialFunction;
 
-public class TestActor extends ReplicatedActor<TestCommand, TestEvent, TestActorState> {
+public class ReplicatedTestActor extends ReplicatedActor<TestCommand, TestEvent, TestActorState> {
     public static final ReplicatedActorSharding<TestCommand> sharding =
-        ReplicatedActorSharding.of(Props.create(TestActor.class), "testactor", c -> toJava(c.getAggregateId()).toString());
+        ReplicatedActorSharding.of(Props.create(ReplicatedTestActor.class), "testactor", c -> toJava(c.getAggregateId()).toString());
 
-    public TestActor() {
+    public ReplicatedTestActor() {
         super(TestCommand.class, TestEvent.class);
     }
     
@@ -71,6 +71,11 @@ public class TestActor extends ReplicatedActor<TestCommand, TestEvent, TestActor
             })
             .build();
             
+    }
+    
+    @Override
+    protected TestEvent createMigrationEvent() {
+    	return TestEvent.newBuilder().setMsg("dc:local").build();
     }
     
     private abstract class Handler extends AbstractCommandHandler<TestCommand, TestEvent, TestActorState> {

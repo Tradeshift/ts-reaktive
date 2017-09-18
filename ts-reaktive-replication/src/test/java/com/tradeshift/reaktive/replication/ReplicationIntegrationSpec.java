@@ -65,7 +65,7 @@ public class ReplicationIntegrationSpec {
                 ).withFallback(ConfigFactory.parseResources("com/tradeshift/reaktive/replication/ReplicationIntegrationSpec.conf")).withFallback(ConfigFactory.defaultReference()).resolve();
             
             system = ActorSystem.create(config.getString("clustering.name"), config);
-            shardRegion = TestActor.sharding.shardRegion(system);
+            shardRegion = ReplicatedTestActor.sharding.shardRegion(system);
             
             new AkkaPersistence(system).awaitPersistenceInit();
             

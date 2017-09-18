@@ -44,7 +44,7 @@ public class ReplicatedActorSharding<C> extends PersistentActorSharding<C> {
      * (from {@link WebSocketDataCenterServer}) are correctly routed to their target actors.
      */
     @Override
-    protected String getEntityId(Object command) {
+    public String getEntityId(Object command) {
         if (command instanceof Query.EventEnvelope) {
             return ((Query.EventEnvelope)command).getPersistenceId();
         } else {
