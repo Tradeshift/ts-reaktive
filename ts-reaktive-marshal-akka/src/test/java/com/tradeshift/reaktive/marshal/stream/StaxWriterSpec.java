@@ -16,6 +16,7 @@ import javax.xml.stream.XMLEventFactory;
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.events.Attribute;
+import javax.xml.stream.events.Namespace;
 import javax.xml.stream.events.XMLEvent;
 
 import org.forgerock.cuppa.junit.CuppaRunner;
@@ -78,6 +79,23 @@ public class StaxWriterSpec extends SharedActorSystemSpec {{
             
             assertThat(result.toArray(), isIdenticalTo(Input.fromString(
                 "<tag xmlns='uri:ns1'><tag xmlns='uri:ns2' xmlns:atprefix='uri:attrns' atprefix:a='hello'/></tag>")));
+        });
+        
+        it("Should remove namespace declarations that are already declared on a parent event", () -> {
+            XMLEventFactory factory = XMLEventFactory.newFactory();
+            Namespace cacNs = factory.createNamespace("cac", "uri:cac");
+            ByteString result = Source.from(Arrays.<XMLEvent>asList(
+                factory.createStartElement("", "uri:invoice", "Invoice", null, Arrays.asList(cacNs).iterator()),
+                factory.createStartElement("cac", "uri:cac", "ID", null, Arrays.asList(cacNs).iterator()),
+                factory.createEndElement("cac", "uri:cac", "ID"),
+                factory.createEndElement("", "uri:invoice", "Invoice")
+            ))
+            .via(StaxWriter.flow())
+            .runFold(ByteString.empty(), (s1,s2) -> s1.concat(s2), materializer)
+            .toCompletableFuture().get(1, TimeUnit.SECONDS);
+                
+            assertThat(result.toArray(), isIdenticalTo(Input.fromString(
+                "<Invoice xmlns='uri:invoice' xmlns:cac='uri:cac'><cac:ID/></Invoice>")));
         });
     });
 }}
