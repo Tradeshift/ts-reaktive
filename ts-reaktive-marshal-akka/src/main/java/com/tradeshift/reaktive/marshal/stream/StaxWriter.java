@@ -54,17 +54,32 @@ public class StaxWriter extends PushPullOutputStreamAdapter<List<XMLEvent>, XMLE
             (attr, out) -> factory.createXMLEventWriter(out, "UTF-8"),
             (writer, events) -> {
                 for (XMLEvent event: events) {
-                    if (event.isStartElement() && !event.asStartElement().getNamespaces().hasNext()) {
-                        List<Namespace> namespaces = new ArrayList<>();
-                        register(writer, namespaces, event.asStartElement().getName());
+                    if (event.isStartElement()) {
+                        @SuppressWarnings("unchecked")
+                        Iterator<Namespace> ns = event.asStartElement().getNamespaces();
+                        boolean needsAdjustment = false;
                         
+                        List<Namespace> namespaces = new ArrayList<>();
+                        while (ns.hasNext()) {
+                            Namespace n = ns.next();
+                            if (writer.getPrefix(n.getNamespaceURI()) != null) {
+                                needsAdjustment = true;
+                            } else {
+                                namespaces.add(n);
+                            }
+                        }
+                        
+                        if (register(writer, namespaces, event.asStartElement().getName())) {
+                            needsAdjustment = true;
+                        }
                         Iterator<?> attributes = event.asStartElement().getAttributes();
                         while (attributes.hasNext()) {
                             Attribute attr = (Attribute) attributes.next();
-                            register(writer, namespaces, attr.getName());
-                        }
-                        
-                        if (!namespaces.isEmpty()) {
+                            if (register(writer, namespaces, attr.getName())) {
+                                needsAdjustment = true;
+                            }
+                        }                        
+                        if (needsAdjustment) {
                             event = evtFactory.createStartElement(event.asStartElement().getName(), event.asStartElement().getAttributes(), namespaces.iterator());
                         }
                     }
@@ -78,13 +93,18 @@ public class StaxWriter extends PushPullOutputStreamAdapter<List<XMLEvent>, XMLE
     /**
      * Adds a namespace mapping for [name] to [namespaces], if it doesn't already exist on [writer].
      */
-    private static void register(XMLEventWriter writer, List<Namespace> namespaces, QName name) {
+    private static boolean register(XMLEventWriter writer, List<Namespace> namespaces, QName name) {
         String nsUri = name.getNamespaceURI();
         if (nsUri != null && !nsUri.isEmpty()) {
             String existing = writer.getNamespaceContext().getNamespaceURI(name.getPrefix());
-            if (existing == null || !existing.equals(nsUri)) {
-                namespaces.add(evtFactory.createNamespace(name.getPrefix(), nsUri));
+            Namespace ns = evtFactory.createNamespace(name.getPrefix(), nsUri);
+            if ((existing == null || !existing.equals(nsUri)) && !namespaces.stream().anyMatch(n ->
+                n.getPrefix().equals(ns.getPrefix())
+            )) {
+                namespaces.add(ns);
+                return true;
             }
         }
+        return false;
     }
 }
