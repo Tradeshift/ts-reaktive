@@ -78,8 +78,8 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
             VisibilityRepository visibilityRepo = mock(VisibilityRepository.class);
             AtomicReference<Visibility> visibility = new AtomicReference<>(Visibility.EMPTY);
             doAnswer(i -> completedFuture(visibility.get())).when(visibilityRepo).getVisibility("doc1");
-            doAnswer(i -> completedFuture(visibility.get().getDatacenters().contains(remote1.name))).when(visibilityRepo).isVisibleTo(remote1, "doc1");
-            doAnswer(i -> completedFuture(visibility.get().getDatacenters().contains(remote2.name))).when(visibilityRepo).isVisibleTo(remote2, "doc1");
+            doAnswer(i -> completedFuture(visibility.get().isVisibleTo(remote1))).when(visibilityRepo).isVisibleTo(remote1, "doc1");
+            doAnswer(i -> completedFuture(visibility.get().isVisibleTo(remote2))).when(visibilityRepo).isVisibleTo(remote2, "doc1");
             doAnswer(inv -> {
                 visibility.updateAndGet(v -> v.add(remote1.name));
                 return completedFuture(Done.getInstance());
@@ -89,7 +89,7 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
                 return completedFuture(Done.getInstance());
             }).when(visibilityRepo).makeVisibleTo(remote2, "doc1");
             doAnswer(inv -> {
-                visibility.updateAndGet(v -> new Visibility(v.getDatacenters(), true));
+                visibility.updateAndGet(v -> v.withMaster(true));
                 return completedFuture(Done.getInstance());
             }).when(visibilityRepo).setMaster("doc1", true);
             
@@ -125,7 +125,8 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
                 assertThat(remote1.events).contains(event1, event2, event3);
                 assertThat(remote2.events).contains(event1, event2, event3);
                 assertThat(visibility.get().isMaster()).isTrue();
-                assertThat(visibility.get().getDatacenters()).containsOnly(remote1.name, remote2.name);
+                assertThat(visibility.get().isVisibleTo(remote1)).isTrue();
+                assertThat(visibility.get().isVisibleTo(remote2)).isTrue();
             });
             
             // Now that the events have arrived, let's send a real-time event
@@ -175,7 +176,7 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
             VisibilityRepository visibilityRepo = mock(VisibilityRepository.class);
             AtomicReference<Visibility> visibility = new AtomicReference<>(Visibility.EMPTY);
             doAnswer(i -> completedFuture(visibility.get())).when(visibilityRepo).getVisibility("doc1");
-            doAnswer(i -> completedFuture(visibility.get().getDatacenters().contains("remote1"))).when(visibilityRepo).isVisibleTo(remote1, "doc1");
+            doAnswer(i -> completedFuture(visibility.get().isVisibleTo(remote1))).when(visibilityRepo).isVisibleTo(remote1, "doc1");
             doAnswer(inv -> {
                 visibility.updateAndGet(v -> v.add("remote1"));
                 return completedFuture(Done.getInstance());
@@ -203,7 +204,7 @@ public class DataCenterForwarderSpec extends SharedActorSystemSpec {
             verify(visibilityRepo).setMaster("doc1", false);
             assertThat(remote1.events).isEmpty();
             assertThat(visibility.get().isMaster()).isFalse();
-            assertThat(visibility.get().getDatacenters()).isEmpty();
+            assertThat(visibility.get().isVisibleTo(remote1)).isFalse();
         });
     });
 }
