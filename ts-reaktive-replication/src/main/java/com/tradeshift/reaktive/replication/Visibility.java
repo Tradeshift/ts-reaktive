@@ -18,24 +18,26 @@ public class Visibility {
     
     /**
      * Creates a new Visibility.
-     * @param datacenters The data centers to which this persistenceId should be visible
-     * @param master Whether the current data center is the master. Only the master will replicate events to other data centers.
+     * @param datacenters The data centers to which this persistenceId should be visible.
+     *        If this includes "*" as an element, the persistenceId is to be visible to
+     *        ALL data centers.
+     * @param master Whether the current data center is the master for the persistenceId. 
+     *        Only the master will replicate events to other data centers.
      */
     public Visibility(Set<String> datacenters, boolean master) {
         this.datacenters = datacenters;
         this.master = master;
     }
 
-    public Set<String> getDatacenters() {
-        return datacenters;
-    }
-    
     public boolean isMaster() {
         return master;
     }
 
+    /**
+     * Returns whether the persistenceId should be replicated to the given data center.
+     */
     public boolean isVisibleTo(DataCenter dataCenter) {
-        return datacenters.contains(dataCenter.getName());
+        return datacenters.contains("*") || datacenters.contains(dataCenter.getName());
     }
 
     /**
@@ -43,5 +45,14 @@ public class Visibility {
      */
     public Visibility add(String dataCenter) {
         return new Visibility(datacenters.add(dataCenter), master);
+    }
+    
+    public Visibility withMaster(boolean master) {
+        return new Visibility(datacenters, master);
+    }
+
+    @Override
+    public String toString() {
+        return "[datacenters=" + datacenters + ", master=" + master + "]";
     }
 }

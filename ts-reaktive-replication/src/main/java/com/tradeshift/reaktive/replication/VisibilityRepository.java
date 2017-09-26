@@ -48,7 +48,7 @@ public class VisibilityRepository {
     }
 
     public CompletionStage<Boolean> isVisibleTo(DataCenter target, String persistenceId) {
-        return getVisibility(persistenceId).thenApply(v -> v.getDatacenters().contains(target.getName()));
+        return getVisibility(persistenceId).thenApply(v -> v.isVisibleTo(target));
     }
 
     /**

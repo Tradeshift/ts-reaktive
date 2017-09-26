@@ -131,6 +131,17 @@ public class ReplicationIntegrationSpec {
             eventuallyDo(() -> {
                 assertThat(dc2.read(id1)).isEqualTo("moar");
             });
+            
+            // Should replicate to all datacenters if event classifier returns "*"
+            UUID id2 = UUID.fromString("95b2a8ba-3960-4bca-b803-c6aec238e99a");
+            dc1.write(id2, "dc:" + dc1.getName());
+            dc1.write(id2, "hello");
+            dc1.write(id2, "dc:*");
+            dc1.write(id2, "world");
+            
+            eventuallyDo(() -> {
+                assertThat(dc2.read(id2)).isEqualTo("world");
+            });
         });
         
         it("should replicate lots of events to another datacenter once the EventRepository indicates it", () -> {

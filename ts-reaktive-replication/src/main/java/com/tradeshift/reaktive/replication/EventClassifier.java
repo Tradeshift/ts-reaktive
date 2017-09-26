@@ -11,6 +11,9 @@ public interface EventClassifier<E> {
      * persistence ID of the given event, after the event has been applied, or Seq.empty()
      * if the data centers should remain unchanged.
      * 
+     * In order to have an aggregate be replicated to ALL known datacenters, include "*" as a 
+     * data center name.
+     * 
      * This must be implemented as a pure function, relying only on the event itself. In other words,
      * the event must fully imply to which datacenters replication is to be done. This is to guarantee
      * full idempotency when replaying.

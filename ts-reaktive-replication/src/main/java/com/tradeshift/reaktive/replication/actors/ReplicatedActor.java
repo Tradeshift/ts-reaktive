@@ -89,7 +89,8 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
                 E event = createMigrationEvent();
                 if (!includesLocalDataCenter(event)) {
                     throw new IllegalStateException(
-                            "createMigrationEvent() returned an event that does NOT include the local data center");
+                            "createMigrationEvent() returned an event that does NOT include the local data center "
+                            + replication.getLocalDataCenterName() + ", but instead " + classifier().getDataCenterNames(event));
                 }
                 persistEvent(event, e -> {
                     getContext().become(master());
@@ -188,7 +189,7 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
     protected void validateFirstEvent(E e) {
         if (!includesLocalDataCenter(e)) {
             throw new IllegalStateException("First-emitted event of a ReplicatedActor must yield local data center name (" +
-                replication.getLocalDataCenterName() + ") when given to EventClassifier, but instead got: " +
+                replication.getLocalDataCenterName() + ") as first element when given to EventClassifier, but instead got: " +
                 classifier().getDataCenterNames(e).mkString(", "));
         }
     }

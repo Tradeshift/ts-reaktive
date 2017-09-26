@@ -216,7 +216,7 @@ public class DataCenterForwarder<E> extends AbstractActor {
                     return visibilityRepo.setMaster(e.persistenceId(), weAreMaster).thenApply(done -> Tuple.of(e, shouldMakeVisible));
                 } else {
                     return visibilityRepo.getVisibility(e.persistenceId()).thenApply(v -> {
-                        log.debug("visibility of {} is {}/{}", e, v.isMaster(), v.getDatacenters());
+                        log.debug("visibility of {} is {}", e, v);
                         return Tuple.of(e, v.isMaster() && !v.isVisibleTo(dataCenter));});
                 }
             })
