@@ -17,6 +17,7 @@ import io.vavr.Function2;
 import io.vavr.Function3;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.HashSet;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 
@@ -40,7 +41,21 @@ public class XMLProtocol {
     public static <T> ReadProtocol<XMLEvent, T> anyTag(ReadProtocol<XMLEvent, T> inner) {
         return new TagReadProtocol<>(Option.none(), inner);
     }
-    
+
+    /**
+     * Matches a tag or (grant)child tag with the given name(s), emitting all tha events that make up that tag and its content.
+     */
+    public static SelectedSubTagProtocol anySubTag(QName... names) {
+        return new SelectedSubTagProtocol(HashSet.of(names));
+    }
+
+    /**
+     * Matches a tag or (grant)child tag with the given name(s), emitting all tha events that make up that tag and its content.
+     */
+    public static SelectedSubTagProtocol anySubTag(Iterable<QName> names) {
+        return new SelectedSubTagProtocol(HashSet.ofAll(names));
+    }
+
     //---------------------- 1-arity tag methods -----------------------------------
     
     /**
