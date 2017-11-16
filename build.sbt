@@ -5,6 +5,7 @@ val akkaVersion = "2.5.4"
 val akkaHttpVersion = "10.0.10"
 val akkaInMemory = "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.5.1.1"
 val kamonVersion = "0.6.6"
+val awsVersion = "1.11.150"
 val assertJ = "org.assertj" % "assertj-core" % "3.2.0"
 
 lazy val projectSettings = Seq(
@@ -78,6 +79,17 @@ lazy val kamonSettings = Seq(
       "org.aspectj" % "aspectjweaver" % "1.8.8",
       "io.kamon" %% "kamon-autoweave" % "0.6.5", // missing for 0.6.6
       "com.readytalk" % "metrics3-statsd" % "4.1.0" // to log cassandra (codahale / dropwizard) metrics into statsd
+    )
+  }
+)
+
+
+lazy val awsSettings = Seq(
+  libraryDependencies ++= {
+    Seq(
+      "com.amazonaws" % "aws-java-sdk-ec2" % awsVersion,
+      "com.amazonaws" % "aws-java-sdk-autoscaling" % awsVersion,
+      "org.scalatest" %% "scalatest" % "3.0.1" % "test"
     )
   }
 )
@@ -217,6 +229,10 @@ lazy val `ts-reaktive-kamon-akka-cluster` = project
   .settings(commonSettings: _*)
   .settings(kamonSettings: _*)
 
+lazy val `ts-reaktive-aws` = project
+  .settings(commonSettings: _*)
+  .settings(awsSettings: _*)
+
 lazy val root = (project in file(".")).settings(publish := { }, publishLocal := { }).aggregate(
   `ts-reaktive-akka`,
   `ts-reaktive-java`,
@@ -233,7 +249,8 @@ lazy val root = (project in file(".")).settings(publish := { }, publishLocal := 
   `ts-reaktive-kamon-log4j`,
   `ts-reaktive-kamon-akka`,
   `ts-reaktive-kamon-akka-client`,
-  `ts-reaktive-kamon-akka-cluster`)
+  `ts-reaktive-kamon-akka-cluster`,
+  `ts-reaktive-aws`)
 
 // Don't publish the root artifact; only publish sub-projects
 publishArtifact := false
