@@ -82,6 +82,7 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
      * and use {@link #createMigrationEvent()} to emit an extra event that DOES pin this actor the the current data center.
      */
     protected Receive migrateNonReplicatedActor() {
+        log.debug("Migrating non-replicated actor {}", self().path());
         self().tell(Migrate.INSTANCE, self()); // we can't use persist() inside receiveRecover(), at least not with the cassandra plugin.
 
         return ReceiveBuilder.create()
@@ -119,7 +120,7 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
      * depending on the first command.
      */
     protected Receive justCreated() {
-        Receive superReceive = super.createReceive();
+        Receive receive = createReceive();
 
         return ReceiveBuilder.create()
             .match(commandType, c -> isReadOnly(c), c -> {
@@ -129,14 +130,17 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
             .match(commandType, c -> {
                 log.debug("Received write command as first, becoming master: {}", c);
                 getContext().become(master());
-                superReceive.onMessage().apply(c);
+                if (receive.onMessage().isDefinedAt(c)) {
+                    receive.onMessage().apply(c);
+                }
             })
             .match(Query.EventEnvelope.class, e -> {
             	log.debug("Received event envelope as first, becoming slave.");
                 getContext().become(slave());
                 receiveEnvelope(e);
             })
-            .build();
+            .build()
+            .orElse(receive); // allow any non-command custom messages to just pass through to the actual actor implementation.
     }
     
     protected Receive master() {
@@ -149,7 +153,7 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
                     + "Possibly the same persistenceId was created on several datacenters independently. That will not end well.")), self());
             })
             .build()
-            .orElse(super.createReceive());    	
+            .orElse(createReceive());    	
     }
     
     protected Receive slave() {
@@ -161,7 +165,7 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
                 sender().tell(new Failure(new IllegalStateException("Actor is in slave mode and does not accept non-readOnly command " + c)), self())
             )
             .build()
-            .orElse(super.createReceive());
+            .orElse(createReceive());
     }
     
     protected void receiveEnvelope(Query.EventEnvelope envelope) {

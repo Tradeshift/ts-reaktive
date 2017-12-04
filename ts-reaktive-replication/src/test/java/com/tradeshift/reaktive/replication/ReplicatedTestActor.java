@@ -34,6 +34,16 @@ public class ReplicatedTestActor extends ReplicatedActor<TestCommand, TestEvent,
     protected TestActorState initialState() {
         return TestActorState.EMPTY;
     }
+    
+    @Override
+    public Receive createReceive() {
+        return receiveBuilder()
+            .match(String.class, s -> {
+                sender().tell("You sent: " + s, self());
+            })
+            .build()
+            .orElse(super.createReceive());
+    }
 
     @Override
     protected PartialFunction<TestCommand, ? extends AbstractCommandHandler<TestCommand, TestEvent, TestActorState>> applyCommand() {
