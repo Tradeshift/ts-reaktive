@@ -1,7 +1,6 @@
 package com.tradeshift.reaktive.replication;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.forgerock.cuppa.Cuppa.only;
 import static org.forgerock.cuppa.Cuppa.beforeEach;
 import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
@@ -13,8 +12,8 @@ import com.google.protobuf.ByteString;
 import com.tradeshift.reaktive.protobuf.Query;
 import com.tradeshift.reaktive.protobuf.Types;
 import com.tradeshift.reaktive.replication.TestData.TestCommand;
-import com.tradeshift.reaktive.replication.TestData.TestEvent;
 import com.tradeshift.reaktive.replication.TestData.TestCommand.Write;
+import com.tradeshift.reaktive.replication.TestData.TestEvent;
 
 import akka.Done;
 import akka.actor.ActorRef;
@@ -50,6 +49,16 @@ public class ReplicatedActorSpec extends SharedActorSystemSpec {
             });
         });
         
+        when("receiving a non-command as first message", () -> {
+            beforeEach(() -> {
+                sender.send(actor, "hello");
+            });
+            
+            it("should process the message normally", () -> {
+                sender.expectMsg("You sent: hello");
+            });
+        });
+        
         when("receiving a write command as first message", () -> {
             beforeEach(() -> {
                 actor.tell(cmd().setWrite(TestCommand.Write.newBuilder().setMsg("dc:local")).build(), sender.getRef());
@@ -66,6 +75,11 @@ public class ReplicatedActorSpec extends SharedActorSystemSpec {
                 Failure failure = sender.expectMsgClass(Failure.class);
                 assertThat(failure.cause().getMessage()).contains("same persistenceId was created on several datacenters");
             });
+            
+            it("should process non-command messages normally", () -> {
+                sender.send(actor, "hello");
+                sender.expectMsg("You sent: hello");
+            });            
         });
         
         when("receiving write command that end up emitting an event which doesn't include the local data center name", () -> {
@@ -180,10 +194,15 @@ public class ReplicatedActorSpec extends SharedActorSystemSpec {
                 actor.tell(cmd().setRead(TestCommand.Read.newBuilder()).build(), sender.getRef());
                 sender.expectMsg("third");
             });
+            
+            it("should process non-command messages normally", () -> {
+                sender.send(actor, "hello");
+                sender.expectMsg("You sent: hello");
+            });            
         });
     });
     
-    only().describe("A replicated actor that is migrated from non-replicated existing events", () -> {
+    describe("A replicated actor that is migrated from non-replicated existing events", () -> {
         final TestKit sender = new TestKit(system);
         beforeEach(() -> {
             actor = system.actorOf(Props.create(NonReplicatedTestActor.class, () -> new NonReplicatedTestActor()), "testactor" + new Random().nextInt(Integer.MAX_VALUE));
