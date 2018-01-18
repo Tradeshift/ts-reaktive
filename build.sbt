@@ -11,7 +11,7 @@ val assertJ = "org.assertj" % "assertj-core" % "3.2.0"
 lazy val projectSettings = Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  version := "0.0.33",
+  version := "0.0.34-SNAPSHOT",
   scalaVersion := "2.12.3",
   crossScalaVersions := Seq("2.11.11", "2.12.3"),
   publishMavenStyle := true,
@@ -131,6 +131,7 @@ lazy val `ts-reaktive-testkit-assertj` = project
 
 lazy val `ts-reaktive-akka` = project
   .settings(commonSettings: _*)
+  .dependsOn(`ts-reaktive-testkit` % "test")
 
 lazy val `ts-reaktive-marshal` = project
   .settings(projectSettings: _*)
