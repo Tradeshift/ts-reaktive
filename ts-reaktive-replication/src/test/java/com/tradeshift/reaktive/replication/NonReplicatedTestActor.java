@@ -23,7 +23,7 @@ import scala.PartialFunction;
  */
 public class NonReplicatedTestActor extends AbstractStatefulPersistentActor<TestCommand, TestEvent, TestActorState> {
     public static final PersistentActorSharding<TestCommand> sharding =
-		PersistentActorSharding.of(Props.create(NonReplicatedTestActor.class), "testactor", c -> toJava(c.getAggregateId()).toString());
+		PersistentActorSharding.of("testactor", Props.create(NonReplicatedTestActor.class), c -> toJava(c.getAggregateId()).toString());
 
     public NonReplicatedTestActor() {
         super(TestCommand.class, TestEvent.class);

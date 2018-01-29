@@ -19,7 +19,7 @@ import scala.PartialFunction;
 
 public class ReplicatedTestActor extends ReplicatedActor<TestCommand, TestEvent, TestActorState> {
     public static final ReplicatedActorSharding<TestCommand> sharding =
-        ReplicatedActorSharding.of(Props.create(ReplicatedTestActor.class), "testactor", c -> toJava(c.getAggregateId()).toString());
+        ReplicatedActorSharding.of("testactor", Props.create(ReplicatedTestActor.class), c -> toJava(c.getAggregateId()).toString());
 
     public ReplicatedTestActor() {
         super(TestCommand.class, TestEvent.class);
