@@ -1,6 +1,8 @@
 target
 bin
+.idea
 .classpath
+.DS_Store
 .project
 .settings
 .cache-main
