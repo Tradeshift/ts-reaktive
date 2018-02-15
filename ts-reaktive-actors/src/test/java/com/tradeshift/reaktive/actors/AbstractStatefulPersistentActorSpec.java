@@ -16,11 +16,9 @@ import com.tradeshift.reaktive.testkit.SharedActorSystemSpec;
 import akka.Done;
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import akka.japi.pf.PFBuilder;
 import akka.testkit.javadsl.TestKit;
 import io.vavr.collection.Seq;
 import io.vavr.collection.Vector;
-import scala.PartialFunction;
 import scala.concurrent.duration.Duration;
 
 @RunWith(CuppaRunner.class)
@@ -50,55 +48,51 @@ public class AbstractStatefulPersistentActorSpec extends SharedActorSystemSpec {
 
     public static class MyActor extends AbstractStatefulPersistentActor<String, MyEvent, MyState> {
         public static abstract class Handler extends AbstractCommandHandler<String, MyEvent, MyState> {
-            public Handler(MyState state, String cmd) {
-                super(state, cmd);
-            }
-
+            
             @Override
-            public Seq<MyEvent> getEventsToEmit() {
-                return Vector.of(new MyEvent(cmd));
-            }
+            protected Results<MyEvent> handle(MyState state, String cmd) {
+                return new Results<MyEvent>() {
+                    @Override
+                    public Seq<MyEvent> getEventsToEmit() {
+                        return Vector.of(new MyEvent(cmd));
+                    }
 
+                    @Override
+                    public Object getReply(Seq<MyEvent> emittedEvents, long lastSequenceNr) {
+                        return Done.getInstance();
+                    }                    
+                };
+            }
+        }
+        
+        public static abstract class AsyncHandler extends Handler {
             @Override
-            public Object getReply(Seq<MyEvent> emittedEvents, long lastSequenceNr) {
-                return Done.getInstance();
+            public CompletionStage<Results<MyEvent>> handleAsync(MyState state, String cmd) {
+                return CompletableFuture.supplyAsync(() -> {
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }                    
+                    return new Results<MyEvent>() {
+                        @Override
+                        public Seq<MyEvent> getEventsToEmit() {
+                            return Vector.of(new MyEvent(cmd));
+                        }
+
+                        @Override
+                        public Object getReply(Seq<MyEvent> emittedEvents, long lastSequenceNr) {
+                            return Done.getInstance();
+                        }                    
+                    };
+                });
             }
         }
         
         public MyActor() {
-            super(String.class, MyEvent.class);
+            super(String.class, MyEvent.class, new Handler1().orElse(new Handler2()).orElse(new HandlerA()).orElse(new HandlerB()));
         }
         
-        @Override
-        protected PartialFunction<String, Handler> applyCommand() {
-            return new PFBuilder<String, Handler>()
-                .match(String.class, c -> c.startsWith("1:"), c -> new Handler1(getState(), c))
-                .match(String.class, c -> c.startsWith("2:"), c -> new Handler2(getState(), c))
-                .build();
-        }
-        
-        @Override
-        protected PartialFunction<String, CompletionStage<? extends AbstractCommandHandler<String, MyEvent, MyState>>> applyCommandAsync() {
-            return applyCommandAsyncBuilder()
-                .match(String.class, c -> c.startsWith("a:"), c -> CompletableFuture.supplyAsync(() -> {
-                    try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    return new Handler1(getState(), c);
-                }))
-                .match(String.class, c -> c.startsWith("b:"), c -> CompletableFuture.supplyAsync(() -> {
-                    try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    return new Handler2(getState(), c);
-                }))
-                .build();
-        }
-
         @Override
         protected MyState initialState() {
             return new MyState("");
@@ -107,17 +101,32 @@ public class AbstractStatefulPersistentActorSpec extends SharedActorSystemSpec {
     }
     
     public static class Handler1 extends MyActor.Handler {
-        public Handler1(MyState state, String cmd) {
-            super(state, cmd);
+        @Override
+        public boolean canHandle(String cmd) {
+            return cmd.startsWith("1:");
         }
     }
     
     public static class Handler2 extends MyActor.Handler {
-        public Handler2(MyState state, String cmd) {
-            super(state, cmd);
+        @Override
+        public boolean canHandle(String cmd) {
+            return cmd.startsWith("2:");
         }
     }
     
+    public static class HandlerA extends MyActor.AsyncHandler {
+        @Override
+        public boolean canHandle(String cmd) {
+            return cmd.startsWith("a:");
+        }
+    }
+    
+    public static class HandlerB extends MyActor.AsyncHandler {
+        @Override
+        public boolean canHandle(String cmd) {
+            return cmd.startsWith("b:");
+        }
+    }
     {
         describe("AbstractStatefulPersistentActor.applyCommandAsync", () -> {
             it("should process several async commands concurrently, until their handlers are resolved", () -> {

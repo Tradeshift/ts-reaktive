@@ -3,6 +3,7 @@ package com.tradeshift.reaktive.replication.actors;
 import java.io.Serializable;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.tradeshift.reaktive.actors.AbstractCommandHandler;
 import com.tradeshift.reaktive.actors.AbstractState;
 import com.tradeshift.reaktive.actors.AbstractStatefulPersistentActor;
 import com.tradeshift.reaktive.protobuf.Query;
@@ -40,8 +41,8 @@ import static io.vavr.control.Option.some;
 public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends AbstractStatefulPersistentActor<C,E,S> {
     private final Replication replication = ReplicationId.INSTANCE.get(context().system());
     
-    public ReplicatedActor(Class<C> commandType, Class<E> eventType) {
-        super(commandType, eventType);
+    public ReplicatedActor(Class<C> commandType, Class<E> eventType, AbstractCommandHandler<C, E, S> handler) {
+        super(commandType, eventType, handler);
     }
     
     protected EventClassifier<E> classifier() {
