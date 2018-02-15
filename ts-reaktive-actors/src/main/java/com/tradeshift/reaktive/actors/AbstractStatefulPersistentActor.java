@@ -54,14 +54,14 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     protected final Class<E> eventType;
     protected final Class<C> commandType;
     private final String tagName;
-    private final AbstractCommandHandler<C,E,S> handlers;
+    private final CommandHandler<C,E,S> handlers;
     
     public static String getEventTag(Config config, Class<?> eventType) {
         ConfigObject tags = config.getConfig("ts-reaktive.actors.tags").root();
         return (String) tags.getOrDefault(eventType.getName(), ConfigValueFactory.fromAnyRef(eventType.getSimpleName())).unwrapped();
     }
     
-    public AbstractStatefulPersistentActor(Class<C> commandType, Class<E> eventType, AbstractCommandHandler<C,E,S> handlers) {
+    public AbstractStatefulPersistentActor(Class<C> commandType, Class<E> eventType, CommandHandler<C,E,S> handlers) {
         this.commandType = commandType;
         this.eventType = eventType;
         this.tagName = getEventTag(context().system().settings().config(), eventType);
@@ -77,8 +77,8 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     @Override
     public Receive createReceive() {
         return ReceiveBuilder.create()
-            .match(AbstractCommandHandler.Results.class, msg -> {
-                handleResults((AbstractCommandHandler.Results<E>) msg);
+            .match(CommandHandler.Results.class, msg -> {
+                handleResults((CommandHandler.Results<E>) msg);
             })
             .match(commandType, this::canHandleCommand, this::handleCommand)
             .matchEquals(ReceiveTimeout.getInstance(), msg -> passivate())
@@ -130,13 +130,13 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
         // FIXME We need to uphold command ordering for the same sender (just like akka does for normal messages).
         // Hence, we need to stash subsequent messages from the same sender, while one message from that sender is still
         // being piped.
-        pipe(handlers.handleAsync(state, cmd), context().dispatcher()).to(self(), sender());
+        pipe(handlers.handle(state, cmd), context().dispatcher()).to(self(), sender());
     }
 
     /**
      * Applies the results that came in from a handler, emitting any events, and responding to sender().
      */
-    protected void handleResults(AbstractCommandHandler.Results<E> results) {
+    protected void handleResults(CommandHandler.Results<E> results) {
         Option<Object> error = results.getValidationError(lastSequenceNr());
         if (error.isDefined()) {
             log.debug("  invalid: {}", error.get());

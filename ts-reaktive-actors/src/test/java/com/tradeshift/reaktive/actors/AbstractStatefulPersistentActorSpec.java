@@ -47,10 +47,9 @@ public class AbstractStatefulPersistentActorSpec extends SharedActorSystemSpec {
     }
 
     public static class MyActor extends AbstractStatefulPersistentActor<String, MyEvent, MyState> {
-        public static abstract class Handler extends AbstractCommandHandler<String, MyEvent, MyState> {
-            
+        public static abstract class Handler implements SynchronousCommandHandler<String, MyEvent, MyState> {
             @Override
-            protected Results<MyEvent> handle(MyState state, String cmd) {
+            public Results<MyEvent> handleSynchronously(MyState state, String cmd) {
                 return new Results<MyEvent>() {
                     @Override
                     public Seq<MyEvent> getEventsToEmit() {
@@ -65,9 +64,9 @@ public class AbstractStatefulPersistentActorSpec extends SharedActorSystemSpec {
             }
         }
         
-        public static abstract class AsyncHandler extends Handler {
+        public static abstract class AsyncHandler implements CommandHandler<String, MyEvent, MyState> {
             @Override
-            public CompletionStage<Results<MyEvent>> handleAsync(MyState state, String cmd) {
+            public CompletionStage<Results<MyEvent>> handle(MyState state, String cmd) {
                 return CompletableFuture.supplyAsync(() -> {
                     try {
                         Thread.sleep(2000);
