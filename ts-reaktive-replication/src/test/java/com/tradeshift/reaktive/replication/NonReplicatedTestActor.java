@@ -5,10 +5,10 @@ import static com.tradeshift.reaktive.protobuf.UUIDs.toJava;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
-import com.tradeshift.reaktive.actors.AbstractCommandHandler;
-import com.tradeshift.reaktive.actors.AbstractCommandHandler.Results;
+import com.tradeshift.reaktive.actors.CommandHandler.Results;
 import com.tradeshift.reaktive.actors.AbstractStatefulPersistentActor;
 import com.tradeshift.reaktive.actors.PersistentActorSharding;
+import com.tradeshift.reaktive.actors.SynchronousCommandHandler;
 import com.tradeshift.reaktive.replication.TestData.TestCommand;
 import com.tradeshift.reaktive.replication.TestData.TestEvent;
 
@@ -27,7 +27,7 @@ public class NonReplicatedTestActor extends AbstractStatefulPersistentActor<Test
     public static final PersistentActorSharding<TestCommand> sharding =
 		PersistentActorSharding.of("testactor", Props.create(NonReplicatedTestActor.class), c -> toJava(c.getAggregateId()).toString());
     
-    private static class Handler extends AbstractCommandHandler<TestCommand, TestEvent, TestActorState> {
+    private static class Handler implements SynchronousCommandHandler<TestCommand, TestEvent, TestActorState> {
         private final Predicate<TestCommand> canHandle;
         private final BiFunction<TestActorState, TestCommand, Results<TestEvent>> handle;
         
@@ -42,7 +42,7 @@ public class NonReplicatedTestActor extends AbstractStatefulPersistentActor<Test
         }
         
         @Override
-        protected Results<TestEvent> handle(TestActorState state, TestCommand cmd) {
+        public Results<TestEvent> handleSynchronously(TestActorState state, TestCommand cmd) {
             return handle.apply(state, cmd);
         }        
     }
