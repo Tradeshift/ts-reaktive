@@ -8,10 +8,58 @@ val kamonVersion = "0.6.6"
 val awsVersion = "1.11.150"
 val assertJ = "org.assertj" % "assertj-core" % "3.2.0"
 
+import sbtrelease._
+// we hide the existing definition for setReleaseVersion to replace it with our own
+import sbtrelease.ReleaseStateTransformations.{setReleaseVersion=>_,_}
+
+def setVersionOnly(selectVersion: Versions => String): ReleaseStep =  { st: State =>
+  val vs = st.get(ReleaseKeys.versions).getOrElse(sys.error("No versions are set! Was this release part executed before inquireVersions?"))
+  val selected = selectVersion(vs)
+
+  st.log.info("Setting version to '%s'." format selected)
+  val useGlobal =Project.extract(st).get(releaseUseGlobalVersion)
+  val versionStr = (if (useGlobal) globalVersionString else versionString) format selected
+
+  reapply(Seq(
+    if (useGlobal) version in ThisBuild := selected
+    else version := selected
+  ), st)
+}
+
+lazy val setReleaseVersion: ReleaseStep = setVersionOnly(_._1)
+
+releaseVersionBump := { System.getProperty("BUMP", "default").toLowerCase match {
+  case "major" => sbtrelease.Version.Bump.Major
+  case "minor" => sbtrelease.Version.Bump.Minor
+  case "bugfix" => sbtrelease.Version.Bump.Bugfix
+  case "default" => sbtrelease.Version.Bump.default
+}}
+    
+releaseVersion := { ver => Version(ver)
+  .map(_.withoutQualifier)
+  .map(_.bump(releaseVersionBump.value).string).getOrElse(versionFormatError)
+}
+
+val VersionRegex = "v([0-9]+.[0-9]+.[0-9]+)-?(.*)?".r
+
+releaseCrossBuild := true
+
+crossScalaVersions := Seq("2.11.11", "2.12.3")
+
+releaseProcess := Seq(
+  checkSnapshotDependencies,
+  inquireVersions,
+  setReleaseVersion,
+  runClean,
+  runTest, 
+  tagRelease,
+  publishArtifacts,
+  pushChanges
+)
+
 lazy val projectSettings = Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  version := "0.0.35-SNAPSHOT",
   scalaVersion := "2.12.3",
   crossScalaVersions := Seq("2.11.11", "2.12.3"),
   publishMavenStyle := true,
@@ -47,7 +95,15 @@ lazy val projectSettings = Seq(
     "com.github.tomakehurst" % "wiremock" % "1.58" % "test",
     "org.xmlunit" % "xmlunit-core" % "2.5.0" % "test",
     "org.xmlunit" % "xmlunit-matchers" % "2.5.0" % "test"
-  )
+  ),
+  git.useGitDescribe := true,
+  git.baseVersion := "0.1.0",
+  git.gitTagToVersionNumber := {
+    case VersionRegex(v,"") => Some(v)
+    case VersionRegex(v,"SNAPSHOT") => Some(s"$v-SNAPSHOT")  
+    case VersionRegex(v,s) => Some(s"$v-$s-SNAPSHOT")
+    case s => None
+  }  
 )
 
 lazy val commonSettings = projectSettings ++ Seq(
@@ -109,6 +165,7 @@ lazy val `ts-reaktive-java` = project
     // This project includes Java -> Scala bridge classes, so we do want the scala library.
     autoScalaLibrary := true
   )
+  .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-testkit` = project
   .settings(commonSettings: _*)
@@ -119,6 +176,7 @@ lazy val `ts-reaktive-testkit` = project
       akkaInMemory
     )
   )
+  .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-testkit-assertj` = project
   .settings(commonSettings: _*)
@@ -128,10 +186,12 @@ lazy val `ts-reaktive-testkit-assertj` = project
       assertJ
     )
   )  
+  .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-akka` = project
   .settings(commonSettings: _*)
   .dependsOn(`ts-reaktive-testkit` % "test")
+  .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-marshal` = project
   .settings(projectSettings: _*)
@@ -142,6 +202,7 @@ lazy val `ts-reaktive-marshal` = project
     )
   )
   .dependsOn(`ts-reaktive-java`)
+  .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-marshal-akka` = project
   .settings(commonSettings: _*)
@@ -152,11 +213,13 @@ lazy val `ts-reaktive-marshal-akka` = project
       "de.undercouch" % "actson" % "1.1.0"
     )
   )
+  .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-csv` = project
   .settings(commonSettings: _*)
   .settings(javaSettings: _*)
   .dependsOn(`ts-reaktive-marshal`, `ts-reaktive-akka`, `ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test", `ts-reaktive-testkit-assertj` % "test")
+  .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-marshal-xerces` = project
   .settings(commonSettings: _*)
@@ -167,6 +230,7 @@ lazy val `ts-reaktive-marshal-xerces` = project
     )
   )
   .dependsOn(`ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test", `ts-reaktive-testkit-assertj` % "test")
+  .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-cassandra` = project
   .settings(commonSettings: _*)
@@ -177,9 +241,11 @@ lazy val `ts-reaktive-cassandra` = project
     )
   )
   .dependsOn(`ts-reaktive-akka`, `ts-reaktive-testkit-assertj` % "test")
+  .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-actors` = project
   .enablePlugins(ProtobufPlugin)
+  .enablePlugins(GitVersioning)
   .settings(commonSettings: _*)
   .settings(javaSettings: _*)
   .settings(
@@ -190,12 +256,14 @@ lazy val `ts-reaktive-actors` = project
 
 lazy val `ts-reaktive-replication` = project
   .enablePlugins(ProtobufPlugin)
+  .enablePlugins(GitVersioning)
   .settings(commonSettings: _*)
   .settings(javaSettings: _*)
   .dependsOn(`ts-reaktive-actors`, `ts-reaktive-actors` % ProtobufConfig.name, `ts-reaktive-cassandra`, `ts-reaktive-testkit` % "test")
 
 lazy val `ts-reaktive-backup` = project
   .enablePlugins(ProtobufPlugin)
+  .enablePlugins(GitVersioning)
   .settings(commonSettings: _*)
   .settings(javaSettings: _*)
   .settings(
@@ -213,26 +281,32 @@ lazy val `ts-reaktive-ssl` = project
       "org.bouncycastle" % "bcpkix-jdk15on" % "1.54" // for PEMReader, in order to read PEM encoded RSA keys
     )
   )
+  .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-kamon-log4j` = project
   .settings(commonSettings: _*)
   .settings(kamonSettings: _*)
+  .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-kamon-akka` = project
   .settings(commonSettings: _*)
   .settings(kamonSettings: _*)
+  .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-kamon-akka-client` = project
   .settings(commonSettings: _*)
   .settings(kamonSettings: _*)
+  .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-kamon-akka-cluster` = project
   .settings(commonSettings: _*)
   .settings(kamonSettings: _*)
+  .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-aws` = project
   .settings(commonSettings: _*)
   .settings(awsSettings: _*)
+  .enablePlugins(GitVersioning)
 
 lazy val root = (project in file(".")).settings(publish := { }, publishLocal := { }).aggregate(
   `ts-reaktive-akka`,
