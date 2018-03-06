@@ -20,6 +20,7 @@ import akka.japi.pf.ReceiveBuilder;
 import akka.persistence.AbstractPersistentActor;
 import akka.persistence.SnapshotOffer;
 import akka.persistence.journal.Tagged;
+import akka.actor.Status.Failure;
 import io.vavr.collection.Seq;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
@@ -79,6 +80,10 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
         return ReceiveBuilder.create()
             .match(CommandHandler.Results.class, msg -> {
                 handleResults((CommandHandler.Results<E>) msg);
+            })
+            .match(Failure.class, f -> {
+                log.error(f.cause(), "A future piped to this actor has failed, rethrowing.");
+                throw (f.cause() instanceof Exception) ? Exception.class.cast(f.cause()) : new Exception(f.cause());
             })
             .match(commandType, this::canHandleCommand, this::handleCommand)
             .matchEquals(ReceiveTimeout.getInstance(), msg -> passivate())
