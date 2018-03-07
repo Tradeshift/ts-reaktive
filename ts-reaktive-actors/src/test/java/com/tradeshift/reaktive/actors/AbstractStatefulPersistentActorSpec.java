@@ -88,8 +88,19 @@ public class AbstractStatefulPersistentActorSpec extends SharedActorSystemSpec {
             }
         }
         
+        public static class FailingHandler implements CommandHandler<String, MyEvent, MyState> {
+            public boolean canHandle(String cmd) {
+                return cmd.equals("fail");
+            }
+
+            @Override
+            public CompletionStage<Results<MyEvent>> handle(MyState state, String cmd) {
+                return CompletableFuture.supplyAsync(() -> { throw new RuntimeException("Simulated failure"); });
+            }
+        }
+
         public MyActor() {
-            super(String.class, MyEvent.class, new Handler1().orElse(new Handler2()).orElse(new HandlerA()).orElse(new HandlerB()));
+            super(String.class, MyEvent.class, new Handler1().orElse(new Handler2()).orElse(new HandlerA()).orElse(new HandlerB()).orElse(new FailingHandler()));
         }
         
         @Override
@@ -142,6 +153,14 @@ public class AbstractStatefulPersistentActorSpec extends SharedActorSystemSpec {
                 // After 2000ms, but before 4000ms since they operate concurrently, we should get 2 replies.
                 probe.expectMsgEquals(Duration.create(3000, TimeUnit.MILLISECONDS), Done.getInstance());
                 probe.expectMsgEquals(Duration.create(500, TimeUnit.MILLISECONDS), Done.getInstance());
+            });
+
+            it("should by default fail when one of its handlers fails asynchronously", () -> {
+                ActorRef actor = system.actorOf(Props.create(MyActor.class));
+                TestKit probe = new TestKit(system);
+                probe.send(actor, "fail");
+                probe.watch(actor);
+                probe.expectTerminated(actor);
             });
         });
     }
