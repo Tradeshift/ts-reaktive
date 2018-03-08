@@ -1,8 +1,8 @@
 
 scalaVersion := "2.12.3" // just for the root
 
-val akkaVersion = "2.5.4"
-val akkaHttpVersion = "10.0.10"
+val akkaVersion = "2.5.9"
+val akkaHttpVersion = "10.0.11"
 val akkaInMemory = "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.5.1.1"
 val kamonVersion = "0.6.6"
 val awsVersion = "1.11.150"
@@ -91,7 +91,7 @@ lazy val projectSettings = Seq(
     "org.forgerock.cuppa" % "cuppa" % "1.3.1" % "test",
     "org.forgerock.cuppa" % "cuppa-junit" % "1.3.1" % "test",
     "org.apache.cassandra" % "cassandra-all" % "3.9" % "test" exclude("ch.qos.logback", "logback-classic"),
-    "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % "0.55" % "test",
+    "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % "0.83" % "test",
     "com.github.tomakehurst" % "wiremock" % "1.58" % "test",
     "org.xmlunit" % "xmlunit-core" % "2.5.0" % "test",
     "org.xmlunit" % "xmlunit-matchers" % "2.5.0" % "test"
@@ -118,8 +118,7 @@ lazy val commonSettings = projectSettings ++ Seq(
       "com.typesafe.akka" %% "akka-persistence-query" % akkaVersion,
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-jackson" % akkaHttpVersion,
-      // Don't upgrade to 0.55 until https://github.com/akka/akka-persistence-cassandra/issues/230 is resolved
-      "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.54",
+      "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.83",
       "org.slf4j" % "slf4j-log4j12" % "1.7.12"
     )
   }  
