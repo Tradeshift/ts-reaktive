@@ -15,7 +15,7 @@
   <logger name="Sigar"><level value="WARN"/></logger>
   <logger name="org.apache.http"><level value="WARN"/></logger>
   <logger name="org.mortbay"><level value="WARN"/></logger>
-  <logger name="akka"><level value="DEBUG"/></logger>
+  <logger name="akka"><level value="INFO"/></logger>
   <logger name="akka.io"><level value="INFO"/></logger>
   <logger name="akka.cluster.sharding"><level value="WARN"/></logger>
   <logger name="akka.persistence.cassandra.query.EventsByTagPublisher"><level value="INFO"/></logger>
