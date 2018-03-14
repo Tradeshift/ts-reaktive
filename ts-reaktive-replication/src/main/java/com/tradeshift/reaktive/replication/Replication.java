@@ -1,8 +1,9 @@
 package com.tradeshift.reaktive.replication;
 
+import static io.vavr.control.Option.none;
+import static io.vavr.control.Option.some;
+
 import java.lang.reflect.Constructor;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -10,53 +11,56 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.tradeshift.reaktive.actors.AbstractStatefulPersistentActor;
+import com.tradeshift.reaktive.akka.SharedActorMaterializer;
 import com.tradeshift.reaktive.protobuf.EventEnvelopeSerializer;
+import com.tradeshift.reaktive.replication.actors.ReplicatedActorSharding;
 import com.tradeshift.reaktive.replication.io.WebSocketDataCenterClient;
 import com.tradeshift.reaktive.replication.io.WebSocketDataCenterServer;
+import com.tradeshift.reaktive.ssl.SSLFactory;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigObject;
 import com.typesafe.config.ConfigValue;
 
+import akka.Done;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Extension;
-import akka.http.javadsl.ConnectHttp;
 import akka.http.javadsl.ConnectionContext;
-import akka.http.javadsl.Http;
-import akka.http.javadsl.ServerBinding;
 import akka.persistence.query.PersistenceQuery;
 import akka.persistence.query.javadsl.CurrentEventsByPersistenceIdQuery;
 import akka.persistence.query.javadsl.EventsByTagQuery;
 import akka.persistence.query.javadsl.ReadJournal;
 import akka.stream.ActorMaterializer;
+import io.vavr.collection.Map;
 import io.vavr.collection.Seq;
 import io.vavr.collection.Vector;
+import io.vavr.control.Option;
 
 public class Replication implements Extension {
     private static final Logger log = LoggerFactory.getLogger(Replication.class);
+    private static final ConcurrentHashMap<Class<?>, EventClassifier<?>> classifiers = new ConcurrentHashMap<>();
     
     public static Replication get(ActorSystem system) {
         return ReplicationId.INSTANCE.get(system);
     }
     
-    private final Map<String,CompletionStage<Void>> started = new HashMap<>();
     private final ActorSystem system;
     private final Config config;
     
+    private Option<CompletionStage<Done>> started = none();
+    
     public Replication(ActorSystem system) {
         this.system = system;
-        this.config = system.settings().config();
+        this.config = system.settings().config().getConfig("ts-reaktive.replication");
     }
     
     public String getLocalDataCenterName() {
-        return config.getString("ts-reaktive.replication.local-datacenter.name");
+        return config.getString("local-datacenter.name");
     }
     
-    private static final Map<Class<?>, EventClassifier<?>> classifiers = new ConcurrentHashMap<>();
     @SuppressWarnings("unchecked")
     public <E> EventClassifier<E> getEventClassifier(Class<E> eventType) {
         return (EventClassifier<E>) classifiers.computeIfAbsent(eventType, t -> {
-            ConfigValue value = config.getConfig("ts-reaktive.replication.event-classifiers").root().get(eventType.getName());
+            ConfigValue value = config.getConfig("event-classifiers").root().get(eventType.getName());
             if (value == null) {
                 throw new IllegalArgumentException("You must configure ts-reaktive.replication.event-classifiers.\"" +
                     eventType.getName() + "\" with an EventClassifier implementation.");
@@ -74,27 +78,48 @@ public class Replication implements Extension {
     }
     
     public <E> String getEventTag(Class<E> eventType) {
-        return AbstractStatefulPersistentActor.getEventTag(config, eventType);
+        return AbstractStatefulPersistentActor.getEventTag(system.settings().config(), eventType);
     }
 
-    public CompletionStage<Void> start(Class<?> eventType, ActorRef shardRegion) {
-        Config config = this.config.getConfig("ts-reaktive.replication");
-        final String eventTag = getEventTag(eventType);
+    /**
+     * Starts the replication subsystem for the given event types and ShardRegion actors. 
+     * This method must only be invoked once per actor system; further invocations have no effect.
+     * @param eventTypesAndShardRegions Event types and their shard region actors (started by {@link ReplicatedActorSharding})
+     */
+    public synchronized CompletionStage<Done> start(Map<Class<?>,ActorRef> eventTypesAndShardRegions) {
+        if (started.isDefined()) {
+            return started.get();
+        }
+        log.info("Starting replication for event types: {}", eventTypesAndShardRegions.keySet().map(c -> c.getSimpleName()));
+            
+        // will throw exception if the classifier is undefined, so we get an early error
+        eventTypesAndShardRegions.keySet().forEach(this::getEventClassifier);
+            
+        CompletionStage<Done> serverStarted = new WebSocketDataCenterServer(system, eventTypesAndShardRegions.mapKeys(this::getEventTag))
+            .getBinding()
+            .thenApply(b -> Done.getInstance());
+
+        ActorMaterializer materializer = SharedActorMaterializer.get(system);
         
-        synchronized(started) {
-            if (started.containsKey(eventTag)) return started.get(eventTag);
+        VisibilityCassandraSession session = new VisibilityCassandraSession(system, "visibilitySession");
+        VisibilityRepository visibilityRepo = new VisibilityRepository(session);
+        EventEnvelopeSerializer serializer = new EventEnvelopeSerializer(system);
+        
+        // We consider ourselves started when the HTTP binding succeeds, and we've successfully connected to cassandra.
+        // The below client flows just start some child actors, so there's nothing to wait on.
+        started = some(session.getUnderlying().thenCompose(sess -> serverStarted));
+        
+        eventTypesAndShardRegions.forEach((eventType, shardRegion) -> {
+            String eventTag = getEventTag(eventType);
+            Config remoteDatacenters = config.getConfig("remote-datacenters");
             
-            getEventClassifier(eventType); // will throw exception if the classifier is undefined, so we get an early error
-            
-            ActorMaterializer materializer = ActorMaterializer.create(system);
-            Config tagConfig = config.hasPath(eventTag) ? config.getConfig(eventTag).withFallback(config) : config;
-            EventEnvelopeSerializer serializer = new EventEnvelopeSerializer(system);
-            
-            Seq<DataCenter> remotes = Vector.ofAll(tagConfig.getConfig("remote-datacenters").root().entrySet()).map(e -> {
-                String name = e.getKey();
-                Config remote = ((ConfigObject) e.getValue()).toConfig();
-                // FIXME add config options for ConnectionContext
-                return new WebSocketDataCenterClient(system, ConnectionContext.noEncryption(), name, remote.getString("url"), serializer);
+            Seq<DataCenter> remotes = Vector.ofAll(remoteDatacenters.root().keySet()).map(name -> {
+                Config dcConfig = remoteDatacenters.getConfig(name);
+                String url = dcConfig.getString("url") + "/events/" + eventTag;
+                ConnectionContext connOpts = SSLFactory.createSSLContext(dcConfig.withFallback(config.getConfig("client")))
+                        .map(sslCtx -> (ConnectionContext) ConnectionContext.https(sslCtx))
+                        .getOrElse(ConnectionContext.noEncryption());
+                return new WebSocketDataCenterClient(system, connOpts, name, url, serializer);
             });
             
             DataCenterRepository dataCenterRepository = new DataCenterRepository() {
@@ -109,28 +134,13 @@ public class Replication implements Extension {
                 }
             };
             
-            VisibilityCassandraSession session = new VisibilityCassandraSession(system, "visibilitySession");
-            VisibilityRepository visibilityRepo = new VisibilityRepository(session);
             ReadJournal journal = PersistenceQuery.get(system).getReadJournalFor(ReadJournal.class, config.getString("read-journal-plugin-id"));
             
             DataCenterForwarder.startAll(system, materializer, dataCenterRepository, visibilityRepo, eventType,
                 (EventsByTagQuery)journal, (CurrentEventsByPersistenceIdQuery) journal);
-            
-            WebSocketDataCenterServer server = new WebSocketDataCenterServer(config.getConfig("server"), shardRegion);
-            final int port = tagConfig.getInt("local-datacenter.port");
-            final String host = tagConfig.getString("local-datacenter.host");
-            log.debug("Binding to {}:{}", host, port);
-            
-            CompletionStage<ServerBinding> bind = Http.get(system).bindAndHandle(server.route().flow(system, materializer),
-                ConnectHttp.toHost(host, port), materializer);
-            
-            // The returned future completes when both the HTTP binding is ready, and the cassandra visibility session has initialized.
-            started.put(eventTag, bind.thenCompose(binding -> session.getUnderlying().thenApply(s -> binding)).thenApply(b -> {
-                log.info("Listening on {}", b.localAddress());
-                return null;
-            }));
-            return started.get(eventTag);
-        }
+        });
+        
+        return started.get();
     }
 
 }
