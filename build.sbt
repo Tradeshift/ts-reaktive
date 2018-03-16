@@ -158,7 +158,7 @@ lazy val javaSettings = Seq(
 )
 
 lazy val `ts-reaktive-java` = project
-  .settings(projectSettings: _*)
+  .settings(commonSettings: _*)
   .settings(javaSettings: _*)
   .settings(
     // This project includes Java -> Scala bridge classes, so we do want the scala library.
@@ -239,7 +239,7 @@ lazy val `ts-reaktive-cassandra` = project
       "com.readytalk" % "metrics3-statsd" % "4.1.0" // to log cassandra (codahale / dropwizard) metrics into statsd
     )
   )
-  .dependsOn(`ts-reaktive-akka`, `ts-reaktive-testkit-assertj` % "test")
+  .dependsOn(`ts-reaktive-java`, `ts-reaktive-akka`, `ts-reaktive-testkit-assertj` % "test")
   .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-actors` = project
