@@ -98,7 +98,7 @@ public class HttpFlow {
             }
             HttpRequest rq = HttpRequest.create().withMethod(method).withUri(uri).addHeaders(Arrays.asList(headers)).withEntity(entity);
             
-            return http.singleRequest(rq, materializer).thenApply(resp -> {
+            return http.singleRequest(rq).thenApply(resp -> {
                 if (isSuccess.test(resp)) {
                     resp.entity().getDataBytes()
                         .runWith(Sink.fromSubscriber(pair.second()), materializer);

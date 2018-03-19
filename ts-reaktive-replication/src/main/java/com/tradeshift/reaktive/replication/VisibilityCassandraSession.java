@@ -7,7 +7,7 @@ import com.typesafe.config.Config;
 import akka.actor.ActorSystem;
 import akka.persistence.cassandra.CassandraPluginConfig;
 import io.vavr.collection.Vector;
-import scala.collection.JavaConversions;
+import scala.collection.JavaConverters;
 
 public class VisibilityCassandraSession extends CassandraSession {
     private final String keyspace;
@@ -25,7 +25,7 @@ public class VisibilityCassandraSession extends CassandraSession {
         String replStrategy = CassandraPluginConfig.getReplicationStrategy(
             config.getString("replication-strategy"),
             config.getInt("replication-factor"),
-            JavaConversions.asScalaBuffer(config.getStringList("data-center-replication-factors")));
+            JavaConverters.asScalaBuffer(config.getStringList("data-center-replication-factors")));
         String keyspace = config.getString("keyspace");
 
         return Vector.of(

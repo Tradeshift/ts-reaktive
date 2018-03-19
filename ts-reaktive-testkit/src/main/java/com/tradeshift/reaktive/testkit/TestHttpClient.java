@@ -131,7 +131,7 @@ public class TestHttpClient {
     private HttpResponse send(HttpRequest request) {
         try {
             return Http.get(system)
-                .singleRequest(request, materializer)
+                .singleRequest(request)
                 .toCompletableFuture()
                 .get(timeout, TimeUnit.MILLISECONDS);
         } catch (ExecutionException x) {

@@ -42,7 +42,7 @@ public class ThrottleDirectiveSpec extends SharedActorSystemSpec {
     private HttpResponse makeRequest(String user) {
         HttpResponse response;
         try {
-            response = http.singleRequest(HttpRequest.GET("http://localhost:8173?user=" + user), materializer).toCompletableFuture().get(2, TimeUnit.SECONDS);
+            response = http.singleRequest(HttpRequest.GET("http://localhost:8173?user=" + user)).toCompletableFuture().get(2, TimeUnit.SECONDS);
             response.discardEntityBytes(materializer);
             return response;
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
