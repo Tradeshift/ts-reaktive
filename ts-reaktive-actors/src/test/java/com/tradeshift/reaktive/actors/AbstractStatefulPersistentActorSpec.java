@@ -139,7 +139,7 @@ public class AbstractStatefulPersistentActorSpec extends SharedActorSystemSpec {
     }
     {
         describe("AbstractStatefulPersistentActor.applyCommandAsync", () -> {
-            it("should process several async commands concurrently, until their handlers are resolved", () -> {
+            it("should process several async commands in sequence, waiting for their handlers to be resolved", () -> {
                 ActorRef actor = system.actorOf(Props.create(MyActor.class));
                 TestKit probe = new TestKit(system);
                 // Send a synchronous message first, to ensure persistence has initialized successfully and doesn't affect timing.
@@ -150,9 +150,12 @@ public class AbstractStatefulPersistentActorSpec extends SharedActorSystemSpec {
                 probe.send(actor, "a:test1");
                 probe.send(actor, "b:test2");
                 
-                // After 2000ms, but before 4000ms since they operate concurrently, we should get 2 replies.
+                // Receive the first reply after about 2000 ms
                 probe.expectMsgEquals(Duration.create(3000, TimeUnit.MILLISECONDS), Done.getInstance());
-                probe.expectMsgEquals(Duration.create(500, TimeUnit.MILLISECONDS), Done.getInstance());
+                // Even after 3000ms, the second reply shouldn't have come in (it's also sleeping its own 2 seconds)
+                probe.expectNoMsg(Duration.create(100, TimeUnit.MILLISECONDS));
+                // But eventually, the reply should make it.
+                probe.expectMsgEquals(Done.getInstance());
             });
 
             it("should by default fail when one of its handlers fails asynchronously", () -> {
