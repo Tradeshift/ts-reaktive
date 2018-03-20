@@ -5,7 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 
 public class ListenableFutures {
-    
+
     /**
      * Turns a google ListenableFuture into a Java 7 CompletableFuture
      */
