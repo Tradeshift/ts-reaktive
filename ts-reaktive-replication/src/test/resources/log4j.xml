@@ -17,12 +17,15 @@
   <logger name="org.mortbay"><level value="WARN"/></logger>
   <logger name="akka"><level value="INFO"/></logger>
   <logger name="akka.io"><level value="INFO"/></logger>
-  <logger name="akka.cluster.sharding"><level value="WARN"/></logger>
-  <logger name="akka.persistence.cassandra.query.EventsByTagPublisher"><level value="INFO"/></logger>
+  <logger name="akka.cluster.sharding"><level value="WARN"/></logger>  
+  <logger name="akka.persistence.cassandra"><level value="FATAL"/></logger>
   <logger name="com.tradeshift.reaktive.cassandra.ResultSetActorPublisher"><level value="INFO"/></logger>
   <logger name="com.tradeshift.reaktive.replication.TestActor"><level value="ERROR"/></logger>
-  <logger name="com.tradeshift.reaktive.replication.DataCenterForwarder"><level value="ERROR"/></logger>
-  
+  <logger name="com.codahale.metrics"><level value="WARN"/></logger>
+  <logger name="com.tradeshift.reaktive.replication.DataCenterForwarder"><level value="FATAL"/></logger>
+  <logger name="akka.actor.OneForOneStrategy"><level value="FATAL"/></logger>
+  <logger name="akka.actor.RepointableActorRef"><level value="FATAL"/></logger>
+   
   <!-- These are to get rid of the "Column family ID mismatch" errors during test startup -->
   <logger name="org.apache.cassandra.service.CassandraDaemon"><level value="FATAL"/></logger>
   <logger name="org.apache.cassandra.transport.Message"><level value="FATAL"/></logger>

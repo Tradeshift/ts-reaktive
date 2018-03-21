@@ -1,5 +1,8 @@
 package com.tradeshift.reaktive.ssl;
 
+import static io.vavr.control.Option.none;
+import static io.vavr.control.Option.some;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -26,6 +29,10 @@ import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+
+import com.typesafe.config.Config;
+
+import io.vavr.control.Option;
 
 /**
  * Factory methods to create SSL and JSE configuration objects
@@ -117,5 +124,33 @@ public class SSLFactory {
         tmf.init(ks);
         sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), SecureRandom.getInstance("SHA1PRNG"));
         return sslContext;
+    }
+    
+    /**
+     * Tries to build a SSLContext from [config], by reading "key" (in PEM format)
+     * and "certificateChain" (in concatenated PEM format).
+     * @return Some(SSLContext) if the configuration options contain a valid key and certificate chain,
+     *         None otherwise.
+     * @throw IllegalArgumentException if the given key and/or chain could not be used.
+     */
+    public static Option<SSLContext> createSSLContext(Config config) {
+        String key = getStringOrEmpty(config, "key");
+        String certificateChain = getStringOrEmpty(config, "certificateChain");
+        if (key.isEmpty() || certificateChain.isEmpty()) {
+            return none();
+        }
+        
+        try {
+            char[] password = "foo".toCharArray(); // used only in-memory, so this password is irrelevant
+            KeyStore keyStore = SSLFactory.createKeystore(password, key, certificateChain);
+            SSLContext sslContext = SSLFactory.createSSLContext(keyStore, password);            
+            return some(sslContext);
+        } catch (KeyStoreException | CertificateException | NoSuchAlgorithmException | KeyManagementException | UnrecoverableKeyException e) {
+            throw new IllegalArgumentException("Could not use the configured key or certificate chain", e);
+        }
+    }
+
+    private static String getStringOrEmpty(Config config, String path) {
+        return config.hasPath(path) ? config.getString(path) : "";
     }
 }

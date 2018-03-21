@@ -258,7 +258,7 @@ lazy val `ts-reaktive-replication` = project
   .enablePlugins(GitVersioning)
   .settings(commonSettings: _*)
   .settings(javaSettings: _*)
-  .dependsOn(`ts-reaktive-actors`, `ts-reaktive-actors` % ProtobufConfig.name, `ts-reaktive-cassandra`, `ts-reaktive-testkit` % "test")
+  .dependsOn(`ts-reaktive-actors`, `ts-reaktive-actors` % ProtobufConfig.name, `ts-reaktive-cassandra`, `ts-reaktive-ssl`, `ts-reaktive-testkit` % "test")
 
 lazy val `ts-reaktive-backup` = project
   .enablePlugins(ProtobufPlugin)

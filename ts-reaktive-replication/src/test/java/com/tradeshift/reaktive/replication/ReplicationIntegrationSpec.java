@@ -52,14 +52,14 @@ public class ReplicationIntegrationSpec {
                 of("clustering.port", clusteringPort)
                 .put("clustering.seed-port", clusteringPort)
                 .put("ts-reaktive.replication.local-datacenter.name", name)
-                .put("ts-reaktive.replication.local-datacenter.host", "localhost")
-                .put("ts-reaktive.replication.local-datacenter.port", httpPort)
+                .put("ts-reaktive.replication.server.host", "localhost")
+                .put("ts-reaktive.replication.server.port", httpPort)
                 .put("ts-reaktive.replication.cassandra.keyspace", "replication_" + name)
                 .put("cassandra-journal.port", CassandraLauncher.randomPort())
                 .put("clustering.name", name)
                 .put("cassandra-journal.keyspace", name) // each datacenter is in its own cassandra keyspace
                 .merge(
-                    HashMap.ofEntries(remotes.map(r -> Tuple.of("ts-reaktive.replication.remote-datacenters." + r._1 + ".url", "ws://localhost:" + r._2)))
+                    HashMap.ofEntries(remotes.map(r -> Tuple.of("ts-reaktive.replication.remote-datacenters." + r._1 + ".url", "wss://localhost:" + r._2)))
                 )
                 .toJavaMap()
                 ).withFallback(ConfigFactory.parseResources("com/tradeshift/reaktive/replication/ReplicationIntegrationSpec.conf")).withFallback(ConfigFactory.defaultReference()).resolve();
@@ -70,9 +70,9 @@ public class ReplicationIntegrationSpec {
             new AkkaPersistence(system).awaitPersistenceInit();
             
             try {
-                System.out.println("*** AWAITING");
-                Replication.get(system).start(TestEvent.class, shardRegion).toCompletableFuture().get(30, TimeUnit.SECONDS);
-                System.out.println("*** DONE");
+                System.out.println("*** AWAITING (" + name + ")");
+                Replication.get(system).start(HashMap.of(TestEvent.class, shardRegion)).toCompletableFuture().get(30, TimeUnit.SECONDS);
+                System.out.println("*** DONE (" + name + ")");
             } catch (InterruptedException | ExecutionException | TimeoutException e) {
                 throw new RuntimeException(e);
             }

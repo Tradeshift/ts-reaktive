@@ -34,9 +34,9 @@ public class WebSocketDataCenterClient implements DataCenter {
     
     /**
      * Creates a new WebSocketDataCenterClient
-     * @param name Name of the data center
+     * @param name Name of the remote data center
      * @param connectionContext Connection context to apply. Any SSL client certificate should be configured here.
-     * @param uri Target URL that the remote datacenter is listening on.
+     * @param uri Target URL that the remote datacenter server is listening on ("wss://host:port/events/eventType")
      */
     public WebSocketDataCenterClient(ActorSystem system, ConnectionContext connectionContext, String name, String uri, EventEnvelopeSerializer serializer) {
         this.system = system;
