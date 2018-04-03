@@ -50,6 +50,7 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
     protected final LoggingAdapter log = Logging.getLogger(context().system(), this);
     
     private S state = initialState();
+    private boolean idle = true;
 
     //IDEA: We can save memory per actor by pushing these fields down into a type class, since the fields have the same value for every type of actor...
     protected final Class<E> eventType;
@@ -74,18 +75,32 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
         return context().system().settings().config().getDuration("ts-reaktive.actors.passivate-timeout");
     }
 
-    @SuppressWarnings({"unchecked"})
+    @SuppressWarnings("unchecked")
     @Override
     public Receive createReceive() {
         return ReceiveBuilder.create()
+            .match(commandType, msg -> canHandleCommand(msg) && idle, msg -> {
+                handleCommand(msg);
+                idle = false;
+            })
+            .match(commandType, msg -> canHandleCommand(msg), msg -> {
+                // we're awaiting results from another command, so let's wait with this one
+                stash();
+            })
+            .match(CommandHandler.Results.class, msg -> idle, msg -> {
+                // If results happen to come in while we're idle, let's accept them anyways
+                log.warning("Received unexpected Results object when idle, but accepting anyways: {}", msg);
+                handleResults((CommandHandler.Results<E>) msg);
+            })
             .match(CommandHandler.Results.class, msg -> {
                 handleResults((CommandHandler.Results<E>) msg);
+                unstashAll();
+                idle = true;
             })
             .match(Failure.class, f -> {
                 log.error(f.cause(), "A future piped to this actor has failed, rethrowing.");
                 throw (f.cause() instanceof Exception) ? Exception.class.cast(f.cause()) : new Exception(f.cause());
             })
-            .match(commandType, this::canHandleCommand, this::handleCommand)
             .matchEquals(ReceiveTimeout.getInstance(), msg -> passivate())
             .match(Stop.class, msg -> context().stop(self()))
             .build();
