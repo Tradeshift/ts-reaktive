@@ -1,13 +1,14 @@
 package com.tradeshift.reaktive.replication;
 
 
+import static scala.collection.JavaConverters.asScalaBufferConverter;
+
 import com.tradeshift.reaktive.cassandra.CassandraSession;
 import com.typesafe.config.Config;
 
 import akka.actor.ActorSystem;
 import akka.persistence.cassandra.CassandraPluginConfig;
 import io.vavr.collection.Vector;
-import scala.collection.JavaConverters;
 
 public class VisibilityCassandraSession extends CassandraSession {
     private final String keyspace;
@@ -25,7 +26,7 @@ public class VisibilityCassandraSession extends CassandraSession {
         String replStrategy = CassandraPluginConfig.getReplicationStrategy(
             config.getString("replication-strategy"),
             config.getInt("replication-factor"),
-            JavaConverters.asScalaBuffer(config.getStringList("data-center-replication-factors")));
+            asScalaBufferConverter(config.getStringList("data-center-replication-factors")).asScala());
         String keyspace = config.getString("keyspace");
 
         return Vector.of(
