@@ -21,6 +21,8 @@
   <logger name="akka.persistence.cassandra"><level value="FATAL"/></logger>
   <logger name="com.tradeshift.reaktive.cassandra.ResultSetActorPublisher"><level value="INFO"/></logger>
   <logger name="com.tradeshift.reaktive.replication.TestActor"><level value="ERROR"/></logger>
+  <logger name="com.tradeshift.reaktive.replication.ReplicatedTestActor"><level value="ERROR"/></logger>
+  <logger name="com.typesafe.sslconfig"><level value="INFO"/></logger>
   <logger name="com.codahale.metrics"><level value="WARN"/></logger>
   <logger name="com.tradeshift.reaktive.replication.DataCenterForwarder"><level value="FATAL"/></logger>
   <logger name="akka.actor.OneForOneStrategy"><level value="FATAL"/></logger>
