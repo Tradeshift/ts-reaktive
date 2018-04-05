@@ -2,6 +2,7 @@ package com.tradeshift.reaktive.replication;
 
 import static akka.pattern.PatternsCS.ask;
 import static com.tradeshift.reaktive.protobuf.UUIDs.toProtobuf;
+import static com.tradeshift.reaktive.testkit.Await.within;
 import static com.tradeshift.reaktive.testkit.Await.eventuallyDo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.forgerock.cuppa.Cuppa.describe;
@@ -123,12 +124,12 @@ public class ReplicationIntegrationSpec {
             assertThat(dc2.read(id1)).isNull();
             dc1.write(id1, "dc:" + dc2.getName());
             dc1.write(id1, "onwards");
-            eventuallyDo(() -> {
+            within(50, TimeUnit.SECONDS).eventuallyDo(() -> {
                 assertThat(dc2.read(id1)).isEqualTo("onwards");
             });
             
             dc1.write(id1, "moar");
-            eventuallyDo(() -> {
+            within(50, TimeUnit.SECONDS).eventuallyDo(() -> {
                 assertThat(dc2.read(id1)).isEqualTo("moar");
             });
             
@@ -139,7 +140,7 @@ public class ReplicationIntegrationSpec {
             dc1.write(id2, "dc:*");
             dc1.write(id2, "world");
             
-            eventuallyDo(() -> {
+            within(50, TimeUnit.SECONDS).eventuallyDo(() -> {
                 assertThat(dc2.read(id2)).isEqualTo("world");
             });
         });
@@ -173,13 +174,13 @@ public class ReplicationIntegrationSpec {
                 dc1.write(id, "onwards");                
             }
             
-            eventuallyDo(() -> {
+            within(50, TimeUnit.SECONDS).eventuallyDo(() -> {
                 assertThat(dc2.read(ids.get(0))).isEqualTo("onwards");
                 assertThat(dc2.read(ids.get(split - 1))).isEqualTo("onwards");
             });
             
             dc1.write(ids.get(1), "moar");
-            eventuallyDo(() -> {
+            within(50, TimeUnit.SECONDS).eventuallyDo(() -> {
                 assertThat(dc2.read(ids.get(1))).isEqualTo("moar");
             });
         });
