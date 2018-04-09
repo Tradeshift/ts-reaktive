@@ -32,7 +32,7 @@ import io.vavr.collection.HashMap;
 /**
  * Exposes the full event stream of an akka persistence journal as an HTTP stream in chunked encoding,
  * by querying the journal with a fixed tag.
- * 
+ *
  * Subclasses can consider overriding {@link #serialize(EventEnvelope)} if they want to provide a different
  * serialization than the default protobuf EventEnvelope representation.
  */
@@ -46,7 +46,7 @@ public class EventRoute {
     private final String tagName;
     private final Materializer materializer;
     private final EventEnvelopeSerializer serializer;
-    
+
     /**
      * Creates a new EventRoute
      * @param journal The cassandra journal to read from
@@ -68,8 +68,8 @@ public class EventRoute {
             )
         );
     }
-    
-    private static long toUTCTimestamp(String since) {
+
+    protected static long toUTCTimestamp(String since) {
         try {
             return Long.parseLong(since);
         } catch (NumberFormatException x) {
@@ -85,13 +85,13 @@ public class EventRoute {
             }
         }
     }
-    
-    private CompletionStage<HttpResponse> getEventsResponse(Optional<String> since) {
+
+    protected CompletionStage<HttpResponse> getEventsResponse(Optional<String> since) {
         return awaitOne(getEvents(since), materializer).thenApply(source ->
             HttpResponse.create().withEntity(HttpEntities.createChunked(mediaType.toContentType(), source))
         );
     }
-    
+
     private static boolean isNumeric(String since) {
         for (int i = 0; i < since.length(); i++) {
             if (i == 0) {
@@ -109,7 +109,7 @@ public class EventRoute {
             .map(this::serialize);
     }
 
-    private Offset timeBasedUUIDFrom(long timestamp) {
+    protected Offset timeBasedUUIDFrom(long timestamp) {
         return (timestamp == 0) ? NoOffset.getInstance() : new TimeBasedUUID(UUIDs.startOf(timestamp));
     }
 
