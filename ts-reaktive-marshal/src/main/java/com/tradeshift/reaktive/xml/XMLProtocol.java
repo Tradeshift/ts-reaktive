@@ -15,6 +15,9 @@ import com.tradeshift.reaktive.marshal.WriteProtocol;
 import io.vavr.Function1;
 import io.vavr.Function2;
 import io.vavr.Function3;
+import io.vavr.Function4;
+import io.vavr.Function5;
+import io.vavr.Function6;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.HashSet;
@@ -163,6 +166,69 @@ public class XMLProtocol {
      */
     public static <F1,F2,F3,T> TagWriteProtocol<T> tag(QName qname, Function1<T,F1> g1, WriteProtocol<XMLEvent,F1> p1, Function1<T,F2> g2, WriteProtocol<XMLEvent,F2> p2, Function1<T,F3> g3, WriteProtocol<XMLEvent,F3> p3) {
         return new TagWriteProtocol<>(Option.of(qname), Vector.of(p1, p2, p3), Vector.of(g1, g2, g3));
+    }
+    
+    //---------------------- 4-arity tag methods -----------------------------------
+    
+    /**
+     * Reads and writes a tag and child elements (tag or attribute) using [p*], using [f] to create the result on reading, getting values using [g*] for writing.
+     */
+    public static <F1,F2,F3,F4,T> TagProtocol<T> tag(QName qname, Protocol<XMLEvent,F1> p1, Protocol<XMLEvent,F2> p2, Protocol<XMLEvent,F3> p3, Protocol<XMLEvent,F4> p4, Function4<F1,F2,F3,F4,T> f, Function1<T,F1> g1, Function1<T,F2> g2, Function1<T,F3> g3, Function1<T,F4> g4) {
+        return new TagProtocol<>(Option.of(qname), Vector.of(p1, p2, p3, p4), args -> f.apply((F1) args.get(0), (F2) args.get(1), (F3) args.get(2), (F4) args.get(3)), Vector.of(g1, g2, g3, g4));
+    }
+    /**
+     * Reads a tag and child elements (tag or attribute) using [p*], using [f] to create the result on reading.
+     */
+    public static <F1,F2,F3,F4,T> TagReadProtocol<T> tag(QName qname, ReadProtocol<XMLEvent,F1> p1, ReadProtocol<XMLEvent,F2> p2, ReadProtocol<XMLEvent,F3> p3, ReadProtocol<XMLEvent,F4> p4, Function4<F1,F2,F3,F4,T> f) {
+        return new TagReadProtocol<>(Option.of(qname), Vector.of(p1, p2, p3, p4), args -> f.apply((F1) args.get(0), (F2) args.get(1), (F3) args.get(2), (F4) args.get(3)));
+    }
+    /**
+     * Writes a tag and child elements (tag or attribute) using [p*], getting values using [g*] for writing.
+     */
+    public static <F1,F2,F3,F4,T> TagWriteProtocol<T> tag(QName qname, Function1<T,F1> g1, WriteProtocol<XMLEvent,F1> p1, Function1<T,F2> g2, WriteProtocol<XMLEvent,F2> p2, Function1<T,F3> g3, WriteProtocol<XMLEvent,F3> p3, Function1<T,F4> g4, WriteProtocol<XMLEvent,F4> p4) {
+        return new TagWriteProtocol<>(Option.of(qname), Vector.of(p1, p2, p3, p4), Vector.of(g1, g2, g3, g4));
+    }
+
+    //---------------------- 5-arity tag methods -----------------------------------
+    
+    /**
+     * Reads and writes a tag and child elements (tag or attribute) using [p*], using [f] to create the result on reading, getting values using [g*] for writing.
+     */
+    public static <F1,F2,F3,F4,F5,T> TagProtocol<T> tag(QName qname, Protocol<XMLEvent,F1> p1, Protocol<XMLEvent,F2> p2, Protocol<XMLEvent,F3> p3, Protocol<XMLEvent,F4> p4, Protocol<XMLEvent,F5> p5, Function5<F1,F2,F3,F4,F5,T> f, Function1<T,F1> g1, Function1<T,F2> g2, Function1<T,F3> g3, Function1<T,F4> g4, Function1<T,F5> g5) {
+        return new TagProtocol<>(Option.of(qname), Vector.of(p1, p2, p3, p4, p5), args -> f.apply((F1) args.get(0), (F2) args.get(1), (F3) args.get(2), (F4) args.get(3), (F5) args.get(4)), Vector.of(g1, g2, g3, g4, g5));
+    }
+    /**
+     * Reads a tag and child elements (tag or attribute) using [p*], using [f] to create the result on reading.
+     */
+    public static <F1,F2,F3,F4,F5,T> TagReadProtocol<T> tag(QName qname, ReadProtocol<XMLEvent,F1> p1, ReadProtocol<XMLEvent,F2> p2, ReadProtocol<XMLEvent,F3> p3, ReadProtocol<XMLEvent,F4> p4, ReadProtocol<XMLEvent,F5> p5, Function5<F1,F2,F3,F4,F5,T> f) {
+        return new TagReadProtocol<>(Option.of(qname), Vector.of(p1, p2, p3, p4, p5), args -> f.apply((F1) args.get(0), (F2) args.get(1), (F3) args.get(2), (F4) args.get(3), (F5) args.get(4)));
+    }
+    /**
+     * Writes a tag and child elements (tag or attribute) using [p*], getting values using [g*] for writing.
+     */
+    public static <F1,F2,F3,F4,F5,T> TagWriteProtocol<T> tag(QName qname, Function1<T,F1> g1, WriteProtocol<XMLEvent,F1> p1, Function1<T,F2> g2, WriteProtocol<XMLEvent,F2> p2, Function1<T,F3> g3, WriteProtocol<XMLEvent,F3> p3, Function1<T,F4> g4, WriteProtocol<XMLEvent,F4> p4, Function1<T,F5> g5, WriteProtocol<XMLEvent,F5> p5) {
+        return new TagWriteProtocol<>(Option.of(qname), Vector.of(p1, p2, p3, p4, p5), Vector.of(g1, g2, g3, g4, g5));
+    }
+
+    //---------------------- 6-arity tag methods -----------------------------------
+    
+    /**
+     * Reads and writes a tag and child elements (tag or attribute) using [p*], using [f] to create the result on reading, getting values using [g*] for writing.
+     */
+    public static <F1,F2,F3,F4,F5,F6,T> TagProtocol<T> tag(QName qname, Protocol<XMLEvent,F1> p1, Protocol<XMLEvent,F2> p2, Protocol<XMLEvent,F3> p3, Protocol<XMLEvent,F4> p4, Protocol<XMLEvent,F5> p5, Protocol<XMLEvent,F6> p6, Function6<F1,F2,F3,F4,F5,F6,T> f, Function1<T,F1> g1, Function1<T,F2> g2, Function1<T,F3> g3, Function1<T,F4> g4, Function1<T,F5> g5, Function1<T,F6> g6) {
+        return new TagProtocol<>(Option.of(qname), Vector.of(p1, p2, p3, p4, p5, p6), args -> f.apply((F1) args.get(0), (F2) args.get(1), (F3) args.get(2), (F4) args.get(3), (F5) args.get(4), (F6) args.get(5)), Vector.of(g1, g2, g3, g4, g5, g6));
+    }
+    /**
+     * Reads a tag and child elements (tag or attribute) using [p*], using [f] to create the result on reading.
+     */
+    public static <F1,F2,F3,F4,F5,F6,T> TagReadProtocol<T> tag(QName qname, ReadProtocol<XMLEvent,F1> p1, ReadProtocol<XMLEvent,F2> p2, ReadProtocol<XMLEvent,F3> p3, ReadProtocol<XMLEvent,F4> p4, ReadProtocol<XMLEvent,F5> p5, ReadProtocol<XMLEvent,F6> p6, Function6<F1,F2,F3,F4,F5,F6,T> f) {
+        return new TagReadProtocol<>(Option.of(qname), Vector.of(p1, p2, p3, p4, p5, p6), args -> f.apply((F1) args.get(0), (F2) args.get(1), (F3) args.get(2), (F4) args.get(3), (F5) args.get(4), (F6) args.get(5)));
+    }
+    /**
+     * Writes a tag and child elements (tag or attribute) using [p*], getting values using [g*] for writing.
+     */
+    public static <F1,F2,F3,F4,F5,F6,T> TagWriteProtocol<T> tag(QName qname, Function1<T,F1> g1, WriteProtocol<XMLEvent,F1> p1, Function1<T,F2> g2, WriteProtocol<XMLEvent,F2> p2, Function1<T,F3> g3, WriteProtocol<XMLEvent,F3> p3, Function1<T,F4> g4, WriteProtocol<XMLEvent,F4> p4,   Function1<T,F5> g5, WriteProtocol<XMLEvent,F5> p5, Function1<T,F6> g6, WriteProtocol<XMLEvent,F6> p6) {
+        return new TagWriteProtocol<>(Option.of(qname), Vector.of(p1, p2, p3, p4, p5, p6), Vector.of(g1, g2, g3, g4, g5, g6));
     }
     
     //---------------------- 1-arity tagName methods -----------------------------------
