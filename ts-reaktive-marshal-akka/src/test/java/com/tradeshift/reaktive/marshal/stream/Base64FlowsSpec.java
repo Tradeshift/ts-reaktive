@@ -50,6 +50,14 @@ public class Base64FlowsSpec extends SharedActorSystemSpec {{
             ).succeedsWith("hello");
         });
         
+        it("should decode fine if the input is split on none-4-character boundaries that include whitespace", () -> {
+            assertThat(
+                Source.from(Arrays.asList("a","G","  Vsb ","G8="))
+                .via(Base64Flows.decodeStrings)
+                .runFold("", (s,b) -> s + b.utf8String(), materializer)
+            ).succeedsWith("hello");
+        });
+        
         it("should blow up on incomplete input", () -> {
             assertThat(
                 Source.single("aGVsbG=")
