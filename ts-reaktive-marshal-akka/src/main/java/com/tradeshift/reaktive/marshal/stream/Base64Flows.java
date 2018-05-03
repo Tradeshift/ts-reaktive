@@ -1,11 +1,13 @@
 package com.tradeshift.reaktive.marshal.stream;
 
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
 
 import akka.NotUsed;
 import akka.parboiled2.util.Base64;
 import akka.stream.javadsl.Flow;
 import akka.util.ByteString;
+import akka.util.ByteStringBuilder;
 
 /**
  * Provides flows for encoding and decoding base64 String and ByteString.
@@ -37,6 +39,14 @@ import akka.util.ByteString;
  */
 public class Base64Flows {
 
+    private static final boolean[] NOT_WHITESPACE = new boolean[256];
+    static {
+        Pattern whitespace = Pattern.compile("\\s");
+        for (int b = 0; b < 256; b++) {
+            NOT_WHITESPACE[b] = !whitespace.matcher(Character.toString((char) (b & 0xFF))).matches();
+        }
+    }
+    
     /**
      * A graph stage that encodes binary input bytes into ByteString representation of Base64 data
      *
@@ -76,6 +86,11 @@ public class Base64Flows {
             }
 
             @Override
+            protected ByteString filterBeforeChunk(ByteString in) {
+                return removeWhitespace(in);
+            }
+
+            @Override
             protected byte[] transform(ByteString input) {
                 byte[] a = Base64.rfc2045().decode(input.toArray());
                 if (a == null) {
@@ -94,4 +109,19 @@ public class Base64Flows {
             .map(ByteStringTransformStage::unsafeWrapByteArray)
             .via(decodeBytes);
 
+     /**
+     * Removes whitespace (or any other ignored characters) from an incoming ByteString buffer
+     * and returns the result.
+     */
+    private static ByteString removeWhitespace(ByteString in) {
+        ByteStringBuilder b = new ByteStringBuilder();
+        b.sizeHint(in.size());
+        for (int i = 0; i < in.size(); i++) {
+            byte ch = in.apply(i);
+            if (NOT_WHITESPACE[ch]) {
+                b.putByte(ch);
+            }
+        }
+        return b.result();
+    }
 }

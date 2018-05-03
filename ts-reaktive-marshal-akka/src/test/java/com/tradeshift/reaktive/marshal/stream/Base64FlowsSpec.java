@@ -18,10 +18,10 @@ public class Base64FlowsSpec extends SharedActorSystemSpec {{
     describe("encoder", () -> {
         it("should encode to correct base64", () -> {
             assertThat(
-                Source.single(fromString("hello"))
+                Source.single(fromString("hello there"))
                 .via(Base64Flows.encodeStrings)
                 .runFold("", (s,b) -> s + b, materializer)
-            ).succeedsWith("aGVsbG8=");
+            ).succeedsWith("aGVsbG8gdGhlcmU=");
         });
         
         it("should encode fine if the input is split on none-3-byte boundaries", () -> {
