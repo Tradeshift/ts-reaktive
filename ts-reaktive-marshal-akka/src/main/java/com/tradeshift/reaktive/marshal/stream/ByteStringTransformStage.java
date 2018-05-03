@@ -1,7 +1,5 @@
 package com.tradeshift.reaktive.marshal.stream;
 
-import java.util.regex.Pattern;
-
 import akka.stream.Attributes;
 import akka.stream.FlowShape;
 import akka.stream.Inlet;
@@ -21,13 +19,6 @@ import scala.Tuple2;
  * feeding it to {@link #transform(ByteString)} method 
  */
 public abstract class ByteStringTransformStage extends GraphStage<FlowShape<ByteString, ByteString>> {
-    private static final boolean[] NOT_WHITESPACE = new boolean[256];
-    static {
-        Pattern whitespace = Pattern.compile("\\s");
-        for (int b = 0; b < 256; b++) {
-            NOT_WHITESPACE[b] = !whitespace.matcher(Character.toString((char) (b & 0xFF))).matches();
-        }
-    }
     
     private final Inlet<ByteString> in = Inlet.create("in");
     private final Outlet<ByteString> out = Outlet.create("out");
@@ -52,21 +43,14 @@ public abstract class ByteStringTransformStage extends GraphStage<FlowShape<Byte
     protected abstract int getInputChunkSizeMultiple();
 
     /**
-     * Removes whitespace (or any other ignored characters) from an incoming bytestring buffer
-     * and returns the result.
+     * Override this to remove the unwanted characters from the ByteString buffer before the chunking takes place.
+     * The returned buffer will be chunked and passed to {@link #transform(ByteString)} method.  
+     * By default no filtering is done.
      */
-    protected ByteString removeWhitespace(ByteString in) {
-        ByteStringBuilder b = new ByteStringBuilder();
-        b.sizeHint(in.size());
-        for (int i = 0; i < in.size(); i++) {
-            byte ch = in.apply(i);
-            if (NOT_WHITESPACE[ch]) {
-                b.putByte(ch);
-            }
-        }
-        return b.result();
+    protected ByteString filterBeforeChunk(ByteString in) {
+        return in;
     }
-    
+
     @Override
     public GraphStageLogic createLogic(Attributes attr) {
         return new GraphStageLogic(shape) {
@@ -76,7 +60,7 @@ public abstract class ByteStringTransformStage extends GraphStage<FlowShape<Byte
                 setHandler(in, new AbstractInHandler() {
                     @Override
                     public void onPush() {
-                        buf = buf.concat(removeWhitespace(grab(in)));
+                        buf = buf.concat(filterBeforeChunk(grab(in)));
                         Tuple2<ByteString, ByteString> split = buf.splitAt(buf.size() - (buf.size() % getInputChunkSizeMultiple()));
                         if (split._1.isEmpty()) {
                             pull(in);
