@@ -64,9 +64,11 @@ lazy val projectSettings = Seq(
   javacOptions ++= Seq("-source", "1.8"),
   javacOptions in (Compile, Keys.compile) ++= Seq("-target", "1.8", "-Xlint", "-Xlint:-processing", "-Xlint:-serial", "-Werror"),
   javacOptions in doc ++= Seq("-Xdoclint:none"),
+  scalacOptions ++= Seq("-target:jvm-1.8"),
   EclipseKeys.executionEnvironment := Some(EclipseExecutionEnvironment.JavaSE18),
   EclipseKeys.createSrc := EclipseCreateSrc.Default + EclipseCreateSrc.ManagedClasses,
   EclipseKeys.withSource := true,
+  javaOptions += "-Xmx128M",
   fork := true,
   resolvers ++= Seq(
     Resolver.bintrayRepo("readytalk", "maven"),
@@ -233,6 +235,17 @@ lazy val `ts-reaktive-marshal-scala` = project
     `ts-reaktive-marshal-akka`,
     `ts-reaktive-testkit` % "test",
     `ts-reaktive-marshal-akka` % "test")
+  .enablePlugins(GitVersioning)
+
+lazy val `ts-reaktive-xsd` = project
+  .settings(projectSettings: _*)
+  .settings(libraryDependencies ++= Seq(
+    "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+  ))
+  .dependsOn(
+    `ts-reaktive-marshal-scala`,
+    `ts-reaktive-testkit` % "test",
+    `ts-reaktive-marshal-akka` % "test")
 
 lazy val `ts-reaktive-actors` = project
   .enablePlugins(ProtobufPlugin)
@@ -297,6 +310,7 @@ lazy val root = (project in file(".")).settings(publish := { }, publishLocal := 
   `ts-reaktive-marshal-akka`,
   `ts-reaktive-marshal-scala`,
   `ts-reaktive-marshal-xerces`,
+  `ts-reaktive-xsd`,
   `ts-reaktive-testkit`,
   `ts-reaktive-testkit-assertj`,
   `ts-reaktive-kamon-log4j`,
