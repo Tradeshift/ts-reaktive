@@ -6,6 +6,7 @@ import static akka.http.javadsl.server.Directives.pathPrefix;
 import static akka.http.javadsl.server.Directives.route;
 import static akka.pattern.PatternsCS.ask;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +27,7 @@ import akka.http.javadsl.ConnectHttpsImpl;
 import akka.http.javadsl.ConnectionContext;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.ServerBinding;
+import akka.http.javadsl.UseHttp2;
 import akka.http.javadsl.model.ws.BinaryMessage;
 import akka.http.javadsl.model.ws.Message;
 import akka.http.javadsl.server.Route;
@@ -44,7 +46,7 @@ import io.vavr.control.Option;
 public class WebSocketDataCenterServer {
     private static final Logger log = LoggerFactory.getLogger(WebSocketDataCenterServer.class);
     
-    private final Timeout timeout;
+    private final Duration timeout;
     private final int maxInFlight;
 
     private CompletionStage<ServerBinding> binding;
@@ -55,7 +57,7 @@ public class WebSocketDataCenterServer {
     public WebSocketDataCenterServer(ActorSystem system, Map<String,ActorRef> tagsAndShardRegions) {
         Config config = system.settings().config().getConfig("ts-reaktive.replication.server");
         ActorMaterializer materializer = SharedActorMaterializer.get(system);
-        this.timeout = Timeout.apply(config.getDuration("timeout", TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
+        this.timeout = config.getDuration("timeout");
         this.maxInFlight = config.getInt("max-in-flight");
         Route route = pathPrefix("events", () -> route(
             tagsAndShardRegions.map(t ->
@@ -66,8 +68,9 @@ public class WebSocketDataCenterServer {
         ));
         ConnectHttp httpOpts = SSLFactory.createSSLContext(config).map(sslContext ->
             (ConnectHttp) new ConnectHttpsImpl(config.getString("host"), config.getInt("port"), Optional.of(
-                ConnectionContext.https(sslContext, Optional.empty(), Optional.empty(), Optional.of(TLSClientAuth.need()), Optional.empty())
-            ))
+                ConnectionContext.https(sslContext, Optional.empty(), Optional.empty(),
+                                        Optional.of(TLSClientAuth.need()), Optional.empty())),
+                                               UseHttp2.never())
         ).getOrElse(() ->
             ConnectHttp.toHost(config.getString("host"), config.getInt("port"))
         );

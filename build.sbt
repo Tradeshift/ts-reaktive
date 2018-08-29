@@ -1,10 +1,9 @@
 
-scalaVersion := "2.12.3" // just for the root
+scalaVersion := "2.12.6" // just for the root
 
-val akkaVersion = "2.5.9"
-val akkaHttpVersion = "10.0.11"
+val akkaVersion = "2.5.16"
+val akkaHttpVersion = "10.1.4"
 val akkaInMemory = "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.5.1.1"
-val kamonVersion = "0.6.6"
 val awsVersion = "1.11.150"
 val assertJ = "org.assertj" % "assertj-core" % "3.2.0"
 
@@ -60,8 +59,8 @@ releaseProcess := Seq(
 lazy val projectSettings = Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  scalaVersion := "2.12.3",
-  crossScalaVersions := Seq("2.11.11", "2.12.3"),
+  scalaVersion := "2.12.6",
+  crossScalaVersions := Seq("2.11.12", "2.12.7"),
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
   javacOptions in (Compile, Keys.compile) ++= Seq("-target", "1.8", "-Xlint", "-Xlint:-processing", "-Xlint:-serial", "-Werror"),
@@ -127,12 +126,9 @@ lazy val commonSettings = projectSettings ++ Seq(
 lazy val kamonSettings = Seq(
   libraryDependencies ++= {
     Seq(
-      "io.kamon" %% "kamon-core" % kamonVersion,
-      "io.kamon" %% "kamon-statsd" % kamonVersion,
-      "io.kamon" %% "kamon-datadog" % kamonVersion,
-      "io.kamon" %% "kamon-system-metrics" % kamonVersion,
-      "org.aspectj" % "aspectjweaver" % "1.8.8",
-      "io.kamon" %% "kamon-autoweave" % "0.6.5", // missing for 0.6.6
+      "io.kamon" %% "kamon-core" % "1.1.3",
+      "io.kamon" %% "kamon-system-metrics" % "1.0.0",
+      "org.aspectj" % "aspectjweaver" % "1.8.13",
       "com.readytalk" % "metrics3-statsd" % "4.1.0" // to log cassandra (codahale / dropwizard) metrics into statsd
     )
   }
@@ -287,16 +283,6 @@ lazy val `ts-reaktive-kamon-log4j` = project
   .settings(kamonSettings: _*)
   .enablePlugins(GitVersioning)
 
-lazy val `ts-reaktive-kamon-akka` = project
-  .settings(commonSettings: _*)
-  .settings(kamonSettings: _*)
-  .enablePlugins(GitVersioning)
-
-lazy val `ts-reaktive-kamon-akka-client` = project
-  .settings(commonSettings: _*)
-  .settings(kamonSettings: _*)
-  .enablePlugins(GitVersioning)
-
 lazy val `ts-reaktive-kamon-akka-cluster` = project
   .settings(commonSettings: _*)
   .settings(kamonSettings: _*)
@@ -321,8 +307,6 @@ lazy val root = (project in file(".")).settings(publish := { }, publishLocal := 
   `ts-reaktive-testkit`,
   `ts-reaktive-testkit-assertj`,
   `ts-reaktive-kamon-log4j`,
-  `ts-reaktive-kamon-akka`,
-  `ts-reaktive-kamon-akka-client`,
   `ts-reaktive-kamon-akka-cluster`,
   `ts-reaktive-aws`)
 

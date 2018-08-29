@@ -7,7 +7,7 @@ import static org.forgerock.cuppa.Cuppa.it;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.xmlunit.matchers.CompareMatcher.isIdenticalTo;
 
-import java.io.File;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -28,7 +28,7 @@ import akka.util.ByteString;
 public class AaltoReaderSpec extends SharedActorSystemSpec {{
     describe("AaltoReader", () -> {
         it("Should parse XML input equivalent to Stax", () -> {
-            ByteString result = FileIO.fromFile(new File(getClass().getResource("/test.xml").getFile()))
+            ByteString result = FileIO.fromPath(Paths.get(getClass().getResource("/test.xml").getFile()))
                 .via(AaltoReader.instance)
                 .via(StaxWriter.flow())
                 .runFold(ByteString.empty(), (s1,s2) -> s1.concat(s2), materializer)
