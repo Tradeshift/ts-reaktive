@@ -3,6 +3,7 @@ package com.tradeshift.reaktive.actors;
 import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
 
+import java.time.Duration;
 import java.io.Serializable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -19,7 +20,6 @@ import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import io.vavr.collection.Seq;
 import io.vavr.collection.Vector;
-import scala.concurrent.duration.Duration;
 
 @RunWith(CuppaRunner.class)
 public class AbstractStatefulPersistentActorSpec extends SharedActorSystemSpec {
@@ -151,9 +151,9 @@ public class AbstractStatefulPersistentActorSpec extends SharedActorSystemSpec {
                 probe.send(actor, "b:test2");
                 
                 // Receive the first reply after about 2000 ms
-                probe.expectMsgEquals(Duration.create(3000, TimeUnit.MILLISECONDS), Done.getInstance());
+                probe.expectMsgEquals(Duration.ofMillis(3000), Done.getInstance());
                 // Even after 3000ms, the second reply shouldn't have come in (it's also sleeping its own 2 seconds)
-                probe.expectNoMsg(Duration.create(100, TimeUnit.MILLISECONDS));
+                probe.expectNoMessage(Duration.ofMillis(100));
                 // But eventually, the reply should make it.
                 probe.expectMsgEquals(Done.getInstance());
             });

@@ -174,13 +174,13 @@ public class ReplicationIntegrationSpec {
                 dc1.write(id, "onwards");                
             }
             
-            within(50, TimeUnit.SECONDS).eventuallyDo(() -> {
+            within(90, TimeUnit.SECONDS).eventuallyDo(() -> {
                 assertThat(dc2.read(ids.get(0))).isEqualTo("onwards");
                 assertThat(dc2.read(ids.get(split - 1))).isEqualTo("onwards");
             });
             
             dc1.write(ids.get(1), "moar");
-            within(50, TimeUnit.SECONDS).eventuallyDo(() -> {
+            within(90, TimeUnit.SECONDS).eventuallyDo(() -> {
                 assertThat(dc2.read(ids.get(1))).isEqualTo("moar");
             });
         });

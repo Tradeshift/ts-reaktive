@@ -3,6 +3,7 @@ package com.tradeshift.reaktive.backup;
 import static akka.pattern.PatternsCS.ask;
 import static com.tradeshift.reaktive.backup.DropUntilNext.dropUntilNext;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -19,7 +20,6 @@ import akka.persistence.AbstractPersistentActor;
 import akka.persistence.RecoveryCompleted;
 import akka.stream.Materializer;
 import akka.stream.javadsl.Sink;
-import akka.util.Timeout;
 import scala.concurrent.duration.FiniteDuration;
 
 /**
@@ -34,7 +34,7 @@ public class S3Restore extends AbstractPersistentActor {
     
     private final Materializer materializer = SharedActorMaterializer.get(context().system());
     private final int maxInFlight;
-    private final Timeout timeout;
+    private final Duration timeout;
     private final S3 s3;
     private final String tag;
     private final ActorRef shardRegion;
@@ -57,7 +57,7 @@ public class S3Restore extends AbstractPersistentActor {
         
         Config config = context().system().settings().config().getConfig("ts-reaktive.backup.restore");
         maxInFlight = config.getInt("maxInFlight");
-        timeout = Timeout.apply(config.getDuration("timeout", TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
+        timeout = config.getDuration("timeout");
         updateAccuracy = FiniteDuration.create(config.getDuration("update-accuracy", TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
     }
     

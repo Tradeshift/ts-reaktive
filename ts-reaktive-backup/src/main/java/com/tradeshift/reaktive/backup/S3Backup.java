@@ -2,6 +2,7 @@ package com.tradeshift.reaktive.backup;
 
 import static akka.pattern.PatternsCS.pipe;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -25,7 +26,6 @@ import akka.persistence.query.javadsl.EventsByTagQuery;
 import akka.stream.Materializer;
 import akka.stream.javadsl.Sink;
 import io.vavr.collection.Vector;
-import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 
 /**
@@ -49,8 +49,8 @@ public class S3Backup extends AbstractActor {
                 Backoff.onFailure(
                     Props.create(S3Backup.class, () -> new S3Backup(query, tag, s3)),
                     "a",
-                    Duration.create(1, TimeUnit.SECONDS),
-                    Duration.create(1, TimeUnit.SECONDS), // TODO make these 3 configurable
+                    FiniteDuration.create(1, TimeUnit.SECONDS),
+                    FiniteDuration.create(1, TimeUnit.SECONDS), // TODO make these 3 configurable
                     0.2)
             ),
             Done.getInstance(),
@@ -64,7 +64,7 @@ public class S3Backup extends AbstractActor {
     private final String tag;
     private final S3 s3;
     private final int eventChunkSize;
-    private final FiniteDuration eventChunkDuration;
+    private final Duration eventChunkDuration;
     
     public S3Backup(EventsByTagQuery query, String tag, S3 s3) {
         this.query = query;
@@ -73,7 +73,7 @@ public class S3Backup extends AbstractActor {
         
         Config backupCfg = context().system().settings().config().getConfig("ts-reaktive.backup.backup");
         eventChunkSize = backupCfg.getInt("event-chunk-max-size");
-        eventChunkDuration = FiniteDuration.create(backupCfg.getDuration("event-chunk-max-duration", TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
+        eventChunkDuration = backupCfg.getDuration("event-chunk-max-duration");
         
         pipe(s3.loadOffset(), context().dispatcher()).to(self());
     }

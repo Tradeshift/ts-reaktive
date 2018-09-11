@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
 
-import java.io.File;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -31,7 +31,7 @@ public class ActsonReaderSpec extends SharedActorSystemSpec {{
                 events.add(Jackson.getEvent(input));
             }
 
-            List<JSONEvent> result = FileIO.fromFile(new File(getClass().getResource("/test.json").getFile()))
+            List<JSONEvent> result = FileIO.fromPath(Paths.get(getClass().getResource("/test.json").getFile()))
                 .via(ActsonReader.instance)
                 .runWith(Sink.seq(), materializer)
                 .toCompletableFuture().get(1, TimeUnit.SECONDS);
