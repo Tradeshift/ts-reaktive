@@ -62,7 +62,7 @@ public class EventRoute {
     public Route apply() {
         return parameterOptional("since", since ->
             get(() ->
-                onSuccess(() -> getEventsResponse(since), response ->
+                onSuccess(() -> getEventsResponse(getEvents(since)), response ->
                     complete(response)
                 )
             )
@@ -86,9 +86,10 @@ public class EventRoute {
         }
     }
 
-    protected CompletionStage<HttpResponse> getEventsResponse(Optional<String> since) {
-        return awaitOne(getEvents(since), materializer).thenApply(source ->
-            HttpResponse.create().withEntity(HttpEntities.createChunked(mediaType.toContentType(), source))
+    protected CompletionStage<HttpResponse> getEventsResponse(Source<EventEnvelope, NotUsed> events) {
+        return awaitOne(events, materializer).thenApply(source ->
+            HttpResponse.create()
+                .withEntity(HttpEntities.createChunked(mediaType.toContentType(), source.map(this::serialize)))
         );
     }
 
@@ -103,10 +104,8 @@ public class EventRoute {
         return true;
     }
 
-    public Source<ByteString,NotUsed> getEvents(Optional<String> since) {
-        return journal
-            .eventsByTag(tagName, timeBasedUUIDFrom(since.map(EventRoute::toUTCTimestamp).orElseGet(() -> 0l)))
-            .map(this::serialize);
+    public Source<EventEnvelope,NotUsed> getEvents(Optional<String> since) {
+        return journal.eventsByTag(tagName, timeBasedUUIDFrom(since.map(EventRoute::toUTCTimestamp).orElse(0L)));
     }
 
     protected Offset timeBasedUUIDFrom(long timestamp) {
