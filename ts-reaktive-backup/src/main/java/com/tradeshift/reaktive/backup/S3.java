@@ -6,13 +6,16 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.datastax.driver.core.utils.UUIDs;
+import com.tradeshift.reaktive.akka.SharedActorMaterializer;
+import com.tradeshift.reaktive.akka.rest.EventMarshallers;
 import com.tradeshift.reaktive.protobuf.DelimitedProtobufFraming;
-import com.tradeshift.reaktive.protobuf.EventEnvelopeSerializer;
+import com.tradeshift.reaktive.protobuf.Query;
 
 import akka.Done;
 import akka.NotUsed;
@@ -71,12 +74,12 @@ public class S3 {
     private final String bucket;
     private final String bucketKeyPrefix;
     private final Materializer materializer;
-    private final EventEnvelopeSerializer serializer;
 	private final S3Client client;
+    private final Function<EventEnvelope, Query.EventEnvelope> serializer;
 
-    public S3(ActorSystem system, Materializer materializer, EventEnvelopeSerializer serializer, String bucket, String prefix) {
-        this.materializer = materializer;
-        this.serializer = serializer;
+    public S3(ActorSystem system, String bucket, String prefix) {
+        this.materializer = SharedActorMaterializer.get(system);
+        this.serializer = EventMarshallers.getAkkaSerializer(system);
         this.bucket = bucket;
         this.bucketKeyPrefix = prefix.endsWith("/") ? prefix : prefix + "/";
         this.client = S3Client.create(system, materializer);
@@ -91,7 +94,7 @@ public class S3 {
         return Source.from(events)
               .map(e -> {
                   ByteStringBuilder b = new ByteStringBuilder();
-                  serializer.toProtobuf(e).writeDelimitedTo(b.asOutputStream());
+                  serializer.apply(e).writeDelimitedTo(b.asOutputStream());
                   return b.result();
               })
               .runWith(upload(key), materializer)

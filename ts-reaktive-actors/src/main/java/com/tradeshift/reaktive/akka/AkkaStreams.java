@@ -23,9 +23,13 @@ public class AkkaStreams {
      */
     public static <T> CompletionStage<Source<T,NotUsed>> awaitOne(Source<T,?> source, Materializer materializer) {
         return source.prefixAndTail(1).map(pair -> {
-            T head = pair.first().get(0);
-            Source<T, NotUsed> tail = pair.second();
-            return Source.single(head).concat(tail);
+            if (pair.first().isEmpty()) {
+                return pair.second();
+            } else {
+                T head = pair.first().get(0);
+                Source<T, NotUsed> tail = pair.second();
+                return Source.single(head).concat(tail);                
+            }
         }).runWith(Sink.head(), materializer);
     }
 

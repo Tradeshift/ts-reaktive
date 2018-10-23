@@ -3,11 +3,10 @@ package com.tradeshift.reaktive.actors;
 import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
 
-import java.time.Duration;
 import java.io.Serializable;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.TimeUnit;
 
 import org.forgerock.cuppa.junit.CuppaRunner;
 import org.junit.runner.RunWith;

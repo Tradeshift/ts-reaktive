@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 
 import com.tradeshift.reaktive.actors.AbstractStatefulPersistentActor;
 import com.tradeshift.reaktive.akka.SharedActorMaterializer;
-import com.tradeshift.reaktive.protobuf.EventEnvelopeSerializer;
 import com.tradeshift.reaktive.replication.actors.ReplicatedActorSharding;
 import com.tradeshift.reaktive.replication.io.WebSocketDataCenterClient;
 import com.tradeshift.reaktive.replication.io.WebSocketDataCenterServer;
@@ -103,7 +102,6 @@ public class Replication implements Extension {
         
         VisibilityCassandraSession session = new VisibilityCassandraSession(system, "visibilitySession");
         VisibilityRepository visibilityRepo = new VisibilityRepository(session);
-        EventEnvelopeSerializer serializer = new EventEnvelopeSerializer(system);
         
         // We consider ourselves started when the HTTP binding succeeds, and we've successfully connected to cassandra.
         // The below client flows just start some child actors, so there's nothing to wait on.
@@ -119,7 +117,7 @@ public class Replication implements Extension {
                 ConnectionContext connOpts = SSLFactory.createSSLContext(dcConfig.withFallback(config.getConfig("client")))
                         .map(sslCtx -> (ConnectionContext) ConnectionContext.https(sslCtx))
                         .getOrElse(ConnectionContext.noEncryption());
-                return new WebSocketDataCenterClient(system, connOpts, name, url, serializer);
+                return new WebSocketDataCenterClient(system, connOpts, name, url);
             });
             
             DataCenterRepository dataCenterRepository = new DataCenterRepository() {

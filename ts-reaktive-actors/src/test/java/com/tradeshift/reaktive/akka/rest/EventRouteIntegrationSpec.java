@@ -5,32 +5,36 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
 import static org.forgerock.cuppa.Cuppa.when;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+
+import java.time.Instant;
 
 import org.forgerock.cuppa.junit.CuppaRunner;
 import org.junit.runner.RunWith;
 
 import com.tradeshift.reaktive.akka.UUIDs;
-import com.tradeshift.reaktive.protobuf.EventEnvelopeSerializer;
-import com.tradeshift.reaktive.protobuf.Query;
 import com.tradeshift.reaktive.testkit.HttpIntegrationSpec;
 
+import akka.http.javadsl.marshalling.Marshaller;
+import akka.http.javadsl.model.ContentTypes;
+import akka.http.javadsl.model.HttpEntities;
+import akka.http.javadsl.model.HttpResponse;
 import akka.http.javadsl.model.StatusCodes;
 import akka.persistence.query.EventEnvelope;
 import akka.persistence.query.TimeBasedUUID;
 import akka.persistence.query.javadsl.EventsByTagQuery;
 import akka.stream.StreamTcpException;
 import akka.stream.javadsl.Source;
+import akka.util.ByteString;
 
 @RunWith(CuppaRunner.class)
 public class EventRouteIntegrationSpec extends HttpIntegrationSpec {
     
     private EventRoute testEventRoute(EventsByTagQuery journal) {
-        EventEnvelopeSerializer serializer = mock(EventEnvelopeSerializer.class);
-        when(serializer.toProtobuf(any())).thenReturn(Query.EventEnvelope.newBuilder().build());
-        return new EventRoute(materializer, journal, serializer, "testEvent");
+        Marshaller<Source<EventEnvelope, ?>, HttpResponse> marshaller = Marshaller.opaque(src -> {
+            Source<ByteString, ?> bytes = src.map(e -> ByteString.fromString("test"));
+            return HttpResponse.create().withEntity(HttpEntities.create(ContentTypes.APPLICATION_OCTET_STREAM, bytes));
+        });
+        return new EventRoute(materializer, journal, marshaller, "testEvent");
     }
     
 {
@@ -42,7 +46,7 @@ public class EventRouteIntegrationSpec extends HttpIntegrationSpec {
             
             it("should fail the http request early by returning a 500 status code", () -> {
                 serve(eventRoute.apply(), http -> {
-                    assertThat(http.tryGet("/events").status()).isEqualTo(StatusCodes.INTERNAL_SERVER_ERROR);
+                    assertThat(http.tryGet("/").status()).isEqualTo(StatusCodes.INTERNAL_SERVER_ERROR);
                 });
             });
         });
@@ -58,11 +62,34 @@ public class EventRouteIntegrationSpec extends HttpIntegrationSpec {
             
             it("should reset the TCP connection from the server side", () -> {
                 assertThatThrownBy(() ->
-                    serve(eventRoute.apply(), http -> http.getByteString("/events"))
+                    serve(eventRoute.apply(), http -> http.getByteString("/"))
                 ).hasMessageContaining("reset by peer")
                  .isInstanceOf(StreamTcpException.class);
             });
         });
         
+        it("should reject if given timestamp is not valid", () -> {
+            assertThatThrownBy(() -> 
+                serve(testEventRoute((tag, idx) -> Source.empty()).apply(), http -> http.getByteString("/?since=123a"))
+            ).hasMessageContaining(
+                "The query parameter 'since' was malformed:\n"
+              + "Timestamp must either be in epoch millisconds or ISO-8601");
+        });
+        
+    });
+    
+    describe("EventRoute.toInstant", () -> {
+        it("converts epoch millis to Instant", () -> {
+            String since = "12345";
+            Instant instant = EventRoute.toInstant(since);
+            assertThat(instant.toEpochMilli()).isEqualTo(12345L);
+        });
+
+        it("converts ISO-8601 timestamp to Instant", () -> {
+            String since = "1970-01-01T00:00:30Z";
+            Instant instant = EventRoute.toInstant(since);
+            assertThat(instant.toEpochMilli()).isEqualTo(30000L);
+            assertThat(instant.toString()).isEqualTo(since);
+        });
     });
 }}
