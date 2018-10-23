@@ -1,12 +1,14 @@
 package com.tradeshift.reaktive.replication.io;
 
 import java.util.Optional;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.tradeshift.reaktive.protobuf.ReplicationMessages.EventsPersisted;
-import com.tradeshift.reaktive.protobuf.EventEnvelopeSerializer;
+import com.tradeshift.reaktive.akka.rest.EventMarshallers;
+import com.tradeshift.reaktive.protobuf.Query;
 import com.tradeshift.reaktive.replication.DataCenter;
 
 import akka.actor.ActorSystem;
@@ -30,7 +32,7 @@ public class WebSocketDataCenterClient implements DataCenter {
     private final String uri;
     private final ConnectionContext connectionContext;
     private final String name;
-    private final EventEnvelopeSerializer serializer;
+    private Function<EventEnvelope, Query.EventEnvelope> serializer;
     
     /**
      * Creates a new WebSocketDataCenterClient
@@ -38,12 +40,12 @@ public class WebSocketDataCenterClient implements DataCenter {
      * @param connectionContext Connection context to apply. Any SSL client certificate should be configured here.
      * @param uri Target URL that the remote datacenter server is listening on ("wss://host:port/events/eventType")
      */
-    public WebSocketDataCenterClient(ActorSystem system, ConnectionContext connectionContext, String name, String uri, EventEnvelopeSerializer serializer) {
+    public WebSocketDataCenterClient(ActorSystem system, ConnectionContext connectionContext, String name, String uri) {
         this.system = system;
         this.connectionContext = connectionContext;
         this.name = name;
         this.uri = uri;
-        this.serializer = serializer;
+        this.serializer = EventMarshallers.getAkkaSerializer(system);
     }
 
     @Override
@@ -71,6 +73,6 @@ public class WebSocketDataCenterClient implements DataCenter {
     }
 
     protected ByteString serialize(EventEnvelope e) {
-        return ByteString.fromArray(serializer.toProtobuf(e).toByteArray());
+        return ByteString.fromArray(serializer.apply(e).toByteArray());
     }
 }
