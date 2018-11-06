@@ -48,9 +48,10 @@ public class DelimitedProtobufFraming extends GraphStage<FlowShape<ByteString,By
     }
 
     @Override
-    public GraphStageLogic createLogic(Attributes attr) throws Exception {
+    public GraphStageLogic createLogic(Attributes attr) {
         return new GraphStageLogic(shape) {
             ByteString buf = ByteString.empty();
+            List<ByteString> deframed = new ArrayList<>();
             {
                 setHandler(in, new AbstractInHandler() {
                     @Override
@@ -62,16 +63,15 @@ public class DelimitedProtobufFraming extends GraphStage<FlowShape<ByteString,By
 
                     @Override
                     public void onUpstreamFinish() {
-                        if (buf.size() > 0) {
+                        if (buf.size() > 0 || !deframed.isEmpty()) {
                             deliverBuf();
                         }
                         completeStage();
-                    };
+                    }
 
                     private void deliverBuf() {
                         log.debug("Buf now {}", buf);
                         try {
-                            List<ByteString> deframed = new ArrayList<>();
                             while (buf.size() > 0) {
                                 CodedInputStream i = CodedInputStream.newInstance(buf.iterator().asInputStream());
                                 long contentLength = i.readUInt64();
@@ -97,6 +97,7 @@ public class DelimitedProtobufFraming extends GraphStage<FlowShape<ByteString,By
                                 }
                             } else {
                                 emitMultiple(out, deframed.iterator());
+                                deframed = new ArrayList<>();
                             }
                         } catch (IOException x) {
                             log.debug("Protobuf unhappy at length {}", buf.size());
