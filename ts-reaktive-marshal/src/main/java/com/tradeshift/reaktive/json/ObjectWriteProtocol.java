@@ -35,7 +35,7 @@ public class ObjectWriteProtocol<T> implements WriteProtocol<JSONEvent, T> {
     }
     
     public ObjectWriteProtocol(WriteProtocol<JSONEvent, T> inner) {
-        this(Vector.of((Protocol<JSONEvent, ?>)inner), Arrays.asList(Function1.identity()), Vector.empty());
+        this(Vector.of((WriteProtocol<JSONEvent, ?>)inner), Arrays.asList(Function1.identity()), Vector.empty());
     }
     
     ObjectWriteProtocol(
