@@ -231,11 +231,12 @@ lazy val `ts-reaktive-actors` = project
   .enablePlugins(GitVersioning)
   .settings(commonSettings: _*)
   .settings(javaSettings: _*)
+  .settings(kamonSettings: _*)
   .settings(
     // the .proto files of this project are supposed to be included by others, so they're added to the .jar
     unmanagedResourceDirectories in Compile += (sourceDirectory in ProtobufConfig).value
   )
-  .dependsOn(`ts-reaktive-java`, `ts-reaktive-testkit` % "test")
+  .dependsOn(`ts-reaktive-java`, `ts-reaktive-akka`, `ts-reaktive-testkit` % "test")
 
 lazy val `ts-reaktive-replication` = project
   .enablePlugins(ProtobufPlugin)
