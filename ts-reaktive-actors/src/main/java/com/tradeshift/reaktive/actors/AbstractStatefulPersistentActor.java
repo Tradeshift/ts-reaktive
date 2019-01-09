@@ -17,7 +17,7 @@ import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.japi.Procedure;
 import akka.japi.pf.ReceiveBuilder;
-import akka.persistence.AbstractPersistentActor;
+import akka.persistence.AbstractPersistentActorWithTimers;
 import akka.persistence.SnapshotOffer;
 import akka.persistence.journal.Tagged;
 import akka.actor.Status.Failure;
@@ -46,7 +46,7 @@ import scala.concurrent.duration.Duration;
  * @param <E> Type of events that this actor emits.
  * @param <S> Immutable type that contains all the state the actor maintains.
  */
-public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractState<E,S>> extends AbstractPersistentActor {
+public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractState<E,S>> extends AbstractPersistentActorWithTimers {
     protected final LoggingAdapter log = Logging.getLogger(context().system(), this);
     
     private S state = initialState();
