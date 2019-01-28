@@ -40,9 +40,35 @@ import static io.vavr.control.Option.some;
  */
 public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends AbstractStatefulPersistentActor<C,E,S> {
     private final Replication replication = ReplicationId.INSTANCE.get(context().system());
-    
+    private final Receive receiveRecover;
+
     public ReplicatedActor(Class<C> commandType, Class<E> eventType, CommandHandler<C, E, S> handler) {
         super(commandType, eventType, handler);
+
+        Receive invokeSuper = super.createReceiveRecover();
+        AtomicReference<Option<Boolean>> slave = new AtomicReference<>(none());
+
+        this.receiveRecover = ReceiveBuilder.create()
+            .match(eventType, e -> slave.get().isEmpty() && !classifier().getDataCenterNames(e).isEmpty(), e -> {
+                slave.set(some(!includesLocalDataCenter(e)));
+                invokeSuper.onMessage().apply(e);
+            })
+            .match(RecoveryCompleted.class, msg -> {
+                if (slave.get().isEmpty()) {
+                    if (lastSequenceNr() > 0) {
+                        getContext().become(migrateNonReplicatedActor());
+                    } else {
+                        getContext().become(justCreated());
+                    }
+                } else {
+                    getContext().become(slave.get().get() ? slave() : master());
+                }
+                if (invokeSuper.onMessage().isDefinedAt(msg)) {
+                    invokeSuper.onMessage().apply(msg);
+                }
+            })
+            .build()
+            .orElse(invokeSuper);
     }
     
     protected EventClassifier<E> classifier() {
@@ -51,30 +77,7 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
 
     @Override
     public Receive createReceiveRecover() {
-        Receive invokeSuper = super.createReceiveRecover();
-        AtomicReference<Option<Boolean>> slave = new AtomicReference<>(none());
-        
-        return ReceiveBuilder.create()
-            .match(eventType, e -> slave.get().isEmpty() && !classifier().getDataCenterNames(e).isEmpty(), e -> {
-                slave.set(some(!includesLocalDataCenter(e)));
-                invokeSuper.onMessage().apply(e);
-            })
-            .match(RecoveryCompleted.class, msg -> {
-                if (slave.get().isEmpty()) {
-                    if (lastSequenceNr() > 0) {
-                        getContext().become(migrateNonReplicatedActor());            			
-                    } else {
-                        getContext().become(justCreated());
-                    }
-                } else {
-                    getContext().become(slave.get().get() ? slave() : master()); 
-                }
-                if (invokeSuper.onMessage().isDefinedAt(msg)) {
-                    invokeSuper.onMessage().apply(msg);
-                }
-            })
-            .build()
-            .orElse(invokeSuper);
+        return receiveRecover;
     }
     
     /**
