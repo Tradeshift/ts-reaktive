@@ -42,7 +42,7 @@ val VersionRegex = "v([0-9]+.[0-9]+.[0-9]+)-?(.*)?".r
 
 releaseCrossBuild := true
 
-crossScalaVersions := Seq("2.11.11", "2.12.6")
+crossScalaVersions := Seq("2.12.6")
 
 releaseProcess := Seq(
   checkSnapshotDependencies,
@@ -59,7 +59,7 @@ lazy val projectSettings = Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
   scalaVersion := "2.12.6",
-  crossScalaVersions := Seq("2.11.12", "2.12.6"),
+  crossScalaVersions := Seq("2.12.6"),
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
   javacOptions in (Compile, Keys.compile) ++= Seq("-target", "1.8", "-Xlint", "-Xlint:-processing", "-Xlint:-serial", "-Werror"),
