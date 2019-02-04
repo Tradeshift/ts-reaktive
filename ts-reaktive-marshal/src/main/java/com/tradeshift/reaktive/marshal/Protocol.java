@@ -1,5 +1,7 @@
 package com.tradeshift.reaktive.marshal;
 
+import static io.vavr.control.Option.some;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.Consumer;
@@ -152,7 +154,7 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
     /**
      * Writes a map using an inner protocol, by turning it into writing multiple tuples.
      */
-    public static <E,K,V> WriteProtocol<E,Map<K,V>> map(Protocol<E,Tuple2<K,V>> inner) {
+    public static <E,K,V> WriteProtocol<E,Map<K,V>> map(WriteProtocol<E,Tuple2<K,V>> inner) {
         return MapProtocol.write(inner);
     }
     
@@ -177,7 +179,19 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
         return OptionProtocol.write(inner);
     }
     
+    /**
+     * Reads a nested protocol optionally, supplying [value] if it does not yield a result.
+     */
+    public static <E,T> Protocol<E,T> withDefault(T value, Protocol<E,T> inner) {
+        return option(inner).map(o -> o.getOrElse(value), v -> some(v));
+    }
     
+    /**
+     * Reads a nested protocol optionally, supplying [value] if it does not yield a result.
+     */
+    public static <E,T> ReadProtocol<E,T> withDefault(T value, ReadProtocol<E,T> inner) {
+        return option(inner).map(o -> o.getOrElse(value));
+    }
     
     // -------------------------------------------------------------------------------------------
     

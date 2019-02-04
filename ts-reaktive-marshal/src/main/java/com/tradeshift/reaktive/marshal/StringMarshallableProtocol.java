@@ -36,7 +36,7 @@ public class StringMarshallableProtocol<E,T> implements Protocol<E,T> {
         return delegate.toString() + " as " + type.toString();
     }
 
-    static <E,T> Reader<E,T> addLocationOnError(Reader<E,T> inner, Locator<E> locator) {
+    public static <E,T> Reader<E,T> addLocationOnError(Reader<E,T> inner, Locator<E> locator) {
         return new Reader<E,T>() {
             @Override
             public Try<T> reset() {

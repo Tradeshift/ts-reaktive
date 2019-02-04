@@ -27,7 +27,7 @@ import io.vavr.control.Option;
 @SuppressWarnings("unchecked")
 public class XMLProtocol {
     private static final XMLEventFactory factory = XMLEventFactory.newFactory();
-    static final Locator<XMLEvent> locator = evt -> evt.getLocation().getLineNumber() + ":" + evt.getLocation().getColumnNumber();
+    public static final Locator<XMLEvent> locator = evt -> evt.getLocation().getLineNumber() + ":" + evt.getLocation().getColumnNumber();
 
     //---------------------- 0-arity tag methods -----------------------------------
     
@@ -334,7 +334,7 @@ public class XMLProtocol {
     }
     
     /**
-     * Reads a string attribute in the default namespace
+     * Reads and writes a string attribute in the default namespace
      */
     public static AttributeProtocol attribute(String name) {
         return attribute(qname(name));
@@ -352,9 +352,6 @@ public class XMLProtocol {
      */
     public static final BodyProtocol body = BodyProtocol.INSTANCE;
     
-    /**
-     * Reads and writes the body of the current XML tag as actual XML {@link Characters} events.
-     */
     public static final Protocol<XMLEvent, Characters> bodyEvents = BodyEventsProtocol.INSTANCE;
     
     /**

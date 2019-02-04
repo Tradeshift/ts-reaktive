@@ -42,7 +42,7 @@ val VersionRegex = "v([0-9]+.[0-9]+.[0-9]+)-?(.*)?".r
 
 releaseCrossBuild := true
 
-crossScalaVersions := Seq("2.11.11", "2.12.6")
+crossScalaVersions := Seq("2.12.6")
 
 releaseProcess := Seq(
   checkSnapshotDependencies,
@@ -59,14 +59,16 @@ lazy val projectSettings = Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
   scalaVersion := "2.12.6",
-  crossScalaVersions := Seq("2.11.12", "2.12.6"),
+  crossScalaVersions := Seq("2.12.6"),
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
   javacOptions in (Compile, Keys.compile) ++= Seq("-target", "1.8", "-Xlint", "-Xlint:-processing", "-Xlint:-serial", "-Werror"),
   javacOptions in doc ++= Seq("-Xdoclint:none"),
+  scalacOptions ++= Seq("-target:jvm-1.8"),
   EclipseKeys.executionEnvironment := Some(EclipseExecutionEnvironment.JavaSE18),
   EclipseKeys.createSrc := EclipseCreateSrc.Default + EclipseCreateSrc.ManagedClasses,
   EclipseKeys.withSource := true,
+  javaOptions += "-Xmx128M",
   fork := true,
   resolvers ++= Seq(
     Resolver.bintrayRepo("readytalk", "maven"),
@@ -226,6 +228,25 @@ lazy val `ts-reaktive-cassandra` = project
   .dependsOn(`ts-reaktive-java`, `ts-reaktive-akka`, `ts-reaktive-testkit-assertj` % "test")
   .enablePlugins(GitVersioning)
 
+lazy val `ts-reaktive-marshal-scala` = project
+  .settings(projectSettings: _*)
+  .dependsOn(
+    `ts-reaktive-marshal`,
+    `ts-reaktive-marshal-akka`,
+    `ts-reaktive-testkit` % "test",
+    `ts-reaktive-marshal-akka` % "test")
+  .enablePlugins(GitVersioning)
+
+lazy val `ts-reaktive-xsd` = project
+  .settings(projectSettings: _*)
+  .settings(libraryDependencies ++= Seq(
+    "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+  ))
+  .dependsOn(
+    `ts-reaktive-marshal-scala`,
+    `ts-reaktive-testkit` % "test",
+    `ts-reaktive-marshal-akka` % "test")
+
 lazy val `ts-reaktive-actors` = project
   .enablePlugins(ProtobufPlugin)
   .enablePlugins(GitVersioning)
@@ -287,7 +308,9 @@ lazy val root = (project in file(".")).settings(publish := { }, publishLocal := 
   `ts-reaktive-ssl`,
   `ts-reaktive-marshal`,
   `ts-reaktive-marshal-akka`,
+  `ts-reaktive-marshal-scala`,
   `ts-reaktive-marshal-xerces`,
+  `ts-reaktive-xsd`,
   `ts-reaktive-testkit`,
   `ts-reaktive-testkit-assertj`,
   `ts-reaktive-kamon-log4j`,
