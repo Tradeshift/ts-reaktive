@@ -20,6 +20,8 @@ import io.vavr.collection.Vector;
 import io.vavr.control.Option;
 
 public class ReplicatedTestActor extends ReplicatedActor<TestCommand, TestEvent, TestActorState> {
+    public static final String NOT_FOUND_MSG = "not_found";
+
     public static final ReplicatedActorSharding<TestCommand> sharding =
         ReplicatedActorSharding.of("testactor", Props.create(ReplicatedTestActor.class), c -> toJava(c.getAggregateId()).toString());
     
@@ -96,5 +98,10 @@ public class ReplicatedTestActor extends ReplicatedActor<TestCommand, TestEvent,
     @Override
     protected TestEvent createMigrationEvent() {
     	return TestEvent.newBuilder().setMsg("dc:local").build();
-    }    
+    }
+
+    @Override
+    protected Object getActorNotFoundReply(TestCommand command) {
+        return NOT_FOUND_MSG;
+    }
 }

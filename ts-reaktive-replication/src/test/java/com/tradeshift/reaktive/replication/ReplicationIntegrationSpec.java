@@ -21,7 +21,6 @@ import org.junit.runner.RunWith;
 import com.google.common.io.Files;
 import com.tradeshift.reaktive.replication.TestData.TestCommand;
 import com.tradeshift.reaktive.replication.TestData.TestEvent;
-import com.tradeshift.reaktive.replication.actors.UnknownActorException;
 import com.tradeshift.reaktive.testkit.AkkaPersistence;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -95,15 +94,12 @@ public class ReplicationIntegrationSpec {
         
         public String read(UUID id) {
             try {
-                return (String) ask(shardRegion, TestCommand.newBuilder().setAggregateId(toProtobuf(id)).setRead(TestCommand.Read.newBuilder()).build(), 5000)
-                .toCompletableFuture().get(5000, TimeUnit.MILLISECONDS);
-            } catch (ExecutionException x) {
-                if (x.getCause() instanceof UnknownActorException || x.getMessage().contains("Nothing written yet")) {
-                    return null;
-                } else {
-                    throw new RuntimeException(x);
-                }
-            } catch (InterruptedException | TimeoutException e) {
+                String reply = (String) ask(shardRegion, TestCommand.newBuilder()
+                    .setAggregateId(toProtobuf(id))
+                    .setRead(TestCommand.Read.newBuilder()).build(), 5000
+                ).toCompletableFuture().get(5000, TimeUnit.MILLISECONDS);
+                return (reply.equals(ReplicatedTestActor.NOT_FOUND_MSG)) ? null : reply;
+            } catch (InterruptedException | TimeoutException | ExecutionException e) {
                 throw new RuntimeException(e);
             }            
         }
