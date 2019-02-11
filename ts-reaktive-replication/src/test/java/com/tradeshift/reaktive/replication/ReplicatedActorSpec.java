@@ -13,6 +13,7 @@ import com.tradeshift.reaktive.protobuf.Query;
 import com.tradeshift.reaktive.protobuf.Types;
 import com.tradeshift.reaktive.replication.TestData.TestCommand;
 import com.tradeshift.reaktive.replication.TestData.TestCommand.Write;
+import com.tradeshift.reaktive.replication.actors.ReplicatedActor;
 import com.tradeshift.reaktive.replication.TestData.TestEvent;
 
 import akka.Done;
@@ -45,7 +46,7 @@ public class ReplicatedActorSpec extends SharedActorSystemSpec {
             });
             
             it("should fail the message, since it doesn't know yet whether it's a master or slave", () -> {
-                sender.expectMsgClass(Failure.class);
+                sender.expectMsg(ReplicatedTestActor.NOT_FOUND_MSG);
             });
         });
         

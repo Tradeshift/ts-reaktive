@@ -39,6 +39,11 @@ import static io.vavr.control.Option.some;
  * migration events.
  */
 public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends AbstractStatefulPersistentActor<C,E,S> {
+    /**
+     * The default error response message when receiving a readonly command to a new actor with no events yet.
+     */
+    public static final String DEFAULT_NOT_FOUND_MESSAGE = "actor_not_found";
+
     private final Replication replication = ReplicationId.INSTANCE.get(context().system());
     private final Receive receiveRecover;
 
@@ -118,6 +123,19 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
     protected E createMigrationEvent() {
         throw new UnsupportedOperationException("Trying to migrate an existing non-replicated actor, but createMigrationEvent() wasn't implemented.");
     }
+
+    /**
+     * Returns the message that should be sent back to a read-only command that is received as first command to a newly
+     * constructed actor with no persisted events. Since an actor needs to know whether it's running as master or slave, the first
+     * command MUST be a non-readonly command.
+     *
+     * This method should construct an error message reply based on the given command.
+     *
+     * The default implementation returns DEFAULT_NOT_FOUND_MESSAGE, a static string "actor-not-found".
+     */
+    protected Object getActorNotFoundReply(C command) {
+        return DEFAULT_NOT_FOUND_MESSAGE;
+    }
     
     /** 
      * The journal doesn't have any events yet for this persistenceId, which means the actor could either become a slave or a master,
@@ -128,8 +146,8 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
 
         return ReceiveBuilder.create()
             .match(commandType, c -> isReadOnly(c), c -> {
-                log.debug("not accepting {}", c);
-                sender().tell(new Failure(new UnknownActorException("Actor " + persistenceId() + " does not know yet whether it's slave or not. Try again later. Was handling:" + c)), self());
+                log.debug("Received erroneous read-only command as first: {}", c);
+                sender().tell(getActorNotFoundReply(c), self());
             })
             .match(commandType, c -> {
                 log.debug("Received write command as first, becoming master: {}", c);
