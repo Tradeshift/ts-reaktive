@@ -229,7 +229,6 @@ class SchemaBuilder(base: Schema = Schema.empty) extends GraphStageWithMateriali
   val in: Inlet[SchemaEntry] = Inlet("in")
   override val shape:SinkShape[SchemaEntry] = SinkShape(in)
   override def createLogicAndMaterializedValue(attr: Attributes) = {
-    println("starting.")
     val mat = Promise[Schema]
     def safely[T](block: =>T): T = try { block } catch { case x:Throwable => mat.failure(x); throw x }
     
@@ -246,7 +245,6 @@ class SchemaBuilder(base: Schema = Schema.empty) extends GraphStageWithMateriali
         }
         
         override def onUpstreamFinish: Unit = safely {
-          println("We're done!")
           if (!(types.isResolved && elements.isResolved)) {
             val x = new IllegalStateException("Unresolved types/elements after reading all schemas: \n" +
               (types.missingKeys ++ elements.missingKeys).toSeq.map(_.toString).sorted.mkString(",\n"))
