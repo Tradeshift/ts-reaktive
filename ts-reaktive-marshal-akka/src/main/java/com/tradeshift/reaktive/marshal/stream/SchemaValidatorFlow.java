@@ -94,10 +94,10 @@ public class SchemaValidatorFlow extends GraphStage<FlowShape<XMLEvent, XMLEvent
                     }
                     try {
                         Stax.apply(event, handler);
+                        push(out, event);
                     } catch (SAXParseException x) {
-                        throw x;
+                        failStage(x);
                     }
-                    push(out, event);
                 }
             });
         }};
