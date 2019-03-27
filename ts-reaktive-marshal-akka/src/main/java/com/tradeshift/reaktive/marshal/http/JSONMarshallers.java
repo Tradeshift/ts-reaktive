@@ -92,7 +92,9 @@ public class JSONMarshallers {
         Unmarshaller<HttpEntity, Source<T, NotUsed>> streamUnmarshaller = sourceFromJSON(protocol, mediaTypes);
         
         return AsyncUnmarshallers.<HttpEntity, T>withMaterializer((ctx, mat, entity) -> {
-            return streamUnmarshaller.unmarshal(entity, ctx, mat).thenCompose(src -> src.runWith(Sink.head(), mat));
+            return streamUnmarshaller.unmarshal(entity, ctx, mat).thenCompose(src ->
+                src.runWith(Sink.headOption(), mat)
+            ).thenApply(opt -> opt.orElseThrow(() -> new IllegalArgumentException("Provided JSON was invalid. Did you forget some required fields?")));
         });
     }
     

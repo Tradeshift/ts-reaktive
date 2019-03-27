@@ -9,3 +9,5 @@ bin
 .cache-tests
 .ensime
 .ensime_cache
+.bloop
+.metals

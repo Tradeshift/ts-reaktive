@@ -1,5 +1,7 @@
 package com.tradeshift.reaktive.testkit;
 
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import akka.japi.pf.FI;
@@ -13,6 +15,7 @@ public class Await {
     private static final long defaultStartInterval = 30;
     private static final long defaultMaxInterval = 500;
     private static final long defaultTimeoutSeconds = 10;
+    private static final Within withinDefaultTimeout = new Within(defaultTimeoutSeconds, TimeUnit.SECONDS);
     
     /**
      * Holds a timeout configuration, on which assertion blocks can be repeatedly attempted.
@@ -67,6 +70,44 @@ public class Await {
                 return null; 
             });
         }
+
+        /**
+         * Waits for the specified future to complete and returns its result, or throw its exception
+         * if it has failed (unwrapping any ExecutionException).
+         */
+        public <T> T result(CompletionStage<T> future) {
+            try {
+                return future.toCompletableFuture().get(amount, unit);
+            } catch (ExecutionException x) {
+                Throwable cause = x.getCause();
+                if (cause instanceof RuntimeException) {
+                    throw (RuntimeException) cause;
+                } else {
+                    throw new RuntimeException(cause);
+                }
+            } catch (RuntimeException x) {
+                throw x;
+            } catch (Exception x) {
+                throw new RuntimeException(x);
+            }
+        }
+
+        /**
+         * Waits for the specified future to fail, and returns its failure exception
+         * (unwrapping any ExecutionException).
+         *
+         * Throws an assertion error if the future succeeds.
+         */
+        public <T> Throwable failure(CompletionStage<T> future) {
+            try {
+                T result = future.toCompletableFuture().get(amount, unit);
+                throw new AssertionError("Expected future to fail, but instead succeeded with: " + result);
+            } catch (ExecutionException x) {
+                return x.getCause();
+            } catch (Exception x) {
+                return x;
+            }
+        }
     }
     
     /**
@@ -83,22 +124,44 @@ public class Await {
     
     /**
      * Repeatedly tries to evaluate the given function, re-trying whenever it fails with
-     * an AssertionError. Any other exception will be thrown immediately. 
+     * an AssertionError. Any other exception will be thrown immediately.
      * 
-     * A default timeout of 10 seconds is applied.
+     * A default timeout of 10 seconds is applied; use within() to use a different timeout.
      * @return The final return value of [f], if invoked successfully
      */
     public static <T> T eventually(CheckedFunction0<T> f) {
-        return within(defaultTimeoutSeconds, TimeUnit.SECONDS).eventually(f);
+        return withinDefaultTimeout.eventually(f);
     }
     
     /**
      * Repeatedly tries to evaluate the given function, re-trying whenever it fails with
      * an AssertionError. Any other exception will be thrown immediately.
      * 
-     * A default timeout of 10 seconds is applied.
+     * A default timeout of 10 seconds is applied; use within() to use a different timeout.
      */
     public static void eventuallyDo(FI.UnitApplyVoid f) {
-        within(defaultTimeoutSeconds, TimeUnit.SECONDS).eventuallyDo(f);
+        withinDefaultTimeout.eventuallyDo(f);
     }    
+
+    /**
+     * Waits for the specified future to complete and returns its result, or throw its exception
+     * if it has failed (unwrapping any ExecutionException).
+     *
+     * A default timeout of 10 seconds is applied; use within() to use a different timeout.
+     */
+    public <T> T result(CompletionStage<T> future) {
+        return withinDefaultTimeout.result(future);
+    }
+
+    /**
+     * Waits for the specified future to fail, and returns its failure exception
+     * (unwrapping any ExecutionException).
+     *
+     * Throws an assertion error if the future succeeds.
+     *
+     * A default timeout of 10 seconds is applied; use within() to use a different timeout.
+     */
+    public <T> Throwable failure(CompletionStage<T> future) {
+        return withinDefaultTimeout.failure(future);
+    }
 }

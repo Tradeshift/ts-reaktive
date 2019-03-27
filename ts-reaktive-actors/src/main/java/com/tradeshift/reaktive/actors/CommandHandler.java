@@ -1,6 +1,7 @@
 package com.tradeshift.reaktive.actors;
 
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 
 import io.vavr.collection.Seq;
 import io.vavr.collection.Vector;
@@ -86,6 +87,21 @@ public interface CommandHandler<C,E,S extends AbstractState<E,?>> {
         public static <T,U extends T> Results<T> cast(Results<U> results) {
             return (Results<T>) results;
         }
+
+        /**
+         * Returns a Results that will always return a fixed error object.
+         */
+        public static <E> Results<E> failed(Object failureReply) {
+            return new Results<E>() {
+                public Option<Object> getValidationError(long lastSequenceNr) {
+                    return Option.some(failureReply);
+                }
+
+                public Object getReply(Seq<E> emittedEvents, long lastSequenceNr) {
+                    throw new UnsupportedOperationException("Results.failed().getReply() should not be invoked");
+                }
+            };
+        }
         
         /**
          * Returns the events to be emitted as a result of applying the command. 
@@ -127,5 +143,29 @@ public interface CommandHandler<C,E,S extends AbstractState<E,?>> {
         default public Option<Object> getValidationError(long lastSequenceNr) {
             return Option.none();
         }
+
+        /**
+         * A function that returns a debug string representation of anything implementing Results.
+         * This is useful with AssertJ, if you register it at the start of your test using
+
+         * <pre>Assertions.registerFormatterForType(Results.class, Results.ToString);</pre>
+         */
+        public static final Function<Results<?>,String> ToString = results -> {
+            Option<Object> err = results.getValidationError(0);
+            if (err.isEmpty()) {
+                if (results.isAlreadyApplied()) {
+                    Object reply = results.getIdempotentReply(0);
+                    return "Results:idempotent(reply=" + reply + ")";
+                } else {
+                    @SuppressWarnings("unchecked")
+                    Results<Object> r = (Results<Object>) results;
+                    Seq<Object> events = r.getEventsToEmit();
+                    Object reply = r.getReply(events, 0);
+                    return "Results:valid(events=" + events + ", reply=" + reply+ ")";
+                }
+            } else {
+                return "Results:invalid(reply=" + err.get() + ")";
+            }
+        };
     }
 }

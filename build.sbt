@@ -170,7 +170,8 @@ lazy val `ts-reaktive-testkit-assertj` = project
     libraryDependencies ++= Seq(
       assertJ
     )
-  )  
+  )
+  .dependsOn(`ts-reaktive-actors`)
   .enablePlugins(GitVersioning)
 
 lazy val `ts-reaktive-akka` = project
