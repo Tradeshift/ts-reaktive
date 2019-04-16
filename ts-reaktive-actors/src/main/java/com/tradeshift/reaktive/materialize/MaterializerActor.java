@@ -9,13 +9,14 @@ import java.io.Serializable;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.tradeshift.reaktive.CompletableFutures;
 import com.tradeshift.reaktive.akka.SharedActorMaterializer;
+import com.tradeshift.reaktive.protobuf.MaterializerActor.MaterializerActorEvent;
 import com.typesafe.config.Config;
 
 import akka.Done;
@@ -36,6 +37,8 @@ import akka.stream.KillSwitches;
 import akka.stream.javadsl.Keep;
 import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Map;
 import io.vavr.collection.Seq;
 import io.vavr.collection.Set;
 import io.vavr.collection.Vector;
@@ -44,6 +47,10 @@ import scala.concurrent.duration.FiniteDuration;
 
 /**
  * Persistent actor that reads events from an existing journal and creates a materialized view.
+ *
+ * Multiple concurrent workers can be started, that import from different time periods simultaneously.
+ *
+ * It is up to the implementing class to synchronize any concurrent workers.
  *
  * @param <E> Type of events that the actor is going to read from the journal
  */
@@ -60,15 +67,14 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
     private final FiniteDuration restartDelay;
     private final int batchSize;
     private final int maxEventsPerTimestamp;
+    private final int maxWorkerCount;
     private final Duration updateOffsetInterval;
     private final AtomicReference<Instant> reimportProgress = new AtomicReference<>();
     private final ActorMaterializer materializer;
 
-    private long offset = 0;
-    private ActorRef stream = null;
-    private boolean awaitingDeleteSuccess = false;
-    private boolean awaitingRestart = false;
+    private MaterializerWorkers workers;
     private Option<KillSwitch> ongoingReimport = Option.none();
+    private Map<UUID,AtomicLong> workerEndTimestamps = HashMap.empty();
 
     protected MaterializerActor() {
         this.materializer = SharedActorMaterializer.get(context().system());
@@ -78,7 +84,9 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
         restartDelay = FiniteDuration.create(config.getDuration("restart-delay", SECONDS), SECONDS);
         batchSize = config.getInt("batch-size");
         maxEventsPerTimestamp = config.getInt("max-events-per-timestamp");
+        maxWorkerCount = config.getInt("max-worker-count");
         updateOffsetInterval = config.getDuration("update-offset-interval");
+        this.workers = MaterializerWorkers.empty(Duration.ofMillis(rollback.toMillis()));
         log.info("{} has started.", self().path());
 
         getContext().setReceiveTimeout(updateOffsetInterval);
@@ -111,86 +119,98 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
                 this.ongoingReimport = none();
                 reimportProgress.set(null);
             })
-            .matchEquals("restartStream", msg -> {
-                materializeEvents();
+            .match(StartWorker.class, msg -> {
+                materializeEvents(msg.worker);
+            })
+            .match(CreateWorker.class, msg -> {
+                createWorker(msg.timestamp);
             })
             .matchEquals("init", msg -> getSender().tell("ack", self()))
-            .match(Long.class, o -> !awaitingRestart, o -> {
-                // We're now positively done with timestamp [o].
-                // If [o] is long enough ago, we can start with [o+1] next time. Otherwise, we start again at now() minus rollback.
-                log.debug("Done with timestamp {}", o);
-                long now = System.currentTimeMillis();
-                long newOffset;
-                if (o < now - rollback.toMillis()) {
-                    newOffset = o + 1;
-                } else {
-                    newOffset = now - rollback.toMillis();
-                }
-                stream = sender();
-                if (log.isInfoEnabled()) {
-                    log.info("Persisting offset {} / {}, which is {}s ago.", newOffset, Instant.ofEpochMilli(newOffset), (now - newOffset) / 1000);
-                }
-                persist(newOffset, done -> {
-                    offset = newOffset;
-                    recordOffsetMetric();
-                    awaitingDeleteSuccess = true;
+            .match(WorkerProgress.class, p -> {
+                persist(workers.onWorkerProgress(p.worker, p.timestamp), evt -> {
+                    applyEvent(evt);
+                    context().system().scheduler().scheduleOnce(
+                        updateAccuracy, sender(), "ack", context().dispatcher(), self());
                     if (lastSequenceNr() > 1) {
                         deleteMessages(lastSequenceNr() - 1);
-                    } else {
-                        self().tell(new DeleteMessagesSuccess(0), self());
                     }
                 });
             })
             .match(DeleteMessagesSuccess.class, msg -> {
-                awaitingDeleteSuccess = false;
-                unstashAll();
-                context().system().scheduler()
-                    .scheduleOnce(updateAccuracy, stream, "ack", context().dispatcher(), self());
+                log.debug("Delete messages completed.");
             })
             .match(DeleteMessagesFailure.class, msg -> {
-                awaitingDeleteSuccess = false;
-                unstashAll();
-                log.error(msg.cause(), "Delete messages failed at offset " + offset + ", rethrowing", msg.cause());
+                log.error(msg.cause(), "Delete messages failed at offsets " + workers
+                    + ", rethrowing", msg.cause());
                 throw (Exception) msg.cause();
             })
-            .match(Failure.class, msg -> {
-                log.error(msg.cause(), "Stream failed at offset " + offset + ", restarting in " + restartDelay);
-                scheduleStreamRestart();
+            .match(WorkerFailure.class, failure -> {
+                log.error(failure.cause, "Stream " + failure.worker + " failed at offset "
+                    + workers + ", restarting in " + restartDelay);
+                onWorkerStopped(failure.worker);
             })
-            .matchEquals("done", msg -> {
-                if (awaitingDeleteSuccess) {
-                    stash();
-                } else {
-                    log.debug("Completed, now offset is: {}", offset);
-                    scheduleStreamRestart();
-                }
+            .match(WorkerDone.class, msg -> {
+                log.debug("Completed {}, now offset is: {}", msg.worker, workers);
+                onWorkerStopped(msg.worker);
             })
             .matchEquals("reset", msg -> {
-                log.info("Resetting importer and starting from scratch.");
-                offset = 0L;
-                persist(offset, done -> {
-                    log.debug("Reset event stored, stopping actor and awaiting restart.");
-                    awaitingRestart = true;
-                    sender().tell(Done.getInstance(), self());
-                    context().stop(self());
-                });
+            /* replaced by creating extra workers */
+                log.warning("Received legacy 'reset' message");
             })
             .build();
     }
 
-    private void scheduleStreamRestart() {
-        context().system().scheduler()
-            .scheduleOnce(restartDelay, self(), "restartStream", context().dispatcher(), self());
+    private void createWorker(Instant timestamp) {
+        if (workers.getIds().size() >= maxWorkerCount) {
+            log.warning("Ignoring request to start extra worker at {}, because maximum of {} is already reached.",
+                timestamp, workers.getIds().size());
+            return;
+        }
+
+        persist(workers.startWorker(timestamp), evt -> {
+            applyEvent(evt);
+
+            // Start the new worker:
+            workers.getIds().removeAll(workerEndTimestamps.keySet()).forEach(this::materializeEvents);
+        });
+    }
+
+    private void onWorkerStopped(UUID worker) {
+        workerEndTimestamps = workerEndTimestamps.remove(worker);
+        if (workers.getIds().contains(worker)) {
+            context().system().scheduler()
+                .scheduleOnce(restartDelay, self(), new StartWorker(worker), context().dispatcher(), self());
+        }
     }
 
     @Override
     public Receive createReceiveRecover() {
         return ReceiveBuilder.create()
-            .match(Long.class, o -> offset = o)
+            // Backwards-compatibility of old Long.class events from when there was only 1 worker
+            .match(Long.class, evt -> workers = workers.applyEvent(evt))
+            .match(MaterializerActorEvent.class, this::applyEvent)
             .match(RecoveryCompleted.class, m -> {
-                materializeEvents();
+                if (workers.isEmpty()) {
+                    workers = workers.initialize();
+                }
+                workers.getIds().forEach(this::materializeEvents);
             })
             .build();
+    }
+
+    private void applyEvent(MaterializerActorEvent evt) {
+        workers = workers.applyEvent(evt);
+        Seq<UUID> ids = workers.getIds();
+        workerEndTimestamps.forEach((id, endTimestamp) -> {
+            if (ids.contains(id)) {
+                endTimestamp.set(workers.getEndTimestamp(id).map(t -> t.toEpochMilli()).getOrElse(-1L));
+            } else {
+                // No longer in the list -> we should stop it right now.
+                log.info("Worker {} being stopped by event.", id);
+                endTimestamp.set(0L);
+            }
+        });
+        recordOffsetMetric();
     }
 
     @Override
@@ -215,12 +235,32 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
         cancelReimport();
     }
 
-    private void materializeEvents() {
-        log.debug("{}: Start materialize of events from offset: {}, with rollback: {}",
-                  persistenceId(), offset, rollback);
+    private void materializeEvents(UUID worker) {
+        if (!workers.getIds().contains(worker)) {
+            log.debug("Not starting {}", worker);
+            return;
+        }
+        if (workerEndTimestamps.containsKey(worker)) {
+            log.warning("Still have timestamp {} for worker {}, about to overwrite.",
+                workerEndTimestamps.apply(worker).get(), worker);
+        }
+        AtomicLong endTimestamp = new AtomicLong(
+            workers.getEndTimestamp(worker).map(t -> t.toEpochMilli()).getOrElse(-1L)
+        );
+        workerEndTimestamps = workerEndTimestamps.put(worker, endTimestamp);
+        log.debug("Worker {}: Start materialize of events from {} until (for now) {}",
+            worker, workers.getTimestamp(worker).toEpochMilli(), endTimestamp.get());
         recordOffsetMetric();
 
-        loadEvents(Instant.ofEpochMilli(offset))
+        loadEvents(workers.getTimestamp(worker))
+            .takeWhile(e -> {
+                long end = endTimestamp.get();
+                if (end == -1) {
+                    return true;
+                } else {
+                    return timestampOf(e).toEpochMilli() < end;
+                }
+            })
             // get a Seq<E> of where each Seq has the same timestamp, or emit buffer after [rollback]
             // (assuming no events with that timestamp after that)
             .via(GroupWhile.apply((a,b) -> timestampOf(a).equals(timestampOf(b)),
@@ -240,7 +280,9 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
             )
             //keep highest last offset, in order to limit the amount of events sent to the journal
             .conflate(Long::max)
-            .runWith(Sink.actorRefWithAck(self(), "init", "ack", "done", Failure::new), materializer);
+            .map(t -> new WorkerProgress(worker, Instant.ofEpochMilli(t)))
+            .runWith(Sink.actorRefWithAck(self(),
+                "init", "ack", new WorkerDone(worker), x -> new WorkerFailure(worker, x)), materializer);
     }
 
     private void reimport(Set<String> entityIds) {
@@ -296,7 +338,10 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
     }
 
     private void recordOffsetMetric() {
-        metrics.getOffset().record(System.currentTimeMillis() - offset);
+        Seq<UUID> ids = workers.getIds();
+        for (int i = 0; i < workers.getIds().size(); i++) {
+            metrics.getOffset(i).record(Duration.between(workers.getTimestamp(ids.apply(i)), Instant.now()).toMillis());
+        }
     }
 
     protected abstract CompletionStage<Done> materialize(E envelope);
@@ -320,18 +365,13 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
      * Materialize the given envelopes in parallel, as far as their entityIds allow it.
      */
     private CompletionStage<Done> materialize(java.util.List<E> envelopes) {
-        java.util.Map<Object, Seq<E>> map = new HashMap<>();
-        for (E envelope: envelopes) {
-            Object key = getConcurrencyKey(envelope);
-            map.put(key, map.getOrDefault(key, Vector.empty()).append(envelope));
-        }
-
-        Seq<CompletionStage<Done>> futures = Vector.empty();
-        for (Entry<Object, Seq<E>> e: map.entrySet()) {
-            futures = futures.append(persistSequential(e.getValue()));
-        }
-
-        return CompletableFutures.sequence(futures.map(c -> c.toCompletableFuture())).thenApply(seqOfDone -> Done.getInstance());
+        return CompletableFutures.sequence(
+            Vector.ofAll(envelopes)
+            .groupBy(this::getConcurrencyKey)
+            .values()
+            .map(this::persistSequential)
+            .map(c -> c.toCompletableFuture())
+        ).thenApply(seqOfDone -> Done.getInstance());
     }
 
     private CompletionStage<Done> persistSequential(Seq<E> seq) {
@@ -397,5 +437,60 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
 
         public static final QueryReimport instance = new QueryReimport();
         private QueryReimport() {}
+    }
+
+    /**
+     * Message that can be sent to this actor to have it launch an extra worker, which starts
+     * work at the given timestamp.
+     *
+     * If the maximum number of workers has been reached, or if the timestamp is too close to an
+     * existing worker, the request is ignored.
+     */
+    public static class CreateWorker implements Serializable {
+        private static final long serialVersionUID = 1L;
+
+        private final Instant timestamp;
+
+        public CreateWorker(Instant timestamp) {
+            this.timestamp = timestamp;
+        }
+    }
+
+    /** Internal status message, sent from stream to actor every so often. */
+    private static class WorkerProgress {
+        private final UUID worker;
+        private final Instant timestamp;
+
+        public WorkerProgress(UUID worker, Instant timestamp) {
+            this.worker = worker;
+            this.timestamp = timestamp;
+        }
+    }
+
+    /** Internal status message, sent from stream to actor when stream fails. */
+    private static class WorkerFailure {
+        private final UUID worker;
+        private final Throwable cause;
+
+        public WorkerFailure(UUID worker, Throwable cause) {
+            this.worker = worker;
+            this.cause = cause;
+        }
+    }
+
+    private static class WorkerDone {
+        private final UUID worker;
+
+        public WorkerDone(UUID worker) {
+            this.worker = worker;
+        }
+    }
+
+    private static class StartWorker {
+        private final UUID worker;
+
+        public StartWorker(UUID worker) {
+            this.worker = worker;
+        }
     }
 }

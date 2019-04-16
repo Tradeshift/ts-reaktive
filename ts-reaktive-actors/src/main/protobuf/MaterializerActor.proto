@@ -1,0 +1,23 @@
+package MaterializerActor;
+
+option java_package = "com.tradeshift.reaktive.protobuf";
+
+import "Types.proto";
+
+message MaterializerActorEvent {
+    // Ordered sequence of where each worker is. Once a worker goes past the timestamp of the next worker, it stops.
+    // Once the last worker catches up with real time, it either stalls and waits for further events (if the stream supports it)
+    // or rolls back and polls after a small delay.
+    repeated Worker worker = 1;
+
+    message Worker {
+        optional Types.UUID id = 1;
+
+        // The timestamp (inclusive) at which the worker should be re-started if it's not currently running
+        optional uint64 timestamp = 2;
+
+        // The timestamp (exclusive) at which the worker can stop working, since it's assumed events from there
+        // were already picked up by another worker.
+        optional uint64 endTimestamp = 3;
+    }
+}
