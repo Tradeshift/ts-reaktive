@@ -60,6 +60,11 @@ public class ACL<R,C> {
         return this;
     }
 
+    /** Returns all the rights granted in this ACL */
+    public Map<R,Set<UUID>> getGranted() {
+        return entries;
+    }
+
     /**
      * Returns whether the given target UUID is registered as having the given right (directly).
      * This function doesn't take any special "admin" rights into account.
