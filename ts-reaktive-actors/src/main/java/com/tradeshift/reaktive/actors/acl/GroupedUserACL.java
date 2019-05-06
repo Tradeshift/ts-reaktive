@@ -127,6 +127,6 @@ public class GroupedUserACL<R extends Enum<R>,C> {
 
     /** Returns, per right, the set of groups that have been granted that right. */
     public Map<R,Set<UUID>> getGrantedGroups() {
-        return userAcl.getGranted();
+        return groupAcl.getGranted();
     }
 }
