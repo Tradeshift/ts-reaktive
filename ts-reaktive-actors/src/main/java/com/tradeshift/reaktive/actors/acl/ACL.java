@@ -49,10 +49,10 @@ public class ACL<R,C> {
         for (UUID target: builder.getTargetId(change)) {
             Map<R,Set<UUID>> entries = this.entries;
             for (R granted: builder.getGranted(change)) {
-                entries = entries.put(granted, entries.getOrElse(Tuple.of(granted, HashSet.empty()))._2.add(target));
+                entries = entries.put(granted, entries.getOrElse(granted, HashSet.empty()).add(target));
             }
             for (R revoked: builder.getRevoked(change)) {
-                entries = entries.put(revoked, entries.getOrElse(Tuple.of(revoked, HashSet.empty()))._2.remove(target));
+                entries = entries.put(revoked, entries.getOrElse(revoked, HashSet.empty()).remove(target));
             }
             return (entries.eq(this.entries)) ? this : new ACL<>(builder, entries);
         }
