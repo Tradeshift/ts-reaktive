@@ -125,6 +125,17 @@ public class ACLSpec {
                 updated = updated.apply(new Change(some(userId), none(), some(Right.WRITE)));
                 assertThat(updated.isOnlyGrantedTo(otherUserId, Right.WRITE)).isTrue();
             });
+
+            it("should grant new users and rights independently", () -> {
+                UUID otherUserId = UUID.fromString("2204f471-afb4-411b-bcbc-f76c2cbb69ea");
+
+                ACL<Right, Change> updated = acl
+                    .apply(new Change(some(userId), some(Right.WRITE), none()))
+                    .apply(new Change(some(otherUserId), some(Right.READ), none()));
+
+                assertThat(updated.isGranted(Right.READ, userId)).isFalse();
+                assertThat(updated.isGranted(Right.WRITE, otherUserId)).isFalse();
+            });
         });
     }
 }
