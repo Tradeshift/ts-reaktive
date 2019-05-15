@@ -11,6 +11,9 @@ import java.util.UUID;
 import org.forgerock.cuppa.junit.CuppaRunner;
 import org.junit.runner.RunWith;
 
+import static io.vavr.control.Option.none;
+import static io.vavr.control.Option.some;
+
 @RunWith(CuppaRunner.class)
 public class MaterializerWorkersSpec {
     {
@@ -18,18 +21,24 @@ public class MaterializerWorkersSpec {
             MaterializerWorkers w = MaterializerWorkers.empty(Duration.ofSeconds(6));
 
             it("should start a new worker and not give it an end timestamp", () -> {
-                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.EPOCH));
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.EPOCH, none()));
                 assertThat(result.getIds()).hasSize(1);
 
                 UUID id = result.getIds().head();
                 assertThat(result.getTimestamp(id)).isEqualTo(Instant.EPOCH);
                 assertThat(result.getEndTimestamp(id)).isEmpty();
             });
+
+            it("should ignore an endTimestamp if given", () -> {
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.EPOCH, some(Instant.ofEpochMilli(10000))));
+                UUID id = result.getIds().head();
+                assertThat(result.getEndTimestamp(id)).isEmpty();
+            });
         });
 
         describe("MaterializerWorkers with 1 worker", () -> {
             MaterializerWorkers w = MaterializerWorkers.build(Duration.ofSeconds(6),
-                i -> i.startWorker(Instant.ofEpochMilli(1000000)));
+                i -> i.startWorker(Instant.ofEpochMilli(1000000), none()));
             UUID worker1 = w.getIds().head();
 
             it("should record progress of its worker", () -> {
@@ -40,7 +49,7 @@ public class MaterializerWorkersSpec {
             });
 
             it("should start a new worker BEFORE the existing timestamp", () -> {
-                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.EPOCH));
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.EPOCH, none()));
                 assertThat(result.getIds()).hasSize(2);
 
                 UUID worker2 = result.getIds().head();
@@ -52,8 +61,33 @@ public class MaterializerWorkersSpec {
                 assertThat(result.getEndTimestamp(worker1)).isEmpty();
             });
 
+            it("should honor endTimestamp for a new worker before the existing timestamp", () -> {
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.EPOCH, some(Instant.ofEpochMilli(50000))));
+                assertThat(result.getIds()).hasSize(2);
+
+                UUID worker2 = result.getIds().head();
+                assertThat(worker2).isNotEqualTo(worker1);
+                assertThat(result.getTimestamp(worker2)).isEqualTo(Instant.EPOCH);
+                assertThat(result.getEndTimestamp(worker2)).contains(Instant.ofEpochMilli(50000));
+            });
+
+            it("should cut endTimestamp if it's past the existing worker's timestamp", () -> {
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.EPOCH, some(Instant.ofEpochMilli(999999999))));
+                assertThat(result.getIds()).hasSize(2);
+
+                UUID worker2 = result.getIds().head();
+                assertThat(worker2).isNotEqualTo(worker1);
+                assertThat(result.getTimestamp(worker2)).isEqualTo(Instant.EPOCH);
+                assertThat(result.getEndTimestamp(worker2)).contains(Instant.ofEpochMilli(1000000));
+            });
+
+            it("should not create a new worker if endTimestamp is before the start timestamp", () -> {
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(5000), some(Instant.ofEpochMilli(0))));
+                assertThat(result.getIds()).containsExactlyElementsOf(w.getIds());
+            });
+
             it("should start a new worker AFTER the existing timestamp", () -> {
-                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(2000000)));
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(2000000), none()));
                 assertThat(result.getIds()).hasSize(2);
 
                 UUID worker2 = result.getIds().last();
@@ -66,7 +100,7 @@ public class MaterializerWorkersSpec {
             });
 
             it("should not start a new worker close to the existing timestamp", () -> {
-                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(1000002)));
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(1000002), none()));
                 assertThat(result.getIds()).containsExactly(worker1);
                 assertThat(result.getTimestamp(worker1)).isEqualTo(Instant.ofEpochMilli(1000000));
             });
@@ -74,11 +108,11 @@ public class MaterializerWorkersSpec {
 
         describe("MaterializerWorkers with 2 workers and a hole between them", () -> {
             MaterializerWorkers w = MaterializerWorkers.build(Duration.ofSeconds(6),
-                i -> i.startWorker(Instant.ofEpochMilli(1000000)),
-                i -> i.startWorker(Instant.ofEpochMilli(2000000)),
+                i -> i.startWorker(Instant.ofEpochMilli(1000000), none()),
+                i -> i.startWorker(Instant.ofEpochMilli(2000000), none()),
 
                 // create a third worker between 1 and 2, and complete it immediately. That will create a hole.
-                i -> i.startWorker(Instant.ofEpochMilli(1500000)),
+                i -> i.startWorker(Instant.ofEpochMilli(1500000), none()),
                 i -> i.onWorkerProgress(i.getIds().apply(1), Instant.ofEpochMilli(2000000)));
 
             UUID worker1 = w.getIds().apply(0);
@@ -97,7 +131,7 @@ public class MaterializerWorkersSpec {
             });
 
             it("should start a worker between worker 1's end and worker 2's start", () -> {
-                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(1700000)));
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(1700000), none()));
                 assertThat(result.getIds()).hasSize(3);
 
                 UUID worker3 = result.getIds().apply(1);
@@ -111,7 +145,7 @@ public class MaterializerWorkersSpec {
             });
 
             it("should start a worker between worker 1's start and end", () -> {
-                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(1200000)));
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(1200000), none()));
                 assertThat(result.getIds()).hasSize(3);
 
                 UUID worker3 = result.getIds().apply(1);

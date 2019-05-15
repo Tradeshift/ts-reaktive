@@ -28,6 +28,7 @@ import io.vavr.collection.HashSet;
 import io.vavr.collection.Set;
 import io.vavr.collection.Stream;
 import io.vavr.collection.Vector;
+import static io.vavr.control.Option.none;
 
 @RunWith(CuppaRunner.class)
 public class MaterializerActorSpec extends SharedActorSystemSpec {
@@ -74,7 +75,7 @@ public class MaterializerActorSpec extends SharedActorSystemSpec {
                 it("runs concurrently if a second worker is started", () -> {
                     ActorRef actor = system.actorOf(Props.create(TestActor.class, () ->
                         new TestActor(Source.from(events), materialized.getRef())));
-                    actor.tell(new CreateWorker(Instant.ofEpochMilli(1000000 + (N/2) * 1000)), system.deadLetters());
+                    actor.tell(new CreateWorker(Instant.ofEpochMilli(1000000 + (N/2) * 1000), none()), system.deadLetters());
 
                     assertReceiveOutOfOrder(events);
 

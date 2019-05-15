@@ -126,7 +126,7 @@ public class MaterializerWorkers {
      *
      * @return An event to emit with new restart indexes.
      */
-    public MaterializerActorEvent startWorker(Instant startTimestamp) {
+    public MaterializerActorEvent startWorker(Instant startTimestamp, Option<Instant> endTimestamp) {
         long t = startTimestamp.toEpochMilli();
         if (workers.isEmpty()) {
             return toEvent(Vector.of(Worker.newBuilder()
@@ -144,14 +144,19 @@ public class MaterializerWorkers {
         int index = workers.indexWhere(w -> w.getTimestamp() >= t);
         if (index == 0) {
             // Prepend to beginning, run to timestamp of current first worker
-            return toEvent(workers
-                .insert(0, Worker.newBuilder()
-                    .setId(toProtobuf(UUID.randomUUID()))
-                    .setTimestamp(t)
-                    .setEndTimestamp(workers.head().getTimestamp())
-                    .build()
-                )
-            );
+            if (endTimestamp.exists(e -> e.toEpochMilli() <= t)) {
+                // endTimestamp is equal to or before start -> don't start this worker
+                return toEvent(workers);
+            } else {
+                return toEvent(workers
+                    .insert(0, Worker.newBuilder()
+                        .setId(toProtobuf(UUID.randomUUID()))
+                        .setTimestamp(t)
+                        .setEndTimestamp(earliest(workers.head().getTimestamp(), endTimestamp))
+                        .build()
+                    )
+                );
+            }
         } else if (index == -1) {
             // Append to end, make currently last worker only run until the timestamp we start at
             return toEvent(workers
@@ -193,6 +198,10 @@ public class MaterializerWorkers {
                 );
             }
         }
+    }
+
+    private static long earliest(long a, Option<Instant> b) {
+        return (b.isEmpty() || a < b.get().toEpochMilli()) ? a : b.get().toEpochMilli();
     }
 
     public Seq<UUID> getIds() {
