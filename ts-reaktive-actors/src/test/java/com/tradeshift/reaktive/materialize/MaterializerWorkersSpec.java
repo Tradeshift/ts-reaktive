@@ -16,6 +16,8 @@ import static io.vavr.control.Option.some;
 
 @RunWith(CuppaRunner.class)
 public class MaterializerWorkersSpec {
+    Duration resolution = Duration.ofMillis(1000);
+
     {
         describe("empty MaterializerWorkers", () -> {
             MaterializerWorkers w = MaterializerWorkers.empty(Duration.ofSeconds(6));
@@ -99,8 +101,8 @@ public class MaterializerWorkersSpec {
                 assertThat(result.getEndTimestamp(worker1)).contains(Instant.ofEpochMilli(2000000));
             });
 
-            it("should not start a new worker close to the existing timestamp", () -> {
-                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(1000002), none()));
+            it("should not start a new worker close on an existing timestamp", () -> {
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(1000000), none()));
                 assertThat(result.getIds()).containsExactly(worker1);
                 assertThat(result.getTimestamp(worker1)).isEqualTo(Instant.ofEpochMilli(1000000));
             });
@@ -158,6 +160,67 @@ public class MaterializerWorkersSpec {
                 assertThat(result.getTimestamp(worker1)).isEqualTo(Instant.ofEpochMilli(1000000));
                 assertThat(result.getEndTimestamp(worker1)).contains(Instant.ofEpochMilli(1200000));
             });
+
+            it("should honor endTimestamp if started before worker 1's start, and ending before its end", () -> {
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(200000), some(Instant.ofEpochMilli(800000))));
+
+                assertThat(result.getIds()).hasSize(3);
+
+                UUID worker3 = result.getIds().apply(0);
+                assertThat(worker3).isNotEqualTo(worker1).isNotEqualTo(worker2);
+                assertThat(result.getTimestamp(worker3)).isEqualTo(Instant.ofEpochMilli(200000));
+                assertThat(result.getEndTimestamp(worker3)).contains(Instant.ofEpochMilli(800000));
+            });
+
+            it("should shorten worker 1, but cut off endTimestamp, if started before worker 1's end, and ending after its end", () -> {
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(1100000), some(Instant.ofEpochMilli(1600000))));
+
+                assertThat(result.getIds()).hasSize(3);
+
+                UUID worker3 = result.getIds().apply(1);
+                assertThat(worker3).isNotEqualTo(worker1).isNotEqualTo(worker2);
+                assertThat(result.getTimestamp(worker3)).isEqualTo(Instant.ofEpochMilli(1100000));
+                assertThat(result.getEndTimestamp(worker3)).contains(Instant.ofEpochMilli(1500000)); // FIXME should this be 16000000?
+                assertThat(result.getEndTimestamp(worker1)).contains(Instant.ofEpochMilli(1100000));
+            });
+
+            it("should shorten worker 1 and run until worker 2's start, if started before worker 1's end, and ending after worker 2's start", () -> {
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(1100000), some(Instant.ofEpochMilli(2100000))));
+
+                assertThat(result.getIds()).hasSize(3);
+
+                UUID worker3 = result.getIds().apply(1);
+                assertThat(worker3).isNotEqualTo(worker1).isNotEqualTo(worker2);
+                assertThat(result.getTimestamp(worker3)).isEqualTo(Instant.ofEpochMilli(1100000));
+                assertThat(result.getEndTimestamp(worker3)).contains(Instant.ofEpochMilli(1500000)); // FIXME should this be 2000000?
+                assertThat(result.getEndTimestamp(worker1)).contains(Instant.ofEpochMilli(1100000));
+            });
+
+            it("should honor endTimestamp if started after worker 1's end and ending before worker 2's start", () -> {
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(1600000), some(Instant.ofEpochMilli(1900000))));
+
+                assertThat(result.getIds()).hasSize(3);
+
+                UUID worker3 = result.getIds().apply(1);
+                assertThat(worker3).isNotEqualTo(worker1).isNotEqualTo(worker2);
+                assertThat(result.getTimestamp(worker3)).isEqualTo(Instant.ofEpochMilli(1600000));
+                assertThat(result.getEndTimestamp(worker3)).contains(Instant.ofEpochMilli(1900000));
+                assertThat(result.getEndTimestamp(worker1)).contains(Instant.ofEpochMilli(1500000)); // unchanged
+            });
+
+            it("should cut off endTimestamp if started after worker 1's end and ending after worker 2's start", () -> {
+
+                MaterializerWorkers result = w.applyEvent(w.startWorker(Instant.ofEpochMilli(1600000), some(Instant.ofEpochMilli(2100000))));
+
+                assertThat(result.getIds()).hasSize(3);
+
+                UUID worker3 = result.getIds().apply(1);
+                assertThat(worker3).isNotEqualTo(worker1).isNotEqualTo(worker2);
+                assertThat(result.getTimestamp(worker3)).isEqualTo(Instant.ofEpochMilli(1600000));
+                assertThat(result.getEndTimestamp(worker3)).contains(Instant.ofEpochMilli(2000000));
+                assertThat(result.getEndTimestamp(worker1)).contains(Instant.ofEpochMilli(1500000)); // unchanged
+            });
+
         });
 
     }

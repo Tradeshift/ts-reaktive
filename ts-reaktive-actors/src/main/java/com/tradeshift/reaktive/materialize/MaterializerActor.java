@@ -193,6 +193,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
                 if (workers.isEmpty()) {
                     workers = workers.initialize();
                 }
+                log.info("Recovery completed, workers: {}", workers);
                 workers.getIds().forEach(this::materializeEvents);
             })
             .build();
@@ -490,10 +491,6 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
     /**
      * Message that can be sent to this actor to have it launch an extra worker, which starts
      * work at the given timestamp, and works at most to the given endTimestamp (if given).
-     *
-     * endTimestamp is only used if this would create a worker starting BEFORE all other workers,
-     * and even then will only be allowing the new worker to stop EARLIER than the currently earliest
-     * worker.
      *
      * If the maximum number of workers has been reached, or if the timestamp is too close to an
      * existing worker, the request is ignored.
