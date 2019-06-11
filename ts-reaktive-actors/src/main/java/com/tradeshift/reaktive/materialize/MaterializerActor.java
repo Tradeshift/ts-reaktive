@@ -110,9 +110,9 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
             .match(Reimport.class, msg -> {
                 reimport(msg.entityIds);
             })
-            .match(QueryReimport.class, msg -> {
-                Instant progress = reimportProgress.get();
-                sender().tell(progress != null ? progress : Done.getInstance(), self());
+            .match(QueryProgress.class, msg -> {
+                Option<Instant> reimportP = Option.of(reimportProgress.get());
+                sender().tell(new Progress(reimportP, workers), self());
             })
             .matchEquals("reimportComplete", msg -> {
                 log.info("Re-import completed.");
@@ -123,7 +123,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
                 materializeEvents(msg.worker);
             })
             .match(CreateWorker.class, msg -> {
-                createWorker(msg.timestamp);
+                createWorker(msg.timestamp, msg.endTimestamp);
             })
             .matchEquals("init", msg -> getSender().tell("ack", self()))
             .match(WorkerProgress.class, p -> {
@@ -160,14 +160,14 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
             .build();
     }
 
-    private void createWorker(Instant timestamp) {
+    private void createWorker(Instant timestamp, Option<Instant> endTimestamp) {
         if (workers.getIds().size() >= maxWorkerCount) {
             log.warning("Ignoring request to start extra worker at {}, because maximum of {} is already reached.",
                 timestamp, workers.getIds().size());
             return;
         }
 
-        persist(workers.startWorker(timestamp), evt -> {
+        persist(workers.startWorker(timestamp, endTimestamp), evt -> {
             applyEvent(evt);
 
             // Start the new worker:
@@ -193,6 +193,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
                 if (workers.isEmpty()) {
                     workers = workers.initialize();
                 }
+                log.info("Recovery completed, workers: {}", workers);
                 workers.getIds().forEach(this::materializeEvents);
             })
             .build();
@@ -429,19 +430,67 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
     }
 
     /**
-     * Message that can be sent to this actor to query the progress of any on-going reimport.
-     * It returns an Instant with the last-reimported timestamp, or Done if no import is in progress.
+     * Message that can be sent to this actor to query its current progress.
+     *
+     * A Progress message will be sent back.
      */
-    public static class QueryReimport implements Serializable {
+    public static class QueryProgress implements Serializable {
         private static final long serialVersionUID = 1L;
 
-        public static final QueryReimport instance = new QueryReimport();
-        private QueryReimport() {}
+        public static final QueryProgress instance = new QueryProgress();
+        private QueryProgress() {}
+    }
+
+    public static class Progress implements Serializable {
+        private static final long serialVersionUID = 1L;
+
+        private final Option<Instant> reimportTimestamp;
+        private final Seq<ProgressWorker> workers;
+
+        private Progress(Option<Instant> reimportTimestamp, MaterializerWorkers state) {
+            this.reimportTimestamp = reimportTimestamp;
+            this.workers = state.getIds().map(id ->
+                new ProgressWorker(id, state.getTimestamp(id), state.getEndTimestamp(id)));
+        }
+
+        public Option<Instant> getReimportTimestamp() {
+            return reimportTimestamp;
+        }
+
+        public Seq<ProgressWorker> getWorkers() {
+            return workers;
+        }
+    }
+
+    public static class ProgressWorker implements Serializable {
+        private static final long serialVersionUID = 1L;
+
+        private final UUID id;
+        private final Instant timestamp;
+        private final Option<Instant> endTimestamp;
+
+        public ProgressWorker(UUID id, Instant timestamp, Option<Instant> endTimestamp) {
+            this.id = id;
+            this.timestamp = timestamp;
+            this.endTimestamp = endTimestamp;
+        }
+
+        public UUID getId() {
+            return id;
+        }
+
+        public Instant getTimestamp() {
+            return timestamp;
+        }
+
+        public Option<Instant> getEndTimestamp() {
+            return endTimestamp;
+        }
     }
 
     /**
      * Message that can be sent to this actor to have it launch an extra worker, which starts
-     * work at the given timestamp.
+     * work at the given timestamp, and works at most to the given endTimestamp (if given).
      *
      * If the maximum number of workers has been reached, or if the timestamp is too close to an
      * existing worker, the request is ignored.
@@ -450,9 +499,16 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
         private static final long serialVersionUID = 1L;
 
         private final Instant timestamp;
+        private final Option<Instant> endTimestamp;
 
-        public CreateWorker(Instant timestamp) {
+        public CreateWorker(Instant timestamp, Option<Instant> endTimestamp) {
             this.timestamp = timestamp;
+            this.endTimestamp = endTimestamp;
+            for (Instant end: endTimestamp) {
+                if (!timestamp.isBefore(end)) {
+                    throw new IllegalArgumentException("endTimestamp must be after timestamp if given");
+                }
+            }
         }
     }
 

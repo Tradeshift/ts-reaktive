@@ -3,9 +3,12 @@ package com.tradeshift.reaktive.materialize;
 import static com.tradeshift.reaktive.protobuf.UUIDs.toJava;
 import static com.tradeshift.reaktive.protobuf.UUIDs.toProtobuf;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAmount;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import com.tradeshift.reaktive.protobuf.MaterializerActor.MaterializerActorEvent;
@@ -37,7 +40,12 @@ public class MaterializerWorkers {
     private final Seq<Worker> workers;
     private final TemporalAmount rollback;
 
-    private MaterializerWorkers(Seq<Worker> workers, TemporalAmount rollback) {
+    /**
+     * Creates a new MaterializerWorkers.
+     *
+     * This constructor is package-private so we can instantiate it directly in unit tests.
+     */
+    MaterializerWorkers(Seq<Worker> workers, TemporalAmount rollback) {
         this.workers = workers;
         this.rollback = rollback;
     }
@@ -86,6 +94,7 @@ public class MaterializerWorkers {
      * @return An event to emit with the new restart indexes. In case the worker was done, it will
      * be absent from the emitted event.
      */
+    // FIXME inject Now() into this as a parameter
     public MaterializerActorEvent onWorkerProgress(UUID workerId, Instant timestamp) {
         int index = workers.map(Worker::getId).indexOf(toProtobuf(workerId));
         if (index == -1) {
@@ -93,9 +102,10 @@ public class MaterializerWorkers {
         }
         Worker worker = workers.apply(index);
         if (worker.hasEndTimestamp() && timestamp.toEpochMilli() >= worker.getEndTimestamp()) {
-            return MaterializerActorEvent.newBuilder()
-                .addAllWorker(workers.removeAt(index))
-                .build();
+            return toEvent(workers.removeAt(index));
+        } else if (timestamp.toEpochMilli() <= worker.getTimestamp()) {
+            // New timestamp is in the past -> ignore it
+            return unchanged();
         } else {
             // We're now positively done with timestamp [o].
             // If [o] is long enough ago, we can start with [o+1] next time. Otherwise, we start again at now() minus rollback.
@@ -107,11 +117,20 @@ public class MaterializerWorkers {
                 newTimestamp = now.minus(rollback).toEpochMilli();
             }
 
+            if (index < workers.size() - 1 && newTimestamp >= workers.apply(index + 1).getTimestamp()) {
+                // We're done after all, since we're beyond the next worker's start timestamp
+                return toEvent(workers.removeAt(index));
+            }
+
             return toEvent(workers.update(index, worker.toBuilder()
                 .setTimestamp(newTimestamp)
                 .build()
             ));
         }
+    }
+
+    private MaterializerActorEvent unchanged() {
+        return toEvent(workers);
     }
 
     private static MaterializerActorEvent toEvent(Seq<Worker> workers) {
@@ -121,12 +140,11 @@ public class MaterializerWorkers {
     /**
      * Attempts to start a new worker which should start at the given start timestamp.
      *
-     * If the start timestamp is close to another worker's timestamp, no worker is started since
-     * that would be non-sensical.
+     * If the start timestamp is equal to another worker's timestamp, no worker is started.
      *
      * @return An event to emit with new restart indexes.
      */
-    public MaterializerActorEvent startWorker(Instant startTimestamp) {
+    public MaterializerActorEvent startWorker(Instant startTimestamp, Option<Instant> endTimestamp) {
         long t = startTimestamp.toEpochMilli();
         if (workers.isEmpty()) {
             return toEvent(Vector.of(Worker.newBuilder()
@@ -136,9 +154,14 @@ public class MaterializerWorkers {
             ));
         }
 
-        if (workers.exists(w -> Math.abs(w.getTimestamp() - t) < 1000)) {
+        if (workers.exists(w -> w.getTimestamp() == t)) {
             // Start timestamp too close to an existing worker, so don't start a new one.
-            return toEvent(workers);
+            return unchanged();
+        }
+
+        if (endTimestamp.exists(e -> e.toEpochMilli() < t)) {
+            // endTimestamp is before start -> don't start this worker
+            return unchanged();
         }
 
         int index = workers.indexWhere(w -> w.getTimestamp() >= t);
@@ -148,7 +171,7 @@ public class MaterializerWorkers {
                 .insert(0, Worker.newBuilder()
                     .setId(toProtobuf(UUID.randomUUID()))
                     .setTimestamp(t)
-                    .setEndTimestamp(workers.head().getTimestamp())
+                    .setEndTimestamp(earliest(workers.head().getTimestamp(), endTimestamp))
                     .build()
                 )
             );
@@ -187,12 +210,16 @@ public class MaterializerWorkers {
                     .insert(index, Worker.newBuilder()
                         .setId(toProtobuf(UUID.randomUUID()))
                         .setTimestamp(t)
-                        .setEndTimestamp(workers.apply(index).getTimestamp())
+                        .setEndTimestamp(earliest(workers.apply(index).getTimestamp(), endTimestamp))
                         .build()
                     )
                 );
             }
         }
+    }
+
+    private static long earliest(long a, Option<Instant> b) {
+        return (b.isEmpty() || a < b.get().toEpochMilli()) ? a : b.get().toEpochMilli();
     }
 
     public Seq<UUID> getIds() {
