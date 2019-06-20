@@ -4,11 +4,15 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
 
+import com.tradeshift.reaktive.marshal.IterableProtocol;
+import com.tradeshift.reaktive.marshal.IterableProtocolMarker;
 import com.tradeshift.reaktive.marshal.Locator;
 import com.tradeshift.reaktive.marshal.Protocol;
 import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.StringProtocol;
 import com.tradeshift.reaktive.marshal.WriteProtocol;
+import com.tradeshift.reaktive.marshal.IterableProtocol.IterableReadProtocol;
+import com.tradeshift.reaktive.marshal.IterableProtocol.IterableWriteProtocol;
 
 import io.vavr.Function1;
 import io.vavr.Function2;
@@ -40,16 +44,41 @@ public class JSONProtocol<T> {
     public static <E> WriteProtocol<JSONEvent, E> array(WriteProtocol<JSONEvent, E> inner) {
         return ArrayProtocol.write(inner);
     }
-    
+
+    @Deprecated
+    /** @deprecated Iterable protocols can not occur as field body, since there must be exactly 1 value there. */
+    public static <T> void field(String name, IterableProtocol<JSONEvent, T> inner) {
+        throw new UnsupportedOperationException("Iterable protocols can not occur as field body, since there must be exactly 1 value there.");
+    }
+    @Deprecated
+    /** @deprecated Iterable protocols can not occur as field body, since there must be exactly 1 value there. */
+    public static <T> void field(String name, IterableReadProtocol<JSONEvent, T> inner) {
+        throw new UnsupportedOperationException("Iterable protocols can not occur as field body, since there must be exactly 1 value there.");
+    }
+    @Deprecated
+    /** @deprecated Iterable protocols can not occur as field body, since there must be exactly 1 value there. */
+    public static <T> void field(String name, IterableWriteProtocol<JSONEvent, T> inner) {
+        throw new UnsupportedOperationException("Iterable protocols can not occur as field body, since there must be exactly 1 value there.");
+    }
+
     public static <T> Protocol<JSONEvent, T> field(String name, Protocol<JSONEvent, T> inner) {
+        if (inner instanceof IterableProtocolMarker) {
+            throw new UnsupportedOperationException("Iterable protocols can not occur as field body, since there must be exactly 1 value there.");
+        }
         return Protocol.of(FieldProtocol.read(name, inner), FieldProtocol.write(name, inner));
     }
     
     public static <T> ReadProtocol<JSONEvent, T> field(String name, ReadProtocol<JSONEvent, T> inner) {
+        if (inner instanceof IterableProtocolMarker) {
+            throw new UnsupportedOperationException("Iterable protocols can not occur as field body, since there must be exactly 1 value there.");
+        }
         return FieldProtocol.read(name, inner);
     }
     
     public static <T> WriteProtocol<JSONEvent, T> field(String name, WriteProtocol<JSONEvent, T> inner) {
+        if (inner instanceof IterableProtocolMarker) {
+            throw new UnsupportedOperationException("Iterable protocols can not occur as field body, since there must be exactly 1 value there.");
+        }
         return FieldProtocol.write(name, inner);
     }
     

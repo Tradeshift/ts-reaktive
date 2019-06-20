@@ -38,6 +38,7 @@ import com.tradeshift.reaktive.json.jackson.Jackson;
 import com.tradeshift.reaktive.marshal.Protocol;
 import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.Reader;
+import com.tradeshift.reaktive.marshal.WriteProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
 import io.vavr.Tuple;
@@ -450,5 +451,29 @@ public class JSONProtocolSpec {{
             assertThat(jackson.writeAll(Arrays.asList(1,2,3).stream(), proto.writer())).isEqualTo("{\"root\":[1,2,3]}");
         });
         
+    });
+
+    describe("a JSONProtocol for writing an array inside an object", () -> {
+        WriteProtocol<JSONEvent, DTO1> proto =
+            object(
+                ((DTO1 d) -> d.getS()),
+                field("s",
+                    array(
+                        vector(
+                            stringValue
+                        )
+                    )
+                ),
+                ((DTO1 d) -> d.getL()),
+                field("l", longValue)
+            );
+
+        it("should write a DTO correctly", () -> {
+            DTO1 dto = new DTO1(42, none(), Vector.of("hello", "world"));
+            System.out.println("******" + proto.writer().applyAndReset(dto) + "*******");
+
+            assertThat(jackson.write(dto, proto.writer()))
+                .isEqualTo("{\"s\":[\"hello\",\"world\"],\"l\":42}");
+        });
     });
 }}

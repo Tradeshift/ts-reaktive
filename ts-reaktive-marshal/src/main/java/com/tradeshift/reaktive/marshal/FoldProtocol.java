@@ -4,6 +4,8 @@ import static com.tradeshift.reaktive.marshal.ReadProtocol.isNone;
 
 import java.util.function.Supplier;
 
+import com.tradeshift.reaktive.marshal.IterableProtocol.IterableReadProtocol;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,10 +26,10 @@ public class FoldProtocol {
      * @param initial Initial value to start accumulating on
      * @param combine Function that combines the previous result (or initial) with a parsed element
      */
-    public static <E,T,U> ReadProtocol<E,U> read(String name, ReadProtocol<E,T> inner, Supplier<U> initial, Function2<U,T,U> combine) {
+    public static <E,T,U> IterableReadProtocol<E,U> read(String name, ReadProtocol<E,T> inner, Supplier<U> initial, Function2<U,T,U> combine) {
         Try<U> EMPTY = Try.success(initial.get());
         
-        return new ReadProtocol<E,U>() {
+        return new IterableReadProtocol<E,U>(new ReadProtocol<E,U>() {
             ReadProtocol<E,U> parent = this;
             @Override
             public Reader<E,U> reader() {
@@ -80,6 +82,6 @@ public class FoldProtocol {
             public String toString() {
                 return name + "(" + inner.toString() + ")";
             }
-        };
+        });
     }
 }
