@@ -69,7 +69,7 @@ public class AbstractCommandResultsAssert<SELF extends AbstractCommandResultsAss
     /**
      * Asserts the results are valid, and are already applied.
      */
-    public SELF isAlreadyApplied() {
+    public SELF isIdempotent() {
         idempotentReply();
         return myself;
     }
@@ -95,16 +95,25 @@ public class AbstractCommandResultsAssert<SELF extends AbstractCommandResultsAss
     }
 
     /**
+     * Asserts the results are valid, and are not already applied (i.e. applying the handler would emit events).
+     */
+    public SELF isNonIdempotent() {
+        nonIdempotentReply();
+        if (getEvents().isEmpty()) {
+            throwAssertionError(new BasicErrorMessageFactory("Expected a Result to be valid and not already applied, " +
+                "and isAlreadyApplied() indeed returned false, but getEvents() then yielded no events. This is almost always " +
+                "a bug in the Results implementation. Results were %s",
+                actualToString()));
+        }
+        return myself;
+    }
+
+    /**
      * Asserts the Results are NOT already applied, and returns the reply message.
      * Useful for subclasses for concrete Results implementations that have a fixed message type.
      */
     protected <M> M nonIdempotentReply(Class<M> type) {
-        if (actual.getValidationError(0).isDefined() ||
-            actual.isAlreadyApplied()) {
-            throwAssertionError(new BasicErrorMessageFactory("Expected a Result to be valid and not already applied, but instead was %s",
-                actualToString()));
-        }
-        Seq<E> events = actual.getEventsToEmit();
+        Seq<E> events = getEvents();
         return type.cast(actual.getReply(events, 0));
     }
 

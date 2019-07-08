@@ -7,6 +7,9 @@ import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import com.tradeshift.reaktive.marshal.IterableProtocol.IterableReadProtocol;
+import com.tradeshift.reaktive.marshal.IterableProtocol.IterableWriteProtocol;
+
 import io.vavr.Function1;
 import io.vavr.Function2;
 import io.vavr.Tuple2;
@@ -81,7 +84,7 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
     /**
      * Reads an inner protocol multiple times. On reading, creates a {@link io.vavr.collection.Vector} to represent it.
      */
-    public static <E,T> ReadProtocol<E,Vector<T>> vector(ReadProtocol<E,T> inner) {
+    public static <E,T> IterableReadProtocol<E,Vector<T>> vector(ReadProtocol<E,T> inner) {
         return SeqProtocol.read(inner, Vector.empty());
     }
     
@@ -89,42 +92,42 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
      * Reads and writes an inner protocol multiple times. On reading, creates a {@link io.vavr.collection.Vector} to hold the values.
      * On writing, any {@link io.vavr.collection.Seq} will do.
      */
-    public static <E,T> Protocol<E,Seq<T>> vector(Protocol<E,T> inner) {
-        return of(SeqProtocol.read(inner, Vector.empty()), SeqProtocol.write(inner));
+    public static <E,T> IterableProtocol<E,Seq<T>> vector(Protocol<E,T> inner) {
+        return IterableProtocol.of(SeqProtocol.read(inner, Vector.empty()), SeqProtocol.write(inner));
     }
 
     /**
      * Writes an inner protocol multiple times, represented by a {@link io.vavr.collection.Seq}.
      */
-    public static <E,T> WriteProtocol<E,Seq<T>> seq(WriteProtocol<E,T> inner) {
+    public static <E,T> IterableWriteProtocol<E,Seq<T>> seq(WriteProtocol<E,T> inner) {
         return SeqProtocol.write(inner);
     }
 
     /**
      * Folds over a repeated nested protocol, merging the results into a single element.
      */
-    public static <E,T,U> ReadProtocol<E,U> foldLeft(ReadProtocol<E,T> inner, Supplier<U> initial, Function2<U,T,U> combine) {
+    public static <E,T,U> IterableReadProtocol<E,U> foldLeft(ReadProtocol<E,T> inner, Supplier<U> initial, Function2<U,T,U> combine) {
         return FoldProtocol.read("*", inner, initial, combine);
     }
     
     /**
      * Invokes the given function for every item the inner protocol emits, while emitting a single null as outer value.
      */
-    public static <E,T> ReadProtocol<E,Void> forEach(ReadProtocol<E,T> inner, Consumer<T> consumer) {
+    public static <E,T> IterableReadProtocol<E,Void> forEach(ReadProtocol<E,T> inner, Consumer<T> consumer) {
         return FoldProtocol.read("*", inner, () -> null, (v1,v2) -> { consumer.accept(v2); return null; });
     }
     
     /**
      * Writes an inner protocol multiple times, represented by a {@link java.util.Iterable}.
      */
-    public static <E,T> WriteProtocol<E,Iterable<T>> iterable(WriteProtocol<E,T> inner) {
+    public static <E,T> IterableWriteProtocol<E,Iterable<T>> iterable(WriteProtocol<E,T> inner) {
         return IterableProtocol.write(inner);
     }
 
     /**
      * Reads an inner protocol multiple times. On reading, creates a {@link java.util.ArrayList} to represent it.
      */
-    public static <E,T> ReadProtocol<E,ArrayList<T>> arrayList(ReadProtocol<E,T> inner) {
+    public static <E,T> IterableReadProtocol<E,ArrayList<T>> arrayList(ReadProtocol<E,T> inner) {
         return IterableProtocol.read(inner, () -> new ArrayList<>(), java.util.List::add);
     }
     
@@ -132,50 +135,54 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
      * Reads and writes an inner protocol multiple times. On reading, creates a {@link java.util.ArrayList} to hold the values.
      * On writing, any {@link java.util.List} will do.
      */
-    public static <E,T> Protocol<E,java.util.List<T>> arrayList(Protocol<E,T> inner) {
-        return of(ReadProtocol.widen(arrayList((ReadProtocol<E,T>)inner)), WriteProtocol.narrow(iterable(inner)));
+    public static <E,T> IterableProtocol<E,java.util.List<T>> arrayList(Protocol<E,T> inner) {
+        return IterableProtocol.of(
+            arrayList((ReadProtocol<E,T>)inner).map(l -> (java.util.List<T>) l),
+            iterable(inner).compose((java.util.List<T> l) -> l));
     }
     
     /**
      * Reads and writes an inner protocol of tuples multiple times. On reading, creates a {@link io.vavr.collection.HashMap} to hold the result.
      * On writing, any {@link io.vavr.collection.Map} will do.
      */
-    public static <E,K,V> Protocol<E,Map<K,V>> hashMap(Protocol<E,Tuple2<K,V>> inner) {
-        return of(ReadProtocol.widen(hashMap((ReadProtocol<E,Tuple2<K,V>>) inner)), map(inner));
+    public static <E,K,V> IterableProtocol<E,Map<K,V>> hashMap(Protocol<E,Tuple2<K,V>> inner) {
+        return IterableProtocol.of(
+            hashMap((ReadProtocol<E,Tuple2<K,V>>) inner).map(m -> (Map<K,V>) m),
+            map(inner));
     }
     
     /**
      * Reads an inner protocol of tuples multiple times. On reading, creates a {@link io.vavr.collection.HashMap} to hold the result.
      */
-    public static <E,K,V> ReadProtocol<E,HashMap<K,V>> hashMap(ReadProtocol<E,Tuple2<K,V>> inner) {
+    public static <E,K,V> IterableReadProtocol<E,HashMap<K,V>> hashMap(ReadProtocol<E,Tuple2<K,V>> inner) {
         return MapProtocol.read(inner, HashMap::of, HashMap.empty());
     }
     
     /**
      * Writes a map using an inner protocol, by turning it into writing multiple tuples.
      */
-    public static <E,K,V> WriteProtocol<E,Map<K,V>> map(WriteProtocol<E,Tuple2<K,V>> inner) {
+    public static <E,K,V> IterableWriteProtocol<E,Map<K,V>> map(WriteProtocol<E,Tuple2<K,V>> inner) {
         return MapProtocol.write(inner);
     }
     
     /**
      * Reads and writes a nested protocol optionally, representing it by a {@link io.vavr.control.Option}.
      */
-    public static <E,T> Protocol<E,Option<T>> option(Protocol<E,T> inner) {
-        return of(OptionProtocol.read(inner), OptionProtocol.write(inner));
+    public static <E,T> IterableProtocol<E,Option<T>> option(Protocol<E,T> inner) {
+        return IterableProtocol.of(OptionProtocol.read(inner), OptionProtocol.write(inner));
     }
     
     /**
      * Reads a nested protocol optionally, representing it by a {@link io.vavr.control.Option}.
      */
-    public static <E,T> ReadProtocol<E,Option<T>> option(ReadProtocol<E,T> inner) {
+    public static <E,T> IterableReadProtocol<E,Option<T>> option(ReadProtocol<E,T> inner) {
         return OptionProtocol.read(inner);
     }
 
     /**
      * Writes a nested protocol optionally, representing it by a {@link io.vavr.control.Option}.
      */
-    public static <E,T> WriteProtocol<E,Option<T>> option(WriteProtocol<E,T> inner) {
+    public static <E,T> IterableWriteProtocol<E,Option<T>> option(WriteProtocol<E,T> inner) {
         return OptionProtocol.write(inner);
     }
     
@@ -193,6 +200,20 @@ public interface Protocol<E,T> extends ReadProtocol<E,T>, WriteProtocol<E,T> {
         return option(inner).map(o -> o.getOrElse(value));
     }
     
+    /**
+     * Reads a nested protocol optionally, supplying [value] if it does not yield a result.
+     */
+    public static <E,T> IterableProtocol<E,T> withDefault(T value, IterableProtocol<E,T> inner) {
+        return option(inner).map(o -> o.getOrElse(value), v -> some(v));
+    }
+
+    /**
+     * Reads a nested protocol optionally, supplying [value] if it does not yield a result.
+     */
+    public static <E,T> IterableReadProtocol<E,T> withDefault(T value, IterableReadProtocol<E,T> inner) {
+        return option(inner).map(o -> o.getOrElse(value));
+    }
+
     // -------------------------------------------------------------------------------------------
     
     /**

@@ -60,38 +60,53 @@ public class ObjectWriteProtocol<T> implements WriteProtocol<JSONEvent, T> {
     public Writer<JSONEvent, T> writer() {
         Vector<Writer<JSONEvent, Object>> writers = Vector.range(0, protocols.size()).map(i ->
             (Writer<JSONEvent, Object>) protocols.get(i).writer());
-        
+
+        // If there's more than one sub-writer, we need to reset each sub-writer after each value
+        // in order to properly close each JSON field. This also means that each incoming value will
+        // always be only 1 JSON object.
+
+        // We don't need to do this when there's only one sub-writer, since then it will be reset when
+        // this ObjectWriteProtocol itself is being reset. In this special case, we can then have multiple
+        // values contribute to the same JSON object.
+        boolean resetAfterValue = writers.size() > 1;
+
         return new Writer<JSONEvent, T>() {
             boolean started = false;
 
             @Override
             public Seq<JSONEvent> apply(T value) {
                 log.debug("{}: Writing {}", ObjectWriteProtocol.this, value);
-                
+
                 Seq<JSONEvent> events = startObject();
                 for (int i = 0; i < protocols.size(); i++) {
-                    events = events.appendAll(writers.get(i).apply(getters.get(i).apply(value)));
+                    if (resetAfterValue) {
+                        events = events.appendAll(writers.get(i).applyAndReset(getters.get(i).apply(value)));
+                    } else {
+                        events = events.appendAll(writers.get(i).apply(getters.get(i).apply(value)));
+                    }
                 }
-                
+
                 started = true;
                 return events;
             }
-            
+
             @Override
             public Seq<JSONEvent> reset() {
                 log.debug("{}: Resetting ", ObjectWriteProtocol.this);
-                
+
                 Seq<JSONEvent> events = startObject();
-                for (int i = 0; i < protocols.size(); i++) {
-                    events = events.appendAll(writers.get(i).reset());
+                if (!resetAfterValue) {
+                    for (int i = 0; i < protocols.size(); i++) {
+                        events = events.appendAll(writers.get(0).reset());
+                    }
                 }
-                
+
                 events = events.appendAll(conditions.map(c -> c.writer().applyAndReset(ConstantProtocol.PRESENT)).flatMap(Function.identity()));
-                
+
                 started = false;
                 return events.append(JSONEvent.END_OBJECT);
             }
-            
+
             private Seq<JSONEvent> startObject() {
                 return (started) ? Vector.empty() : Vector.of(JSONEvent.START_OBJECT);
             }

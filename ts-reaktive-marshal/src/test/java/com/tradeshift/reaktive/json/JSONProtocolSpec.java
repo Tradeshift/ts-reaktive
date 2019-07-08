@@ -9,6 +9,8 @@ import static com.tradeshift.reaktive.json.JSONProtocol.array;
 import static com.tradeshift.reaktive.json.JSONProtocol.field;
 import static com.tradeshift.reaktive.json.JSONProtocol.integerValue;
 import static com.tradeshift.reaktive.json.JSONProtocol.longValue;
+import static com.tradeshift.reaktive.json.JSONProtocol.optionalIterableField;
+import static com.tradeshift.reaktive.json.JSONProtocol.optionalVectorField;
 import static com.tradeshift.reaktive.json.JSONProtocol.object;
 import static com.tradeshift.reaktive.json.JSONProtocol.stringValue;
 import static com.tradeshift.reaktive.marshal.Protocol.anyOf;
@@ -38,6 +40,7 @@ import com.tradeshift.reaktive.json.jackson.Jackson;
 import com.tradeshift.reaktive.marshal.Protocol;
 import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.Reader;
+import com.tradeshift.reaktive.marshal.WriteProtocol;
 import com.tradeshift.reaktive.marshal.Writer;
 
 import io.vavr.Tuple;
@@ -450,5 +453,91 @@ public class JSONProtocolSpec {{
             assertThat(jackson.writeAll(Arrays.asList(1,2,3).stream(), proto.writer())).isEqualTo("{\"root\":[1,2,3]}");
         });
         
+    });
+
+    describe("a JSONProtocol for writing an array inside an object", () -> {
+        WriteProtocol<JSONEvent, DTO1> proto =
+            object(
+                ((DTO1 d) -> d.getS()),
+                field("s",
+                    array(
+                        vector(
+                            stringValue
+                        )
+                    )
+                ),
+                ((DTO1 d) -> d.getL()),
+                field("l", longValue)
+            );
+
+        it("should write a DTO correctly", () -> {
+            DTO1 dto = new DTO1(42, none(), Vector.of("hello", "world"));
+
+            assertThat(jackson.write(dto, proto.writer()))
+                .isEqualTo("{\"s\":[\"hello\",\"world\"],\"l\":42}");
+        });
+    });
+
+    describe("JSONProtocol.optionalIterableField", () -> {
+        WriteProtocol<JSONEvent, DTO1> proto =
+            object(
+                ((DTO1 d) -> d.getS()),
+                optionalIterableField("s",
+                    stringValue
+                )
+            );
+
+        it("should write a DTO correctly", () -> {
+            assertThat(jackson.write(new DTO1(42, none(), Vector.of("hello", "world")), proto.writer()))
+                .isEqualTo("{\"s\":[\"hello\",\"world\"]}");
+            assertThat(jackson.write(new DTO1(42, none(), Vector.empty()), proto.writer()))
+                .isEqualTo("{}");
+        });
+    });
+
+    describe("JSONProtocol.optionalVectorField (read-only)", () -> {
+        ReadProtocol<JSONEvent, DTO1> proto =
+            object(
+                optionalVectorField("s",
+                    stringValue
+                ),
+                s -> new DTO1(42, none(), s)
+            );
+
+        it("should read a DTO correctly", () -> {
+            assertThat(jackson.parse("{\"s\":[\"hello\",\"world\"]}", proto.reader()).findFirst())
+                .contains(new DTO1(42, none(), Vector.of("hello", "world")));
+            assertThat(jackson.parse("{\"s\":[]}", proto.reader()).findFirst())
+                .contains(new DTO1(42, none(), Vector.empty()));
+            assertThat(jackson.parse("{}", proto.reader()).findFirst())
+                .contains(new DTO1(42, none(), Vector.empty()));
+        });
+    });
+
+    describe("JSONProtocol.optionalVectorField (read-write)", () -> {
+        Protocol<JSONEvent, DTO1> proto =
+            object(
+                optionalVectorField("s",
+                    stringValue
+                ),
+                s -> new DTO1(42, none(), s),
+                (DTO1 dto) -> dto.getS()
+            );
+
+        it("should write a DTO correctly", () -> {
+            assertThat(jackson.write(new DTO1(42, none(), Vector.of("hello", "world")), proto.writer()))
+                .isEqualTo("{\"s\":[\"hello\",\"world\"]}");
+            assertThat(jackson.write(new DTO1(42, none(), Vector.empty()), proto.writer()))
+                .isEqualTo("{}");
+        });
+
+        it("should read a DTO correctly", () -> {
+            assertThat(jackson.parse("{\"s\":[\"hello\",\"world\"]}", proto.reader()).findFirst())
+                .contains(new DTO1(42, none(), Vector.of("hello", "world")));
+            assertThat(jackson.parse("{\"s\":[]}", proto.reader()).findFirst())
+                .contains(new DTO1(42, none(), Vector.empty()));
+            assertThat(jackson.parse("{}", proto.reader()).findFirst())
+                .contains(new DTO1(42, none(), Vector.empty()));
+        });
     });
 }}
