@@ -8,6 +8,9 @@ import com.tradeshift.reaktive.marshal.IterableProtocol;
 import com.tradeshift.reaktive.marshal.IterableProtocolMarker;
 import com.tradeshift.reaktive.marshal.Locator;
 import com.tradeshift.reaktive.marshal.Protocol;
+import static com.tradeshift.reaktive.marshal.Protocol.iterable;
+import static com.tradeshift.reaktive.marshal.Protocol.option;
+import static com.tradeshift.reaktive.marshal.Protocol.vector;
 import com.tradeshift.reaktive.marshal.ReadProtocol;
 import com.tradeshift.reaktive.marshal.StringProtocol;
 import com.tradeshift.reaktive.marshal.WriteProtocol;
@@ -20,6 +23,9 @@ import io.vavr.Function3;
 import io.vavr.Function4;
 import io.vavr.Function5;
 import io.vavr.Tuple2;
+import io.vavr.collection.Vector;
+import io.vavr.collection.Seq;
+import io.vavr.control.Option;
 
 @SuppressWarnings("unchecked")
 public class JSONProtocol<T> {
@@ -32,6 +38,36 @@ public class JSONProtocol<T> {
     public static final Protocol<JSONEvent,BigInteger> bigIntegerValue = ValueProtocol.BIGINTEGER;
     public static final Protocol<JSONEvent,BigDecimal> bigDecimalValue = ValueProtocol.BIGDECIMAL;
     public static final Protocol<JSONEvent,Boolean> booleanValue = ValueProtocol.BOOLEAN;
+
+    public static <T> WriteProtocol<JSONEvent, Iterable<T>> optionalIterableField(String name, WriteProtocol<JSONEvent,T> inner) {
+        return option(
+            field(name,
+                array(
+                    iterable(inner)
+                )
+            )
+        ).compose((Iterable<T> i) -> Option.when(i.iterator().hasNext(), i));
+    }
+
+    public static <T> ReadProtocol<JSONEvent, Vector<T>> optionalVectorField(String name, ReadProtocol<JSONEvent,T> inner) {
+        return option(
+            field(name,
+                array(
+                    vector(inner)
+                )
+            )
+        ).map(o -> o.getOrElse(Vector.empty()));
+    }
+    
+    public static <T> Protocol<JSONEvent, Seq<T>> optionalVectorField(String name, Protocol<JSONEvent,T> inner) {
+        return option(
+            field(name,
+                array(
+                    vector(inner)
+                )
+            )
+        ).map(o -> o.getOrElse(Vector.empty()), (Seq<T> i) -> Option.when(!i.isEmpty(), i));
+    }
 
     public static <E> Protocol<JSONEvent, E> array(Protocol<JSONEvent, E> inner) {
         return Protocol.of(ArrayProtocol.read(inner), ArrayProtocol.write(inner));
