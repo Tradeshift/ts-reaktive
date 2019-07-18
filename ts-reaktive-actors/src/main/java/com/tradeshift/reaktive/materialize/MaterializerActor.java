@@ -66,13 +66,14 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
     private final FiniteDuration updateAccuracy;
     private final FiniteDuration restartDelay;
     private final int batchSize;
+    private final int updateSize;
     private final int maxEventsPerTimestamp;
     private final int maxWorkerCount;
     private final Duration updateOffsetInterval;
     private final AtomicReference<Instant> reimportProgress = new AtomicReference<>();
     private final ActorMaterializer materializer;
 
-    private MaterializerWorkers workers;
+    private volatile MaterializerWorkers workers;
     private Option<KillSwitch> ongoingReimport = Option.none();
     private Map<UUID,AtomicLong> workerEndTimestamps = HashMap.empty();
 
@@ -83,6 +84,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
         updateAccuracy = FiniteDuration.create(config.getDuration("update-accuracy", SECONDS), SECONDS);
         restartDelay = FiniteDuration.create(config.getDuration("restart-delay", SECONDS), SECONDS);
         batchSize = config.getInt("batch-size");
+        updateSize = config.getInt("update-size");
         maxEventsPerTimestamp = config.getInt("max-events-per-timestamp");
         maxWorkerCount = config.getInt("max-worker-count");
         updateOffsetInterval = config.getDuration("update-offset-interval");
@@ -111,8 +113,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
                 reimport(msg.entityIds);
             })
             .match(QueryProgress.class, msg -> {
-                Option<Instant> reimportP = Option.of(reimportProgress.get());
-                sender().tell(new Progress(reimportP, workers), self());
+                sendProgress();
             })
             .matchEquals("reimportComplete", msg -> {
                 log.info("Re-import completed.");
@@ -131,7 +132,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
                     applyEvent(evt);
                     context().system().scheduler().scheduleOnce(
                         updateAccuracy, sender(), "ack", context().dispatcher(), self());
-                    if (lastSequenceNr() > 1) {
+                    if ((lastSequenceNr() > 1) && ((lastSequenceNr() % 25) == 0)) {
                         deleteMessages(lastSequenceNr() - 1);
                     }
                 });
@@ -141,7 +142,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
             })
             .match(DeleteMessagesFailure.class, msg -> {
                 log.error(msg.cause(), "Delete messages failed at offsets " + workers
-                    + ", rethrowing", msg.cause());
+                    + ", rethrowing");
                 throw (Exception) msg.cause();
             })
             .match(WorkerFailure.class, failure -> {
@@ -153,11 +154,18 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
                 log.debug("Completed {}, now offset is: {}", msg.worker, workers);
                 onWorkerStopped(msg.worker);
             })
-            .matchEquals("reset", msg -> {
-            /* replaced by creating extra workers */
-                log.warning("Received legacy 'reset' message");
+            .matchEquals("reset", msg -> { // for compatibility
+                reset();
+            })
+            .match(Reset.class, msg -> {
+                reset();
             })
             .build();
+    }
+
+    private void sendProgress() {
+        Option<Instant> reimportP = Option.of(reimportProgress.get());
+        sender().tell(new Progress(reimportP, workers), self());
     }
 
     private void createWorker(Instant timestamp, Option<Instant> endTimestamp) {
@@ -167,11 +175,21 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
             return;
         }
 
-        persist(workers.startWorker(timestamp, endTimestamp), evt -> {
+        persistAndApply(workers.startWorker(timestamp, endTimestamp));
+    }
+
+    private void reset() {
+        persistAndApply(workers.reset());
+    }
+
+    private void persistAndApply(MaterializerActorEvent evt) {
+        persist(evt, e -> {
             applyEvent(evt);
 
-            // Start the new worker:
+            // The first worker will have been stopped and we have a new one at the epoch. Start it.
             workers.getIds().removeAll(workerEndTimestamps.keySet()).forEach(this::materializeEvents);
+
+            sendProgress();
         });
     }
 
@@ -268,14 +286,14 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
                                   maxEventsPerTimestamp, rollback))
 
             // Allow multiple timestamps to be processed simultaneously
-            .groupedWeightedWithin(maxEventsPerTimestamp, seq -> (long) seq.size(), Duration.ofSeconds(1))
+            .groupedWeightedWithin(updateSize, seq -> (long) seq.size(), Duration.ofSeconds(1))
 
             // Process them, and emit a single timestamp at t
             .mapAsync(1, listOfSeq ->
                 // re-group into batchSize, each one no longer necessarily within one timestamp
                 Source.from(Vector.ofAll(listOfSeq).flatMap(seq -> seq))
                     .grouped(batchSize)
-                    .mapAsync(1, envelopeList -> materialize(envelopeList))
+                    .mapAsync(1, envelopeList -> materialize(workers.getIds().indexOf(worker), envelopeList))
                     .runWith(Sink.ignore(), materializer)
                     .thenApply(done -> timestampOf(listOfSeq.get(listOfSeq.size() - 1).last()).toEpochMilli())
             )
@@ -310,7 +328,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
             .conflate((t1, t2) -> (t1.isAfter(t2)) ? t1 : t2)
             .throttle(1, Duration.ofSeconds(1))
             .map(t -> {
-                metrics.getReimportRemaining().record(ChronoUnit.MILLIS.between(t, maxTimestamp));
+                metrics.getReimportRemaining().set(ChronoUnit.MILLIS.between(t, maxTimestamp));
                 return Done.getInstance();
             })
             .toMat(Sink.onComplete(result -> self.tell("reimportComplete", self())), Keep.left())
@@ -340,8 +358,13 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
 
     private void recordOffsetMetric() {
         Seq<UUID> ids = workers.getIds();
-        for (int i = 0; i < workers.getIds().size(); i++) {
-            metrics.getOffset(i).record(Duration.between(workers.getTimestamp(ids.apply(i)), Instant.now()).toMillis());
+        for (int i = 0; i < ids.size(); i++) {
+            Instant offset = workers.getTimestamp(ids.apply(i));
+            metrics.getOffset(i).set(offset.toEpochMilli());
+            metrics.getDelay(i).set(Duration.between(offset, Instant.now()).toMillis());
+            for (Instant end: workers.getEndTimestamp(workers.getIds().apply(i))) {
+                metrics.getRemaining(i).set(Duration.between(offset, end).toMillis());
+            }
         }
     }
 
@@ -365,24 +388,30 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
     /**
      * Materialize the given envelopes in parallel, as far as their entityIds allow it.
      */
-    private CompletionStage<Done> materialize(java.util.List<E> envelopes) {
+    private CompletionStage<Done> materialize(int workerIndex, java.util.List<E> envelopes) {
+        long start = System.nanoTime();
         return CompletableFutures.sequence(
             Vector.ofAll(envelopes)
             .groupBy(this::getConcurrencyKey)
             .values()
-            .map(this::persistSequential)
+            .map(es -> persistSequential(workerIndex, es))
             .map(c -> c.toCompletableFuture())
-        ).thenApply(seqOfDone -> Done.getInstance());
+        ).thenApply(seqOfDone -> {
+            long dur = (System.nanoTime() - start) / 1000;
+            log.debug("Worker {} materialized {} events in {}ms", workerIndex, envelopes.size(),
+                dur / 1000.0);
+            return Done.getInstance();
+        });
     }
 
-    private CompletionStage<Done> persistSequential(Seq<E> seq) {
+    private CompletionStage<Done> persistSequential(int workerIndex, Seq<E> seq) {
         if (seq.isEmpty()) {
             return done;
         } else {
             return materialize(seq.head())
                 .thenCompose(done -> {
-                    metrics.getEvents().increment();
-                    return persistSequential(seq.tail());
+                    metrics.getEvents(workerIndex).increment();
+                    return persistSequential(workerIndex, seq.tail());
                 });
         }
     }
@@ -427,6 +456,25 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
 
         public static final CancelReimport instance = new CancelReimport();
         private CancelReimport() {}
+    }
+
+    /**
+     * Message can be sent to "reset" this materializer, causing it to rematerialize everything.
+     *
+     * All existing workers will stay at the timestamps that they are, except for the oldest worker,
+     * which gets reset to the epoch. In addition, any end timestamps workers have are reset to
+     * the start timestamp of the next worker.
+     *
+     * This way, we queue up rematerialization of all timestamps, while retaining the same amount
+     * of workers, and minimizing disruptions in ongoing time sequences.
+     *
+     * A Progress message is sent back as reply.
+     */
+    public static class Reset implements Serializable {
+        private static final long serialVersionUID = 1L;
+
+        public static final Reset instance = new Reset();
+        private Reset() {}
     }
 
     /**
@@ -494,6 +542,8 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
      *
      * If the maximum number of workers has been reached, or if the timestamp is too close to an
      * existing worker, the request is ignored.
+     *
+     * A Progress message is sent back as reply.
      */
     public static class CreateWorker implements Serializable {
         private static final long serialVersionUID = 1L;

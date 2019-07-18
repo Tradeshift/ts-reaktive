@@ -114,6 +114,28 @@ public class MaterializerWorkersTheories {
                     });
             });
         });
+
+        describe("MaterializerWorkers.reset()", () -> {
+            it("should never have gaps in its result", () -> {
+                qt()
+                    .forAll(Generators.materializerWorkers())
+                    .checkAssert(w -> {
+                        MaterializerActorEvent event = w.reset();
+                        for (int i = 1; i < event.getWorkerCount(); i++) {
+                            assertThat(event.getWorker(i-1).getEndTimestamp())
+                                .describedAs("Worker %d's end timestamp, in event %s", i, event)
+                                .isEqualTo(event.getWorker(i).getTimestamp());
+
+                            assertThat(event.getWorker(i).getTimestamp())
+                                .isEqualTo(w.getTimestamp(w.getIds().apply(i)).toEpochMilli());
+                        }
+
+                        MaterializerWorkers p = w.applyEvent(event);
+                        assertSane(p);
+                    });
+            });
+
+        });
     }
 
     private Condition<Worker> workerForTime(Instant time) {

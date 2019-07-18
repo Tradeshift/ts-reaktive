@@ -3,16 +3,17 @@ package com.tradeshift.reaktive.materialize;
 import static com.tradeshift.reaktive.protobuf.UUIDs.toJava;
 import static com.tradeshift.reaktive.protobuf.UUIDs.toProtobuf;
 
-import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAmount;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import com.tradeshift.reaktive.protobuf.MaterializerActor.MaterializerActorEvent;
 import com.tradeshift.reaktive.protobuf.MaterializerActor.MaterializerActorEvent.Worker;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.tradeshift.reaktive.protobuf.UUIDs;
 
 import io.vavr.collection.Seq;
@@ -24,6 +25,8 @@ import io.vavr.control.Option;
  * timestamp when it's finished.
  **/
 public class MaterializerWorkers {
+    private static final Logger log = LoggerFactory.getLogger(MaterializerWorkers.class);
+
     public static MaterializerWorkers empty(TemporalAmount rollback) {
         return new MaterializerWorkers(Vector.empty(), rollback);
     }
@@ -98,7 +101,8 @@ public class MaterializerWorkers {
     public MaterializerActorEvent onWorkerProgress(UUID workerId, Instant timestamp) {
         int index = workers.map(Worker::getId).indexOf(toProtobuf(workerId));
         if (index == -1) {
-            new IllegalArgumentException("Unknown worker: " + workerId);
+            log.warn("Progress for unknown worker: {}, ignoring.", workerId);
+            return unchanged();
         }
         Worker worker = workers.apply(index);
         if (worker.hasEndTimestamp() && timestamp.toEpochMilli() >= worker.getEndTimestamp()) {
@@ -129,12 +133,35 @@ public class MaterializerWorkers {
         }
     }
 
+    /**
+     * Reimport all timestamps, by removing any gaps between workers, and changing the first worker
+     * to re-start at zero.
+     */
+    public MaterializerActorEvent reset() {
+        Worker zero = Worker.newBuilder()
+            .setId(toProtobuf(UUID.randomUUID()))
+            .setTimestamp(0L)
+            .build();
+
+        if (workers.size() <= 1) {
+            return toEvent(Vector.of(zero));
+        } else {
+            return toEvent(workers.update(0, zero).sliding(2)
+                .map(pair -> pair.apply(0).toBuilder()
+                    .setEndTimestamp(pair.apply(1).getTimestamp())
+                    .build())
+                .toVector()
+                .append(workers.last())
+            );
+        }
+    }
+    
     private MaterializerActorEvent unchanged() {
         return toEvent(workers);
     }
 
-    private static MaterializerActorEvent toEvent(Seq<Worker> workers) {
-        return MaterializerActorEvent.newBuilder() .addAllWorker(workers) .build();
+    private static MaterializerActorEvent toEvent(Iterable<Worker> workers) {
+        return MaterializerActorEvent.newBuilder().addAllWorker(workers) .build();
     }
 
     /**
