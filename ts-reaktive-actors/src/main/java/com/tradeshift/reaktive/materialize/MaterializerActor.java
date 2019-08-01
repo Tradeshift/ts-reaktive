@@ -69,6 +69,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
     private final int updateSize;
     private final int maxEventsPerTimestamp;
     private final int maxWorkerCount;
+    private final int deleteMessagesAfter;
     private final Duration updateOffsetInterval;
     private final AtomicReference<Instant> reimportProgress = new AtomicReference<>();
     private final ActorMaterializer materializer;
@@ -88,6 +89,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
         maxEventsPerTimestamp = config.getInt("max-events-per-timestamp");
         maxWorkerCount = config.getInt("max-worker-count");
         updateOffsetInterval = config.getDuration("update-offset-interval");
+        deleteMessagesAfter = config.getInt("delete-messages-after");
         this.workers = MaterializerWorkers.empty(Duration.ofMillis(rollback.toMillis()));
         log.info("{} has started.", self().path());
 
@@ -132,7 +134,8 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
                     applyEvent(evt);
                     context().system().scheduler().scheduleOnce(
                         updateAccuracy, sender(), "ack", context().dispatcher(), self());
-                    if ((lastSequenceNr() > 1) && ((lastSequenceNr() % 25) == 0)) {
+                    if ((lastSequenceNr() > 1) && ((lastSequenceNr() % deleteMessagesAfter) == 0)) {
+                        log.debug("Deleting up to {}", lastSequenceNr() - 1);
                         deleteMessages(lastSequenceNr() - 1);
                     }
                 });
