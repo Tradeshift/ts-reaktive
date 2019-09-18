@@ -36,7 +36,7 @@ public class CassandraSession {
         this(system, metricsCategory, s -> executeInitStatements(s, initializationStatements));
     }
 
-    private static CompletionStage<Done> executeInitStatements(Session session, Seq<String> statements) {
+    public static CompletionStage<Done> executeInitStatements(Session session, Seq<String> statements) {
         if (statements.isEmpty()) {
             return CompletableFuture.completedFuture(Done.getInstance());
         }
