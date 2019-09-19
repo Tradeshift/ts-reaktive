@@ -8,6 +8,8 @@ import kamon.metric.Counter;
 import kamon.metric.CounterMetric;
 import kamon.metric.Gauge;
 import kamon.metric.GaugeMetric;
+import kamon.metric.Histogram;
+import kamon.metric.HistogramMetric;
 import kamon.metric.MeasurementUnit;
 
 public class MaterializerMetrics {
@@ -19,8 +21,10 @@ public class MaterializerMetrics {
     private final GaugeMetric offset;
     /** The delay between the timestamp of each worker and now(), in milliseconds */
     private final GaugeMetric delay;
-    /** The rime remaining for each worker, in milliseconds (if there is an end timestamp) */
+    /** The time remaining for each worker, in milliseconds (if there is an end timestamp) */
     private final GaugeMetric remaining;
+    /** The duration, milliseconds, of materializing a single event */
+    private final HistogramMetric materializationDuration;
 
     public MaterializerMetrics(String name) {
         baseTags = HashMap.of("journal-materializer", name);
@@ -31,6 +35,7 @@ public class MaterializerMetrics {
         this.offset = Kamon.gauge("journal-materializer.offset", MeasurementUnit.time().milliseconds());
         this.delay = Kamon.gauge("journal-materializer.delay", MeasurementUnit.time().milliseconds());
         this.remaining = Kamon.gauge("journal-materializer.remaining", MeasurementUnit.time().milliseconds());
+        this.materializationDuration = Kamon.histogram("journal-materializer.materialization-duration", MeasurementUnit.time().milliseconds());
     }
 
 
@@ -52,6 +57,10 @@ public class MaterializerMetrics {
 
     public Gauge getRemaining(int index) {
         return remaining.refine(baseTags.put("index", String.valueOf(index)).toJavaMap());
+    }
+
+    public Histogram getMaterializationDuration(int index) {
+        return materializationDuration.refine(baseTags.put("index", String.valueOf(index)).toJavaMap());
     }
 
     public Gauge getReimportRemaining() {
