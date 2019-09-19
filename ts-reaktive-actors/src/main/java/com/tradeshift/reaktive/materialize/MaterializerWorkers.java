@@ -57,6 +57,7 @@ public class MaterializerWorkers {
         return workers.isEmpty();
     }
 
+    /** Returns a new MaterializerWorkers with at least one worker in it */
     public MaterializerWorkers initialize() {
         if (isEmpty()) {
             return new MaterializerWorkers(Vector.of(Worker.newBuilder()
@@ -69,6 +70,7 @@ public class MaterializerWorkers {
         }
     }
 
+    /** Returns a new MaterializerWorkers where the single expected worker has progressed to the given timestamp */
     public MaterializerWorkers applyEvent(long event) {
         if (workers.size() == 0) {
             return new MaterializerWorkers(Vector.of(Worker.newBuilder()
@@ -85,6 +87,7 @@ public class MaterializerWorkers {
         }
     }
 
+    /** Returns a new MaterializerWorkers where the given event has been applied (which is, a worker having progressed) */
     public MaterializerWorkers applyEvent(MaterializerActorEvent event) {
         return new MaterializerWorkers(Vector.ofAll(event.getWorkerList()), rollback);
     }

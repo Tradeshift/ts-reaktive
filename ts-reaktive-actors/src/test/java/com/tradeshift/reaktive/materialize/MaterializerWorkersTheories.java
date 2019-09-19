@@ -8,7 +8,6 @@ import static org.quicktheories.generators.Generate.constant;
 import static org.quicktheories.generators.SourceDSL.integers;
 import static org.quicktheories.generators.SourceDSL.longs;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -23,7 +22,6 @@ import org.quicktheories.core.Gen;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import io.vavr.Tuple3;
 import io.vavr.control.Option;
 
 @RunWith(CuppaRunner.class)
