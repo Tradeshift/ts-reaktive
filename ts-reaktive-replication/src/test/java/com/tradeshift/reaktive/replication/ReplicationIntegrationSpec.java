@@ -147,8 +147,8 @@ public class ReplicationIntegrationSpec {
             final DC dc1 = new DC("dc3", port1, HashMap.of("dc4", port2));
             final DC dc2 = new DC("dc4", port2, HashMap.of("dc3", port1));
             
-            final int N = 100;
-            final int M = 100;
+            final int N = 10;
+            final int M = 10;
             
             List<UUID> ids = new ArrayList<UUID>();
             for (int i = 0; i < N; i++) {
