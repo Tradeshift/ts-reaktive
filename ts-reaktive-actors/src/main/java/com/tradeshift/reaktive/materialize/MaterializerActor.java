@@ -403,6 +403,10 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
             long dur = (System.nanoTime() - start) / 1000;
             log.debug("Worker {} materialized {} events in {}ms", workerIndex, envelopes.size(),
                 dur / 1000.0);
+            if (envelopes.size() > 0) {
+                metrics.getMaterializationDuration(workerIndex)
+                    .record((long) (dur / 1000.0 / envelopes.size()));
+            }
             return Done.getInstance();
         });
     }
