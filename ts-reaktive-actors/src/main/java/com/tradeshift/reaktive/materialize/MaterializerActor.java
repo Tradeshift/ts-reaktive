@@ -131,6 +131,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
             .matchEquals("init", msg -> getSender().tell("ack", self()))
             .match(WorkerProgress.class, p -> {
                 persist(workers.onWorkerProgress(p.worker, p.timestamp), evt -> {
+                    onMaterializationProgress(p.worker, p.timestamp);
                     applyEvent(evt);
                     context().system().scheduler().scheduleOnce(
                         updateAccuracy, sender(), "ack", context().dispatcher(), self());
@@ -164,6 +165,19 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
                 reset();
             })
             .build();
+    }
+
+    /**
+     * Subclasses can override this method to be informed about the progress on materialization.
+     * This becomes handy in the cases where the materializer wants to materialize the events in parallel but also
+     * needs to keep track of the progress on timestamps.
+     * Note that this method is called per-worker instance, so if the materializer is using multiple workers, the
+     * reported timestamp is not the overall progress.
+     * @param workerId the UUID of the worker instance which has reported progress.
+     * @param lastEventTimestamp the timestamp of the last materialized event.
+     *
+     */
+    protected void onMaterializationProgress(UUID workerId, Instant lastEventTimestamp) {
     }
 
     private void sendProgress() {
