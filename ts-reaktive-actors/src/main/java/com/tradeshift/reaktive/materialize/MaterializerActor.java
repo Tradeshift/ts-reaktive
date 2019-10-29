@@ -61,7 +61,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
     protected final LoggingAdapter log = Logging.getLogger(getContext().getSystem(), this);
     private final MaterializerMetrics metrics = new MaterializerMetrics(
         // Turn CamelCase to camel-case.
-        getClass().getSimpleName().replaceAll("([a-z])([A-Z]+)", "$1-$2").toLowerCase());
+        getClass().getSimpleName().replaceAll("([a-z])([A-Z]+)", "$1-$2").toLowerCase(), getAdditionalMetricTags());
     private final FiniteDuration rollback;
     private final FiniteDuration updateAccuracy;
     private final FiniteDuration restartDelay;
@@ -433,6 +433,14 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
      * Get a timestamp of event envelope.
      */
     public abstract Instant timestampOf(E envelope);
+
+    /**
+     * @return the custom tags which will be attached to materializer metrics reported by Kamon.
+     * By default, only the class name is attached as a tag in Kamon metrics and there are no custom tags.
+     */
+    protected Option<HashMap<String, String>> getAdditionalMetricTags() {
+        return none();
+    }
 
     /**
      * Message that can be sent to this actor to start a secondary re-import of certain UUIDs.

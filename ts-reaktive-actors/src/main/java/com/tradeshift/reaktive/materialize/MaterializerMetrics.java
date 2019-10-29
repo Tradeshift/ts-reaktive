@@ -3,6 +3,7 @@ package com.tradeshift.reaktive.materialize;
 import java.util.Map;
 
 import io.vavr.collection.HashMap;
+import io.vavr.control.Option;
 import kamon.Kamon;
 import kamon.metric.Counter;
 import kamon.metric.CounterMetric;
@@ -26,8 +27,8 @@ public class MaterializerMetrics {
     /** The duration, milliseconds, of materializing a single event */
     private final HistogramMetric materializationDuration;
 
-    public MaterializerMetrics(String name) {
-        baseTags = HashMap.of("journal-materializer", name);
+    public MaterializerMetrics(String name, Option<HashMap<String, String>> additionalTags) {
+        baseTags = additionalTags.getOrElse(HashMap.empty()).put("journal-materializer", name);
         Map<String, String> tags = baseTags.toJavaMap();
         this.events = Kamon.counter("journal-materializer.events");
         this.restarts = Kamon.counter("journal-materializer.restarts").refine(tags);
