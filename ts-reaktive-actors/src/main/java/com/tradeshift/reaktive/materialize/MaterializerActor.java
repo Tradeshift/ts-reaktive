@@ -438,8 +438,8 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
      * @return the custom tags which will be attached to materializer metrics reported by Kamon.
      * By default, only the class name is attached as a tag in Kamon metrics and there are no custom tags.
      */
-    protected Option<HashMap<String, String>> getAdditionalMetricTags() {
-        return none();
+    protected Map<String, String> getAdditionalMetricTags() {
+        return HashMap.empty();
     }
 
     /**
