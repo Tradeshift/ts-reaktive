@@ -15,6 +15,7 @@ import java.nio.file.Paths
 import org.scalatest.AsyncFunSpecLike
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import javax.xml.namespace.QName
 
 class SchemaLoaderSpec extends SharedActorSystemSpec with FunSpecLike with Matchers {
   implicit val m = materializer
@@ -47,10 +48,20 @@ class SchemaLoaderSpec extends SharedActorSystemSpec with FunSpecLike with Match
               .via(AaltoReader.instance)
         }), 30.seconds)
 
-        val t = System.nanoTime() - start
-        println(s"Took ${(t / 1000000)}ms")
-        stuff = stuff :+ schema
-        schema.namespaces should have size(14)
+      val t = System.nanoTime() - start
+      println(s"Took ${(t / 1000000)}ms")
+      stuff = stuff :+ schema
+      schema.namespaces should have size(14)
+
+      val invoiceTag =
+        schema.rootElements(new QName("urn:oasis:names:specification:ubl:schema:xsd:Invoice-2", "Invoice"))
+
+      invoiceTag.elementType
+        .isChildMultiValued(new QName("urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2", "InvoiceLine")) shouldBe(true)
+      invoiceTag.elementType
+        .isChildMultiValued(new QName("urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2", "BuyerCustomerParty")) shouldBe(false)
+      invoiceTag.elementType
+        .isChildMultiValued(new QName("urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2", "NonExistingTag")) shouldBe(false)
     }
 
     it("should resolve references to an existing Schema") {
