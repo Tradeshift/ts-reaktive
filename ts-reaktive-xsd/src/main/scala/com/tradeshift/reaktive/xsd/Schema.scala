@@ -22,6 +22,9 @@ sealed trait RootType { // Fixme rename ElementType
   /** Finds a declared, non-xsd:any element as a child of this one */
   def findChildElement(name: QName): Option[RootElement] = None
 
+  /** Returns whether a given child element could occur more than once underneath this parent */
+  def isChildMultiValued(name: QName): Boolean = false
+
   /** Returns whether this type is, or derives from, a type named [name] */
   def hasBase(b: QName): Boolean = b == name
 }
@@ -45,6 +48,9 @@ case class RestrictionType(name: QName, _base: Resolve[RootType], attributes: Se
     (attributes ++ _base.get.allowedAttributes).groupBy(_.name).mapValues(_.last).values
   def base: RootType = _base.get
   override def hasBase(b: QName) = b == name || base.hasBase(b)
+
+  // Restriction types only allow their specified content (which is a subsection of the base type's content).
+  override def isChildMultiValued(name: QName): Boolean = content.exists(_.isMultiValued(name))
 }
 case class ExtensionType(name: QName, _base: Resolve[RootType], attributes: Seq[Attribute],
   content: Option[Content]) extends RootType {
@@ -52,12 +58,18 @@ case class ExtensionType(name: QName, _base: Resolve[RootType], attributes: Seq[
     (attributes ++ _base.get.allowedAttributes).groupBy(_.name).mapValues(_.last).values
   def base: RootType = _base.get
   override def hasBase(b: QName) = b == name || base.hasBase(b)
+
+  // Extension types allow the base type's content, AND THEN their own content.
+  override def isChildMultiValued(name: QName): Boolean =
+    base.isChildMultiValued(name) || content.exists(_.isMultiValued(name))
 }
 case class ComplexType(name: QName, content: Option[Content], attributes: Seq[Attribute]) extends RootType {
   override def allowedAttributes = attributes
 
   /** Finds a declared, non-xsd:any element as a child of this one */
   override def findChildElement(name: QName): Option[RootElement] = content.flatMap(_.findElement(name))
+
+  override def isChildMultiValued(name: QName): Boolean = content.exists(_.isMultiValued(name))
 }
 
 case class Content(element: ElementRef, minOccurs: Int, maxOccurs: Int) {
@@ -77,6 +89,20 @@ case class Content(element: ElementRef, minOccurs: Int, maxOccurs: Int) {
     case Sequence(elements) => elements.flatMap(_.potentialChildren)
     case Choice(elements) => elements.flatMap(_.potentialChildren)
     case _ => Nil
+  }
+
+  /** Returns whether the given child could occur more than once in this content */
+  def isMultiValued(name: QName): Boolean = {
+    def moreThanOnce = (maxOccurs > 1 || maxOccurs == -1)
+
+    element match {
+      case elem@RootElement(n, _) if n == name => moreThanOnce
+      case RootElementRef(ref) if ref.get.name == name => moreThanOnce
+      case AnyElement => moreThanOnce
+      case Sequence(elements) => elements.exists(_.isMultiValued(name))
+      case Choice(elements) => elements.exists(_.isMultiValued(name))
+      case _ => false
+    }
   }
 }
 
