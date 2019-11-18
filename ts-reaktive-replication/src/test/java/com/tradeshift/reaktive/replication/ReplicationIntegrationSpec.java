@@ -3,10 +3,10 @@ package com.tradeshift.reaktive.replication;
 import static akka.pattern.PatternsCS.ask;
 import static com.tradeshift.reaktive.protobuf.UUIDs.toProtobuf;
 import static com.tradeshift.reaktive.testkit.Await.within;
-import static com.tradeshift.reaktive.testkit.Await.eventuallyDo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
+import static org.forgerock.cuppa.Cuppa.skip;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -106,7 +106,7 @@ public class ReplicationIntegrationSpec {
     }
 {
     describe("ts-reaktive-replication", () -> {
-        it("should replicate individual events to another datacenter once the EventRepository indicates it", () -> {
+        skip().it("should replicate individual events to another datacenter once the EventRepository indicates it", () -> {
             final int port1 = CassandraLauncher.freePort(); 
             final int port2 = CassandraLauncher.freePort(); 
             final DC dc1 = new DC("dc1", port1, HashMap.of("dc2", port2));
