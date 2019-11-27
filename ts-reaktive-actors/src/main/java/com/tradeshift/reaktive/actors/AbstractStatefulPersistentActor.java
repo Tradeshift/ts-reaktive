@@ -75,6 +75,14 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
         return context().system().settings().config().getDuration("ts-reaktive.actors.passivate-timeout");
     }
 
+    /**
+     * Returns whether the asynchronous part of a Handler for this command is currently in progress
+     * (and, hence, further commands would currently be stashed if sent to this actor)
+     */
+    protected boolean isCommandInProgress() {
+        return !idle;
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public Receive createReceive() {
@@ -147,9 +155,6 @@ public abstract class AbstractStatefulPersistentActor<C,E,S extends AbstractStat
      * Must only be invoked if {@link #canHandleCommand(Object)} has returned true for this command.
      */
     protected void handleCommand(C cmd) {
-        // FIXME We need to uphold command ordering for the same sender (just like akka does for normal messages).
-        // Hence, we need to stash subsequent messages from the same sender, while one message from that sender is still
-        // being piped.
         pipe(handlers.handle(state, cmd), context().dispatcher()).to(self(), sender());
     }
 
