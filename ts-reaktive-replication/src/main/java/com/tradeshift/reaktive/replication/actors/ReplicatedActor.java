@@ -154,6 +154,8 @@ public abstract class ReplicatedActor<C,E,S extends AbstractState<E,S>> extends 
                 getContext().become(master());
                 if (receive.onMessage().isDefinedAt(c)) {
                     receive.onMessage().apply(c);
+                } else {
+                    log.warning("Unhandled first write command: {}", c);
                 }
             })
             .match(Query.EventEnvelope.class, e -> {
