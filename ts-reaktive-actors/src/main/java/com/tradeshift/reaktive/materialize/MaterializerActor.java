@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -283,14 +284,27 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
             worker, workers.getTimestamp(worker).toEpochMilli(), endTimestamp.get());
         recordOffsetMetric();
 
+        // We end the stream exactly after the first timestamp we encounter
+        // after the set target end timestamp.
+        AtomicLong shouldEndAfter = new AtomicLong(Long.MAX_VALUE);
+
         loadEvents(workers.getTimestamp(worker))
             .takeWhile(e -> {
                 long end = endTimestamp.get();
+                long t = timestampOf(e).toEpochMilli();
                 if (end == -1) {
+                    // no end timestamp has been set
                     return true;
-                } else {
-                    return timestampOf(e).toEpochMilli() < end;
+                } else if (t > shouldEndAfter.get()) {
+                    return false;
+                } else if (t >= end) {
+                    shouldEndAfter.set(t);
                 }
+                // Race condition for if we've updated endTimestamp after reaching shouldEndAfter
+                if (endTimestamp.get() > shouldEndAfter.get()) {
+                    shouldEndAfter.set(Long.MAX_VALUE);
+                }
+                return true;
             })
             // get a Seq<E> of where each Seq has the same timestamp, or emit buffer after [rollback]
             // (assuming no events with that timestamp after that)
