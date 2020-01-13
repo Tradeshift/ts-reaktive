@@ -109,6 +109,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
     public void postRestart(Throwable reason) throws Exception {
         super.postRestart(reason);
         metrics.getRestarts().increment();
+        metrics.getStreams().set(0);
     }
 
     @Override
@@ -158,11 +159,13 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
                 throw (Exception) msg.cause();
             })
             .match(WorkerFailure.class, failure -> {
+                metrics.getStreams().decrement();
                 log.error(failure.cause, "Stream " + failure.worker + " failed at offset "
                     + workers + ", restarting in " + restartDelay);
                 onWorkerStopped(failure.worker);
             })
             .match(WorkerDone.class, msg -> {
+                metrics.getStreams().decrement();
                 log.debug("Completed {}, now offset is: {}", msg.worker, workers);
                 onWorkerStopped(msg.worker);
             })
@@ -283,6 +286,8 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
             worker, workers.getTimestamp(worker).toEpochMilli(), endTimestamp.get());
         recordOffsetMetric();
 
+        metrics.getStreams().increment();
+
         loadEvents(workers.getTimestamp(worker))
             .takeWhile(e -> {
                 long end = endTimestamp.get();
@@ -370,6 +375,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
 
     private void recordOffsetMetric() {
         Seq<UUID> ids = workers.getIds();
+        metrics.getWorkers().set(workers.getIds().size());
         for (int i = 0; i < ids.size(); i++) {
             Instant offset = workers.getTimestamp(ids.apply(i));
             metrics.getOffset(i).set(offset.toEpochMilli());
