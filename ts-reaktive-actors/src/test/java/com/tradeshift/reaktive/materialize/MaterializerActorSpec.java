@@ -5,14 +5,18 @@ import static org.forgerock.cuppa.Cuppa.beforeEach;
 import static org.forgerock.cuppa.Cuppa.describe;
 import static org.forgerock.cuppa.Cuppa.it;
 import static org.forgerock.cuppa.Cuppa.when;
+import static org.forgerock.cuppa.Cuppa.only;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import com.tradeshift.reaktive.materialize.MaterializerActor.CreateWorker;
+import com.tradeshift.reaktive.materialize.MaterializerActor.Progress;
 import com.tradeshift.reaktive.testkit.SharedActorSystemSpec;
+import static com.tradeshift.reaktive.testkit.Await.eventuallyDo;
 import com.typesafe.config.ConfigFactory;
 
 import org.forgerock.cuppa.junit.CuppaRunner;
@@ -75,9 +79,19 @@ public class MaterializerActorSpec extends SharedActorSystemSpec {
                 it("runs concurrently if a second worker is started", () -> {
                     ActorRef actor = system.actorOf(Props.create(TestActor.class, () ->
                         new TestActor(Source.from(events), materialized.getRef())));
-                    actor.tell(new CreateWorker(Instant.ofEpochMilli(1000000 + (N/2) * 1000), none()), system.deadLetters());
+                    actor.tell(new CreateWorker(Instant.ofEpochMilli(1000000 + (N/3) * 1000 + 176), none()), system.deadLetters());
+                    actor.tell(new CreateWorker(Instant.ofEpochMilli(1000000 + (N*2/3) * 1000 + 176), none()), system.deadLetters());
 
                     assertReceiveOutOfOrder(events);
+
+                    TestKit sender = new TestKit(system);
+
+                    eventuallyDo(() -> {
+                        // Intermediate worker must have stopped.
+                        sender.send(actor, MaterializerActor.QueryProgress.instance);
+                        Progress p = sender.expectMsgClass(Progress.class);
+                        assertThat(p.getWorkers()).hasSize(1);
+                    });
 
                     system.stop(actor);
                 });
@@ -96,6 +110,32 @@ public class MaterializerActorSpec extends SharedActorSystemSpec {
                     assertReceiveOutOfOrder(events);
 
                     system.stop(actor);
+                });
+
+                it("runs concurrently if more workers are started", () -> {
+                    ActorRef actor = system.actorOf(Props.create(TestActor.class, () ->
+                        new TestActor(Source.from(events), materialized.getRef())));
+                    actor.tell(new CreateWorker(Instant.ofEpochMilli(1000000 + (N/3) * 1000 + 176), none()), system.deadLetters());
+                    actor.tell(new CreateWorker(Instant.ofEpochMilli(1000000 + (N*2/3) * 1000 + 176), none()), system.deadLetters());
+
+                    assertReceiveOutOfOrder(events);
+
+                    TestKit sender = new TestKit(system);
+
+                    eventuallyDo(() -> {
+                        // Intermediate worker must have stopped.
+                        sender.send(actor, MaterializerActor.QueryProgress.instance);
+                        Progress p = sender.expectMsgClass(Progress.class);
+                        assertThat(p.getWorkers()).hasSize(1);
+                    });
+
+                    system.stop(actor);
+                });
+            });
+
+            when("importing sparse events", () -> {
+                it("should complete a worker started in the past", () -> {
+
                 });
             });
         });
