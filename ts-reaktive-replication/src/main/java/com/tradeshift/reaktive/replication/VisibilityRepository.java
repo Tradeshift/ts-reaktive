@@ -3,7 +3,7 @@ package com.tradeshift.reaktive.replication;
 import java.util.Collections;
 import java.util.concurrent.CompletionStage;
 
-import com.datastax.driver.core.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 
 import akka.Done;
 import io.vavr.collection.HashSet;
@@ -59,7 +59,7 @@ public class VisibilityRepository {
             .thenCompose(stmt -> session.selectOne(stmt.bind(persistenceId)))
             .thenApply(opt ->
                 opt.map(row ->
-                    new Visibility(HashSet.ofAll(row.getSet("datacenters", String.class)), row.getBool("master"))
+                    new Visibility(HashSet.ofAll(row.getSet("datacenters", String.class)), row.getBoolean("master"))
                 ).getOrElse(Visibility.EMPTY)
             );
     }

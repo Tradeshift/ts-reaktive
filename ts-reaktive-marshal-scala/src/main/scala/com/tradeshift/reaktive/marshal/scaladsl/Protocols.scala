@@ -6,8 +6,9 @@ import scala.reflect.ClassTag
 import com.tradeshift.reaktive.marshal.ReadProtocol
 import com.tradeshift.reaktive.marshal.WriteProtocol
 import java.util.function.Supplier
-import java.util.function.BiFunction
 import java.util.function.Consumer
+
+import io.vavr.collection.Seq
 
 object Protocols {
 

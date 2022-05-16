@@ -54,7 +54,7 @@ public abstract class ByteStringTransformStage extends GraphStage<FlowShape<Byte
     @Override
     public GraphStageLogic createLogic(Attributes attr) {
         return new GraphStageLogic(shape) {
-            private ByteString buf = ByteString.empty();
+            private ByteString buf = ByteString.emptyByteString();
 
             {
                 setHandler(in, new AbstractInHandler() {

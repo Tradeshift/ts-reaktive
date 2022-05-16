@@ -109,7 +109,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
     public void postRestart(Throwable reason) throws Exception {
         super.postRestart(reason);
         metrics.getRestarts().increment();
-        metrics.getStreams().set(0);
+        metrics.getStreams().update(0);
     }
 
     @Override
@@ -345,7 +345,7 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
             .conflate((t1, t2) -> (t1.isAfter(t2)) ? t1 : t2)
             .throttle(1, Duration.ofSeconds(1))
             .map(t -> {
-                metrics.getReimportRemaining().set(ChronoUnit.MILLIS.between(t, maxTimestamp));
+                metrics.getReimportRemaining().update(ChronoUnit.MILLIS.between(t, maxTimestamp));
                 return Done.getInstance();
             })
             .toMat(Sink.onComplete(result -> self.tell("reimportComplete", self())), Keep.left())
@@ -375,13 +375,13 @@ public abstract class MaterializerActor<E> extends AbstractPersistentActor {
 
     private void recordOffsetMetric() {
         Seq<UUID> ids = workers.getIds();
-        metrics.getWorkers().set(workers.getIds().size());
+        metrics.getWorkers().update(workers.getIds().size());
         for (int i = 0; i < ids.size(); i++) {
             Instant offset = workers.getTimestamp(ids.apply(i));
-            metrics.getOffset(i).set(offset.toEpochMilli());
-            metrics.getDelay(i).set(Duration.between(offset, Instant.now()).toMillis());
+            metrics.getOffset(i).update(offset.toEpochMilli());
+            metrics.getDelay(i).update(Duration.between(offset, Instant.now()).toMillis());
             for (Instant end: workers.getEndTimestamp(workers.getIds().apply(i))) {
-                metrics.getRemaining(i).set(Duration.between(offset, end).toMillis());
+                metrics.getRemaining(i).update(Duration.between(offset, end).toMillis());
             }
         }
     }

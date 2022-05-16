@@ -5,6 +5,7 @@ import javax.xml.stream.events.XMLEvent
 import java.util.stream.Collectors
 import scala.collection.JavaConverters._
 
+
 /**
  * Interface to and from stax to the XML marshalling framework.
  */

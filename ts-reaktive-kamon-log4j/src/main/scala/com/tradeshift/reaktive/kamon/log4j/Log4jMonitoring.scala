@@ -22,9 +22,9 @@ object Log4jMonitoring {
     log.debug("Log4J is now being monitored into Kamon")
 
     org.apache.log4j.Logger.getRootLogger().addAppender(new AppenderSkeleton {
-      val fatal = Kamon.counter("log4j.fatal")
-      val error = Kamon.counter("log4j.error")
-      val warn = Kamon.counter("log4j.warn")
+      val fatal = Kamon.counter("log4j.fatal").withoutTags()
+      val error = Kamon.counter("log4j.error").withoutTags()
+      val warn = Kamon.counter("log4j.warn").withoutTags()
 
       override def close: Unit = {}
       override def requiresLayout = false

@@ -50,7 +50,7 @@ public class DelimitedProtobufFraming extends GraphStage<FlowShape<ByteString,By
     @Override
     public GraphStageLogic createLogic(Attributes attr) {
         return new GraphStageLogic(shape) {
-            ByteString buf = ByteString.empty();
+            ByteString buf = ByteString.emptyByteString();
             List<ByteString> deframed = new ArrayList<>();
             {
                 setHandler(in, new AbstractInHandler() {

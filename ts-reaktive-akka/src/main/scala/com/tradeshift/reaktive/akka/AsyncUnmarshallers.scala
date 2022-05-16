@@ -17,6 +17,6 @@ object AsyncUnmarshallers {
     
   def entityToStream(): Unmarshaller[HttpEntity, Source[ByteString, NotUsed]] = 
     Unmarshaller.sync(new java.util.function.Function[HttpEntity, Source[ByteString, NotUsed]] {
-      override def apply(entity: HttpEntity) = entity.getDataBytes().asScala.mapMaterializedValue(obj => NotUsed).asJava
+      override def apply(entity: HttpEntity) = entity.getDataBytes().asScala.mapMaterializedValue(obj => NotUsed.notUsed()).asJava
     })
 }
