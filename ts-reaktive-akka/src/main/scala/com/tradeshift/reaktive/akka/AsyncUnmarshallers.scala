@@ -15,8 +15,8 @@ object AsyncUnmarshallers {
   def withMaterializer[A, B](f: Function3[ExecutionContext, Materializer, A, CompletionStage[B]]): Unmarshaller[A, B] =
     akka.http.scaladsl.unmarshalling.Unmarshaller.withMaterializer(ctx => mat => a => f.apply(ctx, mat, a).toScala)
     
-  def entityToStream(): Unmarshaller[HttpEntity, Source[ByteString, NotUsed]] = 
-    Unmarshaller.sync(new java.util.function.Function[HttpEntity, Source[ByteString, NotUsed]] {
+  def entityToStream(): Unmarshaller[HttpEntity, Source[ByteString, NotUsed.type ]] =
+    Unmarshaller.sync(new java.util.function.Function[HttpEntity, Source[ByteString, NotUsed.type]] {
       override def apply(entity: HttpEntity) = entity.getDataBytes().asScala.mapMaterializedValue(obj => NotUsed).asJava
     })
 }
