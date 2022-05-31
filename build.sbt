@@ -81,7 +81,7 @@ lazy val projectSettings = Seq(
   libraryDependencies ++= Seq(
     "io.vavr" % "vavr" % "0.9.0",
     "org.slf4j" % "slf4j-api" % "1.7.12",
-    "org.slf4j" % "slf4j-log4j12" % "1.7.12" % "test",
+    "org.slf4j" % "slf4j-reload4j" % "1.7.6" % "test",
     "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test",
     "junit" % "junit" % "4.11" % "test",
     assertJ % "test",
