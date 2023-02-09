@@ -1,0 +1,21 @@
+name: PR build
+
+on:
+  pull_request:
+      
+jobs:
+  pr-test:
+    name: Compile & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # get all the history
+          ref: ${{ github.event.pull_request.head.sha }}
+      - id: setupJava
+        uses: actions/setup-java@v3
+        with:
+          java-version: 8
+          distribution: 'zulu'
+      - name: Compile
+        run: sbt test
