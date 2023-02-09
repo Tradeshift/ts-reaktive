@@ -4,5 +4,7 @@
     "enableWiki": false,
     "enableProjects": false,
     "extraChecks": [],
-    "maintainers": ["DocsAPI"]
+    "maintainers": [
+        "docsapi"
+    ]
 }
