@@ -2,7 +2,7 @@ package com.tradeshift.reaktive;
 
 import java.util.concurrent.CompletableFuture;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import com.datastax.oss.driver.shaded.guava.common.util.concurrent.ListenableFuture;
 
 public class ListenableFutures {
 

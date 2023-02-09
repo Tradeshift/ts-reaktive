@@ -3,8 +3,8 @@ package com.tradeshift.reaktive.cassandra;
 import java.util.concurrent.TimeUnit;
 
 import akka.actor.ActorSystem;
-import akka.persistence.cassandra.CassandraMetricsRegistry;
 
+import akka.stream.alpakka.cassandra.CassandraMetricsRegistry;
 import com.codahale.metrics.MetricRegistry;
 import com.readytalk.metrics.StatsDReporter;
 

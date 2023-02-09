@@ -22,6 +22,6 @@ public class Streams {
      * Returns a {@link Sink} that appends all emitted ByteString elements to each other.
      */
     public static Sink<ByteString, CompletionStage<ByteString>> toByteString() {
-        return Sink.fold(ByteString.empty(), (bs, elmt) -> bs.concat(elmt));
+        return Sink.fold(ByteString.emptyByteString(), (bs, elmt) -> bs.concat(elmt));
     }
 }

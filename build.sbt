@@ -1,9 +1,9 @@
 
-scalaVersion := "2.12.6" // just for the root
+scalaVersion := "2.13.8" // just for the root
 
-val akkaVersion = "2.5.16"
-val akkaHttpVersion = "10.1.4"
-val akkaInMemory = "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.5.1.1"
+val akkaVersion = "2.5.27"
+val akkaHttpVersion = "10.1.8"
+val akkaInMemory = "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.5.15.2"
 val assertJ = "org.assertj" % "assertj-core" % "3.2.0"
 
 import sbtrelease._
@@ -19,7 +19,7 @@ def setVersionOnly(selectVersion: Versions => String): ReleaseStep =  { st: Stat
   val versionStr = (if (useGlobal) globalVersionString else versionString) format selected
 
   reapply(Seq(
-    if (useGlobal) version in ThisBuild := selected
+    if (useGlobal) ThisBuild / version := selected
     else version := selected
   ), st)
 }
@@ -32,7 +32,7 @@ releaseVersionBump := { System.getProperty("BUMP", "default").toLowerCase match 
   case "bugfix" => sbtrelease.Version.Bump.Bugfix
   case "default" => sbtrelease.Version.Bump.default
 }}
-    
+
 releaseVersion := { ver => Version(ver)
   .map(_.withoutQualifier)
   .map(_.bump(releaseVersionBump.value).string).getOrElse(versionFormatError)
@@ -49,7 +49,7 @@ releaseProcess := Seq(
   inquireVersions,
   setReleaseVersion,
   runClean,
-  runTest, 
+  runTest,
   tagRelease,
   publishArtifacts,
   pushChanges
@@ -58,12 +58,12 @@ releaseProcess := Seq(
 lazy val projectSettings = Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  scalaVersion := "2.12.6",
-  crossScalaVersions := Seq("2.12.6"),
+  scalaVersion := "2.13.8",
+  crossScalaVersions := Seq("2.13.8"),
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
-  javacOptions in (Compile, Keys.compile) ++= Seq("-target", "1.8", "-Xlint", "-Xlint:-processing", "-Xlint:-serial", "-Werror"),
-  javacOptions in doc ++= Seq("-Xdoclint:none"),
+  Compile / Keys.compile / javacOptions ++= Seq("-target", "1.8", "-Xlint", "-Xlint:-processing", "-Xlint:-serial"),
+  doc / javacOptions ++= Seq("-Xdoclint:none"),
   scalacOptions ++= Seq("-target:jvm-1.8"),
   EclipseKeys.executionEnvironment := Some(EclipseExecutionEnvironment.JavaSE18),
   EclipseKeys.createSrc := EclipseCreateSrc.Default + EclipseCreateSrc.ManagedClasses,
@@ -71,13 +71,16 @@ lazy val projectSettings = Seq(
   javaOptions += "-Xmx128M",
   fork := true,
   resolvers ++= Seq(
-    Resolver.bintrayRepo("readytalk", "maven"),
-    Resolver.jcenterRepo),
+    "Local Maven Repository" at "file://"+Path.userHome+"/.m2/repository",
+    "tradeshift-public" at "https://maven.tradeshift.net/content/repositories/tradeshift-public",
+    "tradeshift-snapshots" at "https://maven.tradeshift.net/content/repositories/tradeshift-public-snapshots"),
   dependencyOverrides += "com.google.protobuf" % "protobuf-java" % "2.6.1",
-  protobufRunProtoc in ProtobufConfig := { args =>
+  ProtobufConfig / protobufRunProtoc:= { args =>
     com.github.os72.protocjar.Protoc.runProtoc("-v261" +: args.toArray)
   },
   testOptions += Tests.Argument(TestFrameworks.JUnit, "-a"),
+  credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
+
   libraryDependencies ++= Seq(
     "io.vavr" % "vavr" % "0.9.0",
     "org.slf4j" % "slf4j-api" % "1.7.12",
@@ -92,7 +95,7 @@ lazy val projectSettings = Seq(
     "org.forgerock.cuppa" % "cuppa" % "1.3.1" % "test",
     "org.forgerock.cuppa" % "cuppa-junit" % "1.3.1" % "test",
     "org.apache.cassandra" % "cassandra-all" % "3.9" % "test" exclude("ch.qos.logback", "logback-classic"),
-    "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % "0.83" % "test",
+    "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % "1.0.5" % "test",
     "com.github.tomakehurst" % "wiremock" % "1.58" % "test",
     "org.xmlunit" % "xmlunit-core" % "2.5.0" % "test",
     "org.xmlunit" % "xmlunit-matchers" % "2.5.0" % "test"
@@ -101,10 +104,10 @@ lazy val projectSettings = Seq(
   git.baseVersion := "0.1.0",
   git.gitTagToVersionNumber := {
     case VersionRegex(v,"") => Some(v)
-    case VersionRegex(v,"SNAPSHOT") => Some(s"$v-SNAPSHOT")  
+    case VersionRegex(v,"SNAPSHOT") => Some(s"$v-SNAPSHOT")
     case VersionRegex(v,s) => Some(s"$v-$s-SNAPSHOT")
     case s => None
-  }  
+  }
 )
 
 lazy val commonSettings = projectSettings ++ Seq(
@@ -119,18 +122,19 @@ lazy val commonSettings = projectSettings ++ Seq(
       "com.typesafe.akka" %% "akka-persistence-query" % akkaVersion,
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-jackson" % akkaHttpVersion,
-      "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.83",
+      "com.typesafe.akka" %% "akka-persistence-cassandra" % "1.0.5",
       "org.quicktheories" % "quicktheories" % "0.26" % "test",
-      "org.slf4j" % "slf4j-log4j12" % "1.7.12"
+      "org.slf4j" % "slf4j-log4j12" % "1.7.12",
+      "javax.xml.bind" % "jaxb-api" % "2.3.1"
     )
-  }  
+  }
 )
 
 lazy val kamonSettings = Seq(
   libraryDependencies ++= {
     Seq(
-      "io.kamon" %% "kamon-core" % "1.1.3",
-      "io.kamon" %% "kamon-system-metrics" % "1.0.0",
+      "io.kamon" %% "kamon-core" % "2.5.1",
+      "io.kamon" %% "kamon-system-metrics" % "2.5.0",
       "org.aspectj" % "aspectjweaver" % "1.8.13",
       "com.readytalk" % "metrics3-statsd" % "4.1.0" // to log cassandra (codahale / dropwizard) metrics into statsd
     )
@@ -214,7 +218,7 @@ lazy val `ts-reaktive-marshal-xerces` = project
   .settings(javaSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "xerces" % "xercesImpl" % "2.11.0"     
+      "xerces" % "xercesImpl" % "2.11.0"
     )
   )
   .dependsOn(`ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test", `ts-reaktive-testkit-assertj` % "test")
@@ -243,7 +247,7 @@ lazy val `ts-reaktive-marshal-scala` = project
 lazy val `ts-reaktive-xsd` = project
   .settings(projectSettings: _*)
   .settings(libraryDependencies ++= Seq(
-    "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+    "org.scalatest" %% "scalatest" % "3.2.11" % "test"
   ))
   .dependsOn(
     `ts-reaktive-marshal-scala`,
@@ -258,7 +262,7 @@ lazy val `ts-reaktive-actors` = project
   .settings(kamonSettings: _*)
   .settings(
     // the .proto files of this project are supposed to be included by others, so they're added to the .jar
-    unmanagedResourceDirectories in Compile += (sourceDirectory in ProtobufConfig).value
+    Compile / unmanagedResourceDirectories+= (ProtobufConfig / sourceDirectory).value
   )
   .dependsOn(`ts-reaktive-java`, `ts-reaktive-akka`, `ts-reaktive-testkit` % "test")
 
@@ -276,7 +280,7 @@ lazy val `ts-reaktive-backup` = project
   .settings(javaSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.lightbend.akka" %% "akka-stream-alpakka-s3" % "0.11"
+      "com.lightbend.akka" %% "akka-stream-alpakka-s3" % "3.0.4"
     )
   )
   .dependsOn(`ts-reaktive-replication`, `ts-reaktive-actors` % ProtobufConfig.name, `ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test")

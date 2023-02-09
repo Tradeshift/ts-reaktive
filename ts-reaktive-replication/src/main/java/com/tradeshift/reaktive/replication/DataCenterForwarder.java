@@ -4,7 +4,7 @@ import static akka.pattern.PatternsCS.pipe;
 
 import java.util.concurrent.TimeUnit;
 
-import com.datastax.driver.core.utils.UUIDs;
+import com.datastax.oss.driver.api.core.uuid.Uuids;
 
 import akka.Done;
 import akka.NotUsed;
@@ -41,12 +41,11 @@ public class DataCenterForwarder<E> extends AbstractActor {
     /**
      * Starts a DataCenterForwarder for each of the known data centers in the {@link DataCenterRepository}.
      * @param system Actor system to create the DataCenterForwarder actors in
-     * @param dataRepo Repository that knows about all data centers
      * @param materializer Akka streams materializer to use
+     * @param dataRepo Repository that knows about all data centers
      * @param visibilityRepo Repository that stores the current visiblity of aggregates
-     * @param eventRepo Classifier that determines which additional datacenters an event should trigger replication for
+     * @param eventType eventType to determine Classifier which is used to find additional datacenters an event should trigger replication for
      * @param eventsByTagQuery Query to use to find a continuous stream of all events
-     * @param tag Tag to pass to {@link EventsByTagQuery} (all events must be tagged by this)
      * @param currentEventsByPersistenceIdQuery Query to find all current events for a specific persistenceId
      */
     public static <E> void startAll(ActorSystem system, Materializer materializer, DataCenterRepository dataRepo, VisibilityRepository visibilityRepo, Class<E> eventType,
@@ -91,9 +90,8 @@ public class DataCenterForwarder<E> extends AbstractActor {
      * @param materializer Akka streams materializer to use
      * @param dataCenter Target data center to forward events to.
      * @param visibilityRepo Repository that stores the current visiblity of aggregates
-     * @param eventRepo Classifier that determines which additional datacenters an event should trigger replication for
+     * @param eventType eventType to determine Classifier which is used to find additional datacenters an event should trigger replication for
      * @param eventsByTagQuery Query to use to find a continuous stream of all events
-     * @param tag Tag to pass to {@link EventsByTagQuery} (all events must be tagged by this)
      * @param currentEventsByPersistenceIdQuery Query to find all current events for a specific persistenceId
      */
     public DataCenterForwarder(Materializer materializer, DataCenter dataCenter, VisibilityRepository visibilityRepo, Class<E> eventType,
@@ -121,7 +119,8 @@ public class DataCenterForwarder<E> extends AbstractActor {
             .match(LastEventOffsetKnown.class, msg -> {
                 log.debug("Last offset known is {}", msg.offset);
                 lastEventOffset = Math.max(0, msg.offset - context().system().settings().config().getDuration("ts-reaktive.replication.allowed-clock-drift").toMillis());
-                eventsByTagQuery.eventsByTag(tag, lastEventOffset == 0 ? NoOffset.getInstance() : new TimeBasedUUID(UUIDs.startOf(lastEventOffset)))
+                eventsByTagQuery.eventsByTag(tag, lastEventOffset == 0 ? NoOffset.getInstance() : new TimeBasedUUID(
+                                Uuids.startOf(lastEventOffset)))
                     .alsoTo(filteredDataCenterSink())
                     .alsoTo(stopOnError("eventsByTag"))
                     .runWith(updateVisibility(), materializer);
@@ -244,7 +243,7 @@ public class DataCenterForwarder<E> extends AbstractActor {
     }
     
     private static long getTimestamp(EventEnvelope e) {
-        return UUIDs.unixTimestamp(TimeBasedUUID.class.cast(e.offset()).value());
+        return Uuids.unixTimestamp(TimeBasedUUID.class.cast(e.offset()).value());
     }
 
     private <T> Sink<T,NotUsed> stopOnError(String msg) {
