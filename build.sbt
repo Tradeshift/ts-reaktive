@@ -1,5 +1,5 @@
 
-scalaVersion := "2.12.6" // just for the root
+scalaVersion := "2.12.18" // just for the root
 
 val akkaVersion = "2.5.16"
 val akkaHttpVersion = "10.1.4"
@@ -58,7 +58,7 @@ releaseProcess := Seq(
 lazy val projectSettings = Seq(
   licenses := Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   organization := "com.tradeshift",
-  scalaVersion := "2.12.6",
+  scalaVersion := "2.12.18",
   crossScalaVersions := Seq("2.12.6"),
   publishMavenStyle := true,
   javacOptions ++= Seq("-source", "1.8"),
