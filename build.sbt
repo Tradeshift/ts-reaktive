@@ -86,7 +86,7 @@ lazy val projectSettings = Seq(
     "junit" % "junit" % "4.11" % "test",
     assertJ % "test",
     "org.mockito" % "mockito-core" % "1.10.19" % "test",
-    "info.solidsoft.mockito" % "mockito-java8" % "0.3.0" % "test",
+    "info.solidsoft.mockito" % "mockito-java8" % "0.3.1" % "test",
     akkaInMemory % "test",
     "com.novocode" % "junit-interface" % "0.11" % "test",
     "org.forgerock.cuppa" % "cuppa" % "1.3.1" % "test",
