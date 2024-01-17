@@ -129,7 +129,7 @@ lazy val commonSettings = projectSettings ++ Seq(
 lazy val kamonSettings = Seq(
   libraryDependencies ++= {
     Seq(
-      "io.kamon" %% "kamon-core" % "1.1.3",
+      "io.kamon" %% "kamon-core" % "1.1.6",
       "io.kamon" %% "kamon-system-metrics" % "1.0.1",
       "org.aspectj" % "aspectjweaver" % "1.8.13",
       "com.readytalk" % "metrics3-statsd" % "4.1.0" // to log cassandra (codahale / dropwizard) metrics into statsd
