@@ -2,7 +2,7 @@
 scalaVersion := "2.12.18" // just for the root
 
 val akkaVersion = "2.5.16"
-val akkaHttpVersion = "10.1.4"
+val akkaHttpVersion = "10.5.3"
 val akkaInMemory = "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.5.15.2"
 val assertJ = "org.assertj" % "assertj-core" % "3.2.0"
 
