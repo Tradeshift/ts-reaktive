@@ -83,7 +83,7 @@ lazy val projectSettings = Seq(
     "org.slf4j" % "slf4j-api" % "1.7.36",
     "org.slf4j" % "slf4j-log4j12" % "1.7.36" % "test",
     "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test",
-    "junit" % "junit" % "4.11" % "test",
+    "junit" % "junit" % "4.13.2" % "test",
     assertJ % "test",
     "org.mockito" % "mockito-core" % "1.10.19" % "test",
     "info.solidsoft.mockito" % "mockito-java8" % "0.3.1" % "test",
