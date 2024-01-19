@@ -92,7 +92,7 @@ lazy val projectSettings = Seq(
     "org.forgerock.cuppa" % "cuppa" % "1.3.1" % "test",
     "org.forgerock.cuppa" % "cuppa-junit" % "1.3.1" % "test",
     "org.apache.cassandra" % "cassandra-all" % "3.9" % "test" exclude("ch.qos.logback", "logback-classic"),
-    "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % "0.83" % "test",
+    "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % "0.107" % "test",
     "com.github.tomakehurst" % "wiremock" % "1.58" % "test",
     "org.xmlunit" % "xmlunit-core" % "2.5.0" % "test",
     "org.xmlunit" % "xmlunit-matchers" % "2.5.0" % "test"
