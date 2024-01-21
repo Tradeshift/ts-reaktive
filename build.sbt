@@ -90,7 +90,7 @@ lazy val projectSettings = Seq(
     akkaInMemory % "test",
     "com.novocode" % "junit-interface" % "0.11" % "test",
     "org.forgerock.cuppa" % "cuppa" % "1.6.0" % "test",
-    "org.forgerock.cuppa" % "cuppa-junit" % "1.3.1" % "test",
+    "org.forgerock.cuppa" % "cuppa-junit" % "1.6.0" % "test",
     "org.apache.cassandra" % "cassandra-all" % "3.11.16" % "test" exclude("ch.qos.logback", "logback-classic"),
     "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % "0.107" % "test",
     "com.github.tomakehurst" % "wiremock" % "1.58" % "test",
