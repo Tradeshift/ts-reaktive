@@ -243,7 +243,7 @@ lazy val `ts-reaktive-marshal-scala` = project
 lazy val `ts-reaktive-xsd` = project
   .settings(projectSettings: _*)
   .settings(libraryDependencies ++= Seq(
-    "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+    "org.scalatest" %% "scalatest" % "3.2.17" % "test"
   ))
   .dependsOn(
     `ts-reaktive-marshal-scala`,
