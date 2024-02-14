@@ -6,6 +6,6 @@ addSbtPlugin("com.github.gseitz" % "sbt-release" % "1.0.7")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.9.3")
 
-libraryDependencies += "com.github.os72" % "protoc-jar" % "3.0.0"
+libraryDependencies += "com.github.os72" % "protoc-jar" % "3.11.4"
 
 addSbtPlugin("org.foundweekends" % "sbt-bintray" % "0.5.3")
