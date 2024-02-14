@@ -286,7 +286,7 @@ lazy val `ts-reaktive-ssl` = project
   .settings(javaSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "org.bouncycastle" % "bcpkix-jdk15on" % "1.54" // for PEMReader, in order to read PEM encoded RSA keys
+      "org.bouncycastle" % "bcpkix-jdk15on" % "1.70" // for PEMReader, in order to read PEM encoded RSA keys
     )
   )
   .enablePlugins(GitVersioning)
