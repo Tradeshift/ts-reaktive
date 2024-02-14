@@ -119,7 +119,7 @@ lazy val commonSettings = projectSettings ++ Seq(
       "com.typesafe.akka" %% "akka-persistence-query" % akkaVersion,
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-jackson" % akkaHttpVersion,
-      "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.83",
+      "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.107",
       "org.quicktheories" % "quicktheories" % "0.26" % "test",
       "org.slf4j" % "slf4j-log4j12" % "1.7.36"
     )
