@@ -214,7 +214,7 @@ lazy val `ts-reaktive-marshal-xerces` = project
   .settings(javaSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "xerces" % "xercesImpl" % "2.11.0"     
+      "xerces" % "xercesImpl" % "2.12.2"     
     )
   )
   .dependsOn(`ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test", `ts-reaktive-testkit-assertj` % "test")
