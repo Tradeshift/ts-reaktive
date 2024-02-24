@@ -80,7 +80,7 @@ lazy val projectSettings = Seq(
   testOptions += Tests.Argument(TestFrameworks.JUnit, "-a"),
   libraryDependencies ++= Seq(
     "io.vavr" % "vavr" % "0.10.4",
-    "org.slf4j" % "slf4j-api" % "1.7.36",
+    "org.slf4j" % "slf4j-api" % "2.0.12",
     "org.slf4j" % "slf4j-log4j12" % "1.7.36" % "test",
     "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test",
     "junit" % "junit" % "4.13.2" % "test",
