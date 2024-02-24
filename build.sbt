@@ -73,7 +73,7 @@ lazy val projectSettings = Seq(
   resolvers ++= Seq(
     Resolver.bintrayRepo("readytalk", "maven"),
     Resolver.jcenterRepo),
-  dependencyOverrides += "com.google.protobuf" % "protobuf-java" % "2.6.1",
+  dependencyOverrides += "com.google.protobuf" % "protobuf-java" % "3.25.3",
   protobufRunProtoc in ProtobufConfig := { args =>
     com.github.os72.protocjar.Protoc.runProtoc("-v261" +: args.toArray)
   },
