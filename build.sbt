@@ -276,7 +276,7 @@ lazy val `ts-reaktive-backup` = project
   .settings(javaSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.lightbend.akka" %% "akka-stream-alpakka-s3" % "0.20"
+      "com.lightbend.akka" %% "akka-stream-alpakka-s3" % "6.0.2"
     )
   )
   .dependsOn(`ts-reaktive-replication`, `ts-reaktive-actors` % ProtobufConfig.name, `ts-reaktive-marshal-akka`, `ts-reaktive-testkit` % "test")
