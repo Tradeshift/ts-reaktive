@@ -198,7 +198,7 @@ lazy val `ts-reaktive-marshal-akka` = project
   .settings(
     libraryDependencies ++= Seq(
       "com.fasterxml" % "aalto-xml" % "1.3.2",
-      "de.undercouch" % "actson" % "1.2.0"
+      "de.undercouch" % "actson" % "2.1.0"
     )
   )
   .enablePlugins(GitVersioning)
