@@ -197,7 +197,7 @@ lazy val `ts-reaktive-marshal-akka` = project
   .dependsOn(`ts-reaktive-marshal`, `ts-reaktive-akka`, `ts-reaktive-testkit` % "test", `ts-reaktive-testkit-assertj` % "test")
   .settings(
     libraryDependencies ++= Seq(
-      "com.fasterxml" % "aalto-xml" % "1.3.2",
+      "com.fasterxml" % "aalto-xml" % "1.3.3",
       "de.undercouch" % "actson" % "1.2.0"
     )
   )
