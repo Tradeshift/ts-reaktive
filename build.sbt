@@ -91,7 +91,7 @@ lazy val projectSettings = Seq(
     "com.novocode" % "junit-interface" % "0.11" % "test",
     "org.forgerock.cuppa" % "cuppa" % "1.6.0" % "test",
     "org.forgerock.cuppa" % "cuppa-junit" % "1.7.0" % "test",
-    "org.apache.cassandra" % "cassandra-all" % "4.1.5" % "test" exclude("ch.qos.logback", "logback-classic"),
+    "org.apache.cassandra" % "cassandra-all" % "4.1.6" % "test" exclude("ch.qos.logback", "logback-classic"),
     "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % "1.1.1" % "test",
     "com.github.tomakehurst" % "wiremock" % "3.0.1" % "test",
     "org.xmlunit" % "xmlunit-core" % "2.9.1" % "test",
