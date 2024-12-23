@@ -4,7 +4,7 @@ scalaVersion := "2.13.14" // just for the root
 val akkaVersion = "2.8.8"
 val akkaHttpVersion = "10.5.3"
 val akkaInMemory = "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.5.15.2"
-val assertJ = "org.assertj" % "assertj-core" % "3.26.3"
+val assertJ = "org.assertj" % "assertj-core" % "3.27.0"
 
 import sbtrelease._
 // we hide the existing definition for setReleaseVersion to replace it with our own
