@@ -85,7 +85,7 @@ lazy val projectSettings = Seq(
     "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % "test",
     "junit" % "junit" % "4.13.2" % "test",
     assertJ % "test",
-    "org.mockito" % "mockito-core" % "5.17.0" % "test",
+    "org.mockito" % "mockito-core" % "5.18.0" % "test",
     "info.solidsoft.mockito" % "mockito-java8" % "2.5.0" % "test",
     akkaInMemory % "test",
     "com.novocode" % "junit-interface" % "0.11" % "test",
