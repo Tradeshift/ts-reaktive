@@ -94,7 +94,7 @@ lazy val projectSettings = Seq(
     "org.apache.cassandra" % "cassandra-all" % "5.0.4" % "test" exclude("ch.qos.logback", "logback-classic"),
     "com.typesafe.akka" %% "akka-persistence-cassandra-launcher" % "1.1.1" % "test",
     "com.github.tomakehurst" % "wiremock" % "3.0.1" % "test",
-    "org.xmlunit" % "xmlunit-core" % "2.10.2" % "test",
+    "org.xmlunit" % "xmlunit-core" % "2.10.3" % "test",
     "org.xmlunit" % "xmlunit-matchers" % "2.10.3" % "test"
   ),
   git.useGitDescribe := true,
