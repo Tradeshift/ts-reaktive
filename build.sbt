@@ -110,7 +110,7 @@ lazy val projectSettings = Seq(
 lazy val commonSettings = projectSettings ++ Seq(
   libraryDependencies ++= {
     Seq(
-      "com.typesafe" % "config" % "1.4.4",
+      "com.typesafe" % "config" % "1.4.5",
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
       "com.typesafe.akka" %% "akka-persistence" % akkaVersion,
