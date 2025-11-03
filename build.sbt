@@ -186,7 +186,7 @@ lazy val `ts-reaktive-marshal` = project
   .settings(javaSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.fasterxml.jackson.core" % "jackson-core" % "2.20.0"
+      "com.fasterxml.jackson.core" % "jackson-core" % "2.20.1"
     )
   )
   .dependsOn(`ts-reaktive-java`)
