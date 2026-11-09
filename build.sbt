@@ -110,7 +110,7 @@ lazy val projectSettings = Seq(
 lazy val commonSettings = projectSettings ++ Seq(
   libraryDependencies ++= {
     Seq(
-      "com.typesafe" % "config" % "1.4.9",
+      "com.typesafe" % "config" % "1.4.10",
       "com.typesafe.akka" %% "akka-actor" % akkaVersion,
       "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
       "com.typesafe.akka" %% "akka-persistence" % akkaVersion,
@@ -131,7 +131,7 @@ lazy val kamonSettings = Seq(
     Seq(
       "io.kamon" %% "kamon-core" % "1.1.6",
       "io.kamon" %% "kamon-system-metrics" % "1.0.1",
-      "org.aspectj" % "aspectjweaver" % "1.9.26",
+      "org.aspectj" % "aspectjweaver" % "1.9.27",
       "com.readytalk" % "metrics3-statsd" % "4.1.0" // to log cassandra (codahale / dropwizard) metrics into statsd
     )
   }
@@ -186,7 +186,7 @@ lazy val `ts-reaktive-marshal` = project
   .settings(javaSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.fasterxml.jackson.core" % "jackson-core" % "2.22.4"
+      "com.fasterxml.jackson.core" % "jackson-core" % "2.23.0"
     )
   )
   .dependsOn(`ts-reaktive-java`)
